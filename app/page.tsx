@@ -1,5 +1,5 @@
 const channels = [
-  { name: "Etsy", status: "Planner ready", detail: "Draft payload + Product Truth Gate" },
+  { name: "Etsy", status: "OAuth integration ready", detail: "Open API v3 + Product Truth Gate" },
   { name: "Gumroad", status: "Planner ready", detail: "Unpublished product payload" },
   { name: "Payhip", status: "Planner ready", detail: "Invisible product payload" }
 ];
@@ -25,7 +25,7 @@ export default function Home() {
             channel-specific publishing jobs.
           </p>
         </div>
-        <div className="badge">V1.0 · ACTIVE BASELINE</div>
+        <div className="badge">V1.1 · ETSY OAUTH</div>
       </section>
 
       <section className="grid">
@@ -52,6 +52,15 @@ export default function Home() {
             </li>
           ))}
         </ol>
+      </section>
+
+      <section className="panel compact">
+        <div>
+          <p className="eyebrow">ETSY API</p>
+          <h2>OAuth connection</h2>
+          <p>Connect the Etsy seller account before live listing writes are enabled.</p>
+        </div>
+        <a className="connectButton" href="/connect/etsy">Connect Etsy API</a>
       </section>
 
       <section className="panel compact">

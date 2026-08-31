@@ -132,10 +132,24 @@ code {
   color: var(--ok);
 }
 
+.connectButton {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #111827;
+  text-decoration: none;
+  font-weight: 800;
+}
+
 @media (max-width: 760px) {
   .shell { padding-top: 28px; }
   .hero, .panel { grid-template-columns: 1fr; display: grid; }
   .grid { grid-template-columns: 1fr; }
   .badge { width: max-content; }
-  code { justify-self: start; }
+  code, .connectButton { justify-self: start; }
 }

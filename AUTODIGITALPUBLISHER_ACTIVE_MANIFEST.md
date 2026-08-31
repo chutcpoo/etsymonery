@@ -1,7 +1,7 @@
 # AUTODIGITALPUBLISHER ACTIVE MANIFEST
 
 STATUS: ACTIVE / PRODUCTION BASELINE / EXECUTABLE
-VERSION: V1.0
+VERSION: V1.1
 AUTHORITY: THIS FILE ONLY
 
 ## Mission
@@ -15,6 +15,7 @@ INPUT
 → Required-field validation
 → Channel selection
 → Channel payload generation
+→ Etsy OAuth Authorization Gate
 → Publish Plan
 → Human/API authorization boundary
 → Marketplace adapter
@@ -25,7 +26,8 @@ INPUT
 - PRODUCT_TRUTH_VERIFIED must be true.
 - Title, description, price and at least one buyer file are mandatory.
 - Unknown or unsupported claims must be omitted.
-- Marketplace writes are disabled unless PUBLISH_WRITES_ENABLED=true.
+- Etsy live writes require valid Etsy Open API v3 OAuth authorization.
+- Marketplace writes remain disabled unless PUBLISH_WRITES_ENABLED=true.
 - Secrets must come from runtime environment variables only.
 - No legacy manifest may supersede this file without an explicit version promotion.
 
@@ -34,6 +36,8 @@ INPUT
 ACTIVE:
 - Dashboard
 - Publish plan API
+- Etsy OAuth 2.0 + PKCE authorization flow
+- Etsy connection status endpoint
 - Etsy plan adapter
 - Gumroad plan adapter
 - Payhip plan adapter
@@ -41,9 +45,10 @@ ACTIVE:
 - CI build/typecheck
 
 PENDING:
-- OAuth/token lifecycle
-- Live marketplace writes
+- Verified Etsy live create/update listing adapter
+- Etsy token refresh lifecycle
+- Persistent encrypted token/audit storage
 - Asset upload automation
+- Gumroad/Payhip live authentication
 - Listing update/reconciliation
-- Persistent audit database
 - Scheduled publishing queue
