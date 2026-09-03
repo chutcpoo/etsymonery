@@ -76,7 +76,9 @@ export default async function SalesControlCenterPage() {
               UNKNOWN until Etsy Shop Stats evidence is supplied.
             </p>
           </div>
-          <code>NO DATA → NO RANDOM REDESIGN</code>
+          <a className="connectButton" href="/stats-evidence">
+            Capture Shop Stats
+          </a>
         </section>
 
         <section className="listingStack">
