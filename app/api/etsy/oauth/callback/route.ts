@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getEtsyCredentials, getEtsyRedirectUri } from "../../../../../lib/etsy";
+import { getEtsyUserIdFromToken } from "../../../../../lib/etsy-auth";
+import { isTokenStoreConfigured, saveEtsyTokens } from "../../../../../lib/token-store";
 
 export const runtime = "nodejs";
 
@@ -8,6 +10,7 @@ type EtsyTokenResponse = {
   refresh_token?: string;
   expires_in?: number;
   token_type?: string;
+  scope?: string;
   error?: string;
   error_description?: string;
 };
@@ -22,6 +25,13 @@ export async function GET(request: Request) {
     return NextResponse.json(
       { error: "ETSY_AUTHORIZATION_DENIED", detail: error },
       { status: 400 }
+    );
+  }
+
+  if (!isTokenStoreConfigured()) {
+    return NextResponse.json(
+      { error: "ETSY_TOKEN_STORE_NOT_CONFIGURED" },
+      { status: 503 }
     );
   }
 
@@ -84,25 +94,29 @@ export async function GET(request: Request) {
     );
   }
 
+  try {
+    await saveEtsyTokens({
+      accessToken: token.access_token,
+      refreshToken: token.refresh_token,
+      expiresIn: token.expires_in ?? 3600,
+      scope: token.scope,
+      tokenType: token.token_type,
+      userId: getEtsyUserIdFromToken(token.access_token)
+    });
+  } catch (storageError) {
+    return NextResponse.json(
+      {
+        error: "ETSY_TOKEN_STORAGE_FAILED",
+        detail:
+          storageError instanceof Error ? storageError.message : "UNKNOWN"
+      },
+      { status: 503 }
+    );
+  }
+
   const response = NextResponse.redirect(new URL("/connect/etsy", request.url));
-  const secure = process.env.NODE_ENV === "production";
-
-  response.cookies.set("etsy_access_token", token.access_token, {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: token.expires_in ?? 3600
-  });
-
-  response.cookies.set("etsy_refresh_token", token.refresh_token, {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 90 * 24 * 60 * 60
-  });
-
+  response.cookies.delete("etsy_access_token");
+  response.cookies.delete("etsy_refresh_token");
   response.cookies.delete("etsy_oauth_verifier");
   response.cookies.delete("etsy_oauth_state");
 
