@@ -1,57 +1,55 @@
-# AutoDigitalPublisher
+# AutoDigitalPublisher / Etsy Sales Control Center
 
-Production-oriented starter for automating digital-product publishing across Etsy, Gumroad and Payhip.
+A gated Etsy commerce control center for diagnosing sales problems before changing listings.
 
-## What is included
+## Current candidate
 
-- Product Truth Gate before any publish plan is created
-- Multi-channel publish planner
-- Next.js dashboard
-- POST /api/publish API
-- GET /api/health API
-- Single active authority manifest
-- GitHub Actions build/typecheck workflow
-- Environment-variable template with no secrets committed
+The current software candidate adds a read-only Etsy Sales Control Center on top of the encrypted OAuth persistence branch.
 
-## Quick start
+### Evidence layers
 
-```bash
-npm install
-npm run dev
-```
+- Canonical Catalog identifier reconciliation
+- Etsy Shop Identity
+- Exact six live Etsy Listing records
+- Listing title / tags / image / favorite evidence
+- Sales transaction counts when `transactions_r` has been granted
+- Funnel diagnosis: discovery → click-through → engagement → conversion
+- Root Cause state that remains `NOT_YET_CONFIRMED` when evidence is insufficient
 
-Open http://localhost:3000
+### Etsy API limitation
 
-## Publish API
+The Etsy Open API v3 endpoints used by this project do not expose Etsy Shop Stats views, visits, search terms or click-through rate. The application therefore marks those fields as unavailable/unknown instead of fabricating metrics.
 
-POST `/api/publish`
+Conversion rate is not calculated without an authoritative visit denominator.
 
-Example:
+### Canonical Product Truth
 
-```json
-{
-  "productId": "PDT-001",
-  "title": "Cafe Operations Toolkit",
-  "description": "Editable operations toolkit for cafe owners.",
-  "priceUsd": 14.9,
-  "files": ["Cafe_Operations_Toolkit.zip"],
-  "channels": ["etsy", "gumroad", "payhip"],
-  "productTruthVerified": true
-}
-```
+`DIGITAL_PRODUCT_CATALOG_MASTER.xlsx` on Google Drive remains the sole canonical Catalog.
 
-The API returns a publish plan. It does **not** push to marketplaces yet. Real marketplace writes stay disabled until credentials and per-channel adapters are connected.
+The repository contains only a derived, read-only Product_ID ↔ Etsy Listing_ID identifier projection required for runtime reconciliation. It is not Product Truth and cannot override the Catalog.
 
-## Production rules
+### Safety
 
-1. Product truth is required before publishing.
-2. Unknown claims/specs are omitted.
-3. Each channel receives its own adapter payload.
-4. No marketplace secret is committed to Git.
-5. `AUTODIGITALPUBLISHER_ACTIVE_MANIFEST.md` is the single executable project authority.
+- Marketplace writes remain disabled by default.
+- Sales Control Center endpoints are GET/read-only.
+- Any controlled Listing fix must still follow Product Truth → ETSY GROWTH OS adaptation → Production Build → Tester → independent QC → Production authorization.
+- A material candidate change invalidates stale Tester/QC evidence.
 
-## Next integration stage
+## Required environment
 
-Connect marketplace credentials through environment variables, then implement authenticated adapters under `lib/adapters/`.
+See `.env.example`.
 
-See `.env.example` and `AUTODIGITALPUBLISHER_ACTIVE_MANIFEST.md`.
+For persistent OAuth:
+- `DATABASE_URL`
+- `TOKEN_ENCRYPTION_KEY`
+
+For Etsy:
+- `ETSY_API_KEY`
+- `ETSY_SHARED_SECRET`
+- `ETSY_REDIRECT_URI`
+- optional `ETSY_SHOP_ID`
+
+Keep:
+- `PUBLISH_WRITES_ENABLED=false`
+
+After this candidate is deployed, re-authorize Etsy once because the requested scope set adds `transactions_r`.

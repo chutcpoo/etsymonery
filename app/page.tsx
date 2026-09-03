@@ -1,16 +1,12 @@
-const channels = [
-  { name: "Etsy", status: "OAuth integration ready", detail: "Open API v3 + Product Truth Gate" },
-  { name: "Gumroad", status: "Planner ready", detail: "Unpublished product payload" },
-  { name: "Payhip", status: "Planner ready", detail: "Invisible product payload" }
-];
-
 const workflow = [
-  "Product package",
-  "Product Truth Gate",
-  "Channel payloads",
-  "Authorization boundary",
-  "Marketplace adapter",
-  "Audit result"
+  "Canonical Catalog identifiers",
+  "Shop Identity",
+  "Exact 6 live listings",
+  "API performance evidence",
+  "Funnel Root Cause",
+  "Controlled fix candidate",
+  "Tester + independent QC",
+  "Production authorization"
 ];
 
 export default function Home() {
@@ -19,30 +15,44 @@ export default function Home() {
       <section className="hero">
         <div>
           <p className="eyebrow">DIGITAL PRODUCT COMMERCE</p>
-          <h1>AutoDigitalPublisher</h1>
+          <h1>Etsy Sales Control Center</h1>
           <p className="lede">
-            One control center for turning verified digital products into safe,
-            channel-specific publishing jobs.
+            Diagnose why a listing is not selling before changing it. Live Etsy
+            evidence, canonical Catalog identity, and ETSY GROWTH OS rules stay
+            separated from Product Truth and production publishing.
           </p>
         </div>
-        <div className="badge">V1.1 · ETSY OAUTH</div>
+        <div className="badge">V1 CANDIDATE · READ ONLY</div>
       </section>
 
-      <section className="grid">
-        {channels.map((channel) => (
-          <article className="card" key={channel.name}>
-            <div className="statusDot" />
-            <h2>{channel.name}</h2>
-            <strong>{channel.status}</strong>
-            <p>{channel.detail}</p>
-          </article>
-        ))}
+      <section className="metrics">
+        <article className="metricCard">
+          <span>Etsy OAuth</span>
+          <strong>CONNECTED FLOW</strong>
+        </article>
+        <article className="metricCard">
+          <span>Catalog</span>
+          <strong>EXACT DRIVE ID</strong>
+        </article>
+        <article className="metricCard">
+          <span>Listings</span>
+          <strong>EXACT 6</strong>
+        </article>
+        <article className="metricCard">
+          <span>Production writes</span>
+          <strong>DISABLED</strong>
+        </article>
       </section>
 
       <section className="panel">
         <div>
-          <p className="eyebrow">EXECUTION FLOW</p>
-          <h2>Truth first. Publish second.</h2>
+          <p className="eyebrow">SALES DIAGNOSIS FLOW</p>
+          <h2>Find the leak before fixing the listing.</h2>
+          <p>
+            Discovery, click-through, engagement and conversion are separate
+            evidence stages. Missing Shop Stats remain UNKNOWN instead of being
+            guessed.
+          </p>
         </div>
         <ol className="flow">
           {workflow.map((step, index) => (
@@ -56,20 +66,30 @@ export default function Home() {
 
       <section className="panel compact">
         <div>
-          <p className="eyebrow">ETSY API</p>
-          <h2>OAuth connection</h2>
-          <p>Connect the Etsy seller account before live listing writes are enabled.</p>
+          <p className="eyebrow">CONTROL CENTER</p>
+          <h2>Exact 6 Listing Root Cause Dashboard</h2>
+          <p>
+            Read current listing fields, favorites and authorized sales signals.
+            No listing is edited from the dashboard.
+          </p>
         </div>
-        <a className="connectButton" href="/connect/etsy">Connect Etsy API</a>
+        <a className="connectButton" href="/sales">
+          Open Sales Dashboard
+        </a>
       </section>
 
       <section className="panel compact">
         <div>
-          <p className="eyebrow">API</p>
-          <h2>POST /api/publish</h2>
-          <p>Builds a validated multi-channel publish plan. Live marketplace writes are off by default.</p>
+          <p className="eyebrow">ETSY CONNECTION</p>
+          <h2>OAuth + encrypted token lifecycle</h2>
+          <p>
+            Re-authorize only when requested scopes change or the stored grant
+            requires renewal.
+          </p>
         </div>
-        <code>GET /api/health</code>
+        <a className="textLink" href="/connect/etsy">
+          Etsy connection status
+        </a>
       </section>
     </main>
   );

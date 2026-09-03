@@ -1,6 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
 
-export const ETSY_SCOPES = ["listings_r", "listings_w", "shops_r"] as const;
+export const ETSY_SCOPES = [
+  "listings_r",
+  "listings_w",
+  "shops_r",
+  "transactions_r"
+] as const;
 
 function base64Url(input: Buffer) {
   return input

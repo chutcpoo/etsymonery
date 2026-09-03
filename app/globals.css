@@ -2,11 +2,14 @@
   color-scheme: dark;
   --bg: #08101d;
   --panel: #0f1a2b;
+  --panel2: #111f34;
   --line: #22324a;
   --text: #f5f7fb;
   --muted: #9eabc0;
   --accent: #f29a3f;
   --ok: #50d890;
+  --warn: #ffbe5c;
+  --danger: #ff7a8a;
 }
 
 * { box-sizing: border-box; }
@@ -24,10 +27,12 @@ html, body {
 body { min-height: 100vh; }
 
 .shell {
-  width: min(1120px, calc(100% - 32px));
+  width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
   padding: 64px 0 80px;
 }
+
+.salesShell { width: min(1280px, calc(100% - 32px)); }
 
 .hero {
   display: flex;
@@ -48,7 +53,7 @@ h2 { margin: 8px 0 10px; }
 
 p { color: var(--muted); line-height: 1.65; }
 
-.lede { max-width: 680px; font-size: 18px; }
+.lede { max-width: 760px; font-size: 18px; }
 
 .eyebrow {
   margin: 0;
@@ -68,28 +73,41 @@ p { color: var(--muted); line-height: 1.65; }
   font-weight: 700;
 }
 
-.grid {
+.metrics {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.card, .panel {
+.metricCard {
+  border: 1px solid var(--line);
+  background: rgba(15,26,43,.82);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.metricCard span,
+.listingMetrics span,
+.funnelGrid span,
+.diagnosis span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 7px;
+}
+
+.metricCard strong {
+  font-size: 14px;
+  color: var(--ok);
+}
+
+.card, .panel, .notice, .listingCard {
   border: 1px solid var(--line);
   background: rgba(15, 26, 43, .86);
   border-radius: 20px;
   padding: 24px;
   backdrop-filter: blur(10px);
-}
-
-.card strong { color: var(--ok); }
-
-.statusDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 99px;
-  background: var(--ok);
-  box-shadow: 0 0 0 5px rgba(80,216,144,.1);
 }
 
 .panel {
@@ -98,6 +116,16 @@ p { color: var(--muted); line-height: 1.65; }
   grid-template-columns: .8fr 1.2fr;
   gap: 40px;
 }
+
+.notice {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.warningNotice { border-color: rgba(255,190,92,.45); }
 
 .flow {
   list-style: none;
@@ -130,6 +158,7 @@ code {
   padding: 12px 14px;
   border-radius: 10px;
   color: var(--ok);
+  overflow-wrap: anywhere;
 }
 
 .connectButton {
@@ -146,10 +175,149 @@ code {
   font-weight: 800;
 }
 
+.textLink {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.listingStack {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.listingCard { background: rgba(15,26,43,.94); }
+
+.listingTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.listingIdentity {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  min-width: 0;
+}
+
+.listingIdentity h2 {
+  margin: 4px 0 4px;
+  font-size: 20px;
+}
+
+.listingIdentity p { margin: 0; }
+
+.listingThumb {
+  width: 88px;
+  height: 88px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.listingThumb.placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.rootState {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.rootState.warn { color: var(--warn); }
+.rootState.neutral { color: var(--muted); }
+
+.listingMetrics {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.listingMetrics > div,
+.funnelGrid > div {
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.listingMetrics strong { overflow-wrap: anywhere; }
+
+.funnelGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.signal {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.signal.good { color: var(--ok); }
+.signal.warn { color: var(--warn); }
+.signal.neutral { color: var(--muted); }
+
+.diagnosis {
+  margin-top: 10px;
+  border-left: 3px solid var(--accent);
+  padding: 12px 14px;
+  background: rgba(242,154,63,.06);
+}
+
+.diagnosis p { margin: 8px 0 0; }
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 14px 0;
+}
+
+.tagRow span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  padding: 5px 9px;
+  font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .listingMetrics { grid-template-columns: repeat(2, 1fr); }
+  .funnelGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 760px) {
   .shell { padding-top: 28px; }
   .hero, .panel { grid-template-columns: 1fr; display: grid; }
-  .grid { grid-template-columns: 1fr; }
+  .metrics { grid-template-columns: 1fr 1fr; }
   .badge { width: max-content; }
   code, .connectButton { justify-self: start; }
+  .notice { align-items: flex-start; flex-direction: column; }
+  .listingTop { flex-direction: column; }
+  .listingIdentity { align-items: flex-start; }
+}
+
+@media (max-width: 520px) {
+  .metrics,
+  .listingMetrics,
+  .funnelGrid { grid-template-columns: 1fr; }
+  .listingIdentity { flex-direction: column; }
+  .listingThumb { width: 100%; height: 180px; }
 }
