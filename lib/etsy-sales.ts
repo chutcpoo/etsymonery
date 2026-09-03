@@ -33,6 +33,12 @@ type EtsyListing = {
   error?: string;
 };
 
+type EtsyListingsResponse = {
+  count?: number;
+  results?: EtsyListing[];
+  error?: string;
+};
+
 type EtsyTransactions = {
   count?: number;
   results?: unknown[];
@@ -123,13 +129,12 @@ function duplicateTags(tags: string[]) {
   return [...duplicates];
 }
 
-async function fetchListing(
+async function fetchShopListings(
   accessToken: string,
-  shopId: number,
-  listingId: number
-): Promise<{ listing: EtsyListing | null; error?: string }> {
+  shopId: number
+): Promise<{ listings: Map<number, EtsyListing>; error?: string }> {
   const response = await fetch(
-    `https://api.etsy.com/v3/application/listings/${listingId}?includes=Images`,
+    `https://api.etsy.com/v3/application/shops/${shopId}/listings?state=active&limit=100&includes=Images`,
     {
       method: "GET",
       headers: etsyApiHeaders(accessToken),
@@ -137,20 +142,28 @@ async function fetchListing(
     }
   );
 
-  const payload = (await response.json()) as EtsyListing;
+  const payload = (await response.json()) as EtsyListingsResponse;
 
-  if (!response.ok || !payload.listing_id) {
+  if (!response.ok || !Array.isArray(payload.results)) {
     return {
-      listing: null,
-      error: payload.error ?? `ETSY_LISTING_HTTP_${response.status}`
+      listings: new Map(),
+      error: payload.error ?? `ETSY_SHOP_LISTINGS_HTTP_${response.status}`
     };
   }
 
-  if (payload.shop_id != null && payload.shop_id !== shopId) {
-    return { listing: null, error: "LISTING_SHOP_ID_MISMATCH" };
+  const listings = new Map<number, EtsyListing>();
+
+  for (const listing of payload.results) {
+    if (listing.shop_id != null && listing.shop_id !== shopId) {
+      return { listings: new Map(), error: "LISTING_SHOP_ID_MISMATCH" };
+    }
+
+    if (typeof listing.listing_id === "number") {
+      listings.set(listing.listing_id, listing);
+    }
   }
 
-  return { listing: payload };
+  return { listings };
 }
 
 async function fetchTransactionCount(
@@ -325,15 +338,13 @@ export async function getSalesControlCenterSnapshot() {
   const transactionScopeGranted = grantedScopes.has("transactions_r");
 
   const listings: ListingDiagnosis[] = [];
+  const listingBatch = await fetchShopListings(accessToken, shopId);
 
   for (const entry of ETSY_CHANNEL_INDEX) {
-    const listingResult = await fetchListing(
-      accessToken,
-      shopId,
-      entry.listingId
-    );
-
-    await sleep(230);
+    const listing = listingBatch.listings.get(entry.listingId) ?? null;
+    const listingError =
+      listingBatch.error ??
+      (listing ? undefined : "LISTING_NOT_RETURNED_BY_GET_LISTINGS_BY_SHOP");
 
     let transactionCount: number | null = null;
     let transactionEvidence:
@@ -341,7 +352,7 @@ export async function getSalesControlCenterSnapshot() {
       | "AUTH_SCOPE_REQUIRED"
       | "API_ERROR" = "AUTH_SCOPE_REQUIRED";
 
-    if (transactionScopeGranted && listingResult.listing) {
+    if (transactionScopeGranted && listing) {
       const transactionResult = await fetchTransactionCount(
         accessToken,
         shopId,
@@ -356,8 +367,8 @@ export async function getSalesControlCenterSnapshot() {
       diagnose(
         entry.productId,
         entry.listingId,
-        listingResult.listing,
-        listingResult.error,
+        listing,
+        listingError,
         transactionCount,
         transactionEvidence
       )
@@ -370,6 +381,13 @@ export async function getSalesControlCenterSnapshot() {
     generatedAt: new Date().toISOString(),
     shopId,
     exactListingCount: ETSY_CHANNEL_INDEX.length,
+    listingAcquisition: {
+      operation: "getListingsByShop",
+      requestCount: 1,
+      state: "active",
+      limit: 100,
+      includes: ["Images"]
+    },
     catalogSource: CANONICAL_CATALOG_SOURCE,
     requestedPerformanceScope: "transactions_r",
     transactionScopeGranted,
