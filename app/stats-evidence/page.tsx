@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ETSY_CHANNEL_INDEX } from "../../lib/catalog-channel-index";
 
 type ListingInput = {
@@ -8,6 +8,14 @@ type ListingInput = {
   orders: string;
   revenue: string;
   favorites: string;
+};
+
+type ApiListingEvidence = {
+  favoriteCount: number | null;
+  transactionCount: number | null;
+  transactionEvidence: string;
+  title: string | null;
+  state: string | null;
 };
 
 const SHOP_ID = 23582741;
@@ -49,6 +57,92 @@ export default function ShopStatsEvidencePage() {
   const [noSearchTermsVisible, setNoSearchTermsVisible] = useState(false);
   const [output, setOutput] = useState("");
   const [copyState, setCopyState] = useState("");
+  const [apiListingEvidence, setApiListingEvidence] =
+    useState<Record<string, ApiListingEvidence>>({});
+  const [apiEnrichmentState, setApiEnrichmentState] =
+    useState<"LOADING" | "CONNECTED" | "UNAVAILABLE">("LOADING");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadApiEvidence() {
+      try {
+        const response = await fetch("/api/etsy/control-center", {
+          cache: "no-store"
+        });
+        const payload = (await response.json()) as {
+          status?: string;
+          listings?: Array<{
+            listingId?: number;
+            favoriteCount?: number | null;
+            transactionCount?: number | null;
+            transactionEvidence?: string;
+            title?: string | null;
+            state?: string | null;
+          }>;
+        };
+
+        if (!response.ok || payload.status !== "PASS" || !Array.isArray(payload.listings)) {
+          throw new Error("CONTROL_CENTER_API_UNAVAILABLE");
+        }
+
+        const evidence: Record<string, ApiListingEvidence> = {};
+
+        for (const listing of payload.listings) {
+          if (typeof listing.listingId !== "number") continue;
+          evidence[String(listing.listingId)] = {
+            favoriteCount:
+              typeof listing.favoriteCount === "number"
+                ? listing.favoriteCount
+                : null,
+            transactionCount:
+              typeof listing.transactionCount === "number"
+                ? listing.transactionCount
+                : null,
+            transactionEvidence:
+              listing.transactionEvidence ?? "UNKNOWN",
+            title: listing.title ?? null,
+            state: listing.state ?? null
+          };
+        }
+
+        if (cancelled) return;
+
+        setApiListingEvidence(evidence);
+        setListingInputs((current) => {
+          const next = { ...current };
+
+          for (const entry of ETSY_CHANNEL_INDEX) {
+            const key = String(entry.listingId);
+            const apiRow = evidence[key];
+            const currentRow = next[key];
+
+            if (
+              currentRow &&
+              currentRow.favorites.trim() === "" &&
+              typeof apiRow?.favoriteCount === "number"
+            ) {
+              next[key] = {
+                ...currentRow,
+                favorites: String(apiRow.favoriteCount)
+              };
+            }
+          }
+
+          return next;
+        });
+        setApiEnrichmentState("CONNECTED");
+      } catch {
+        if (!cancelled) setApiEnrichmentState("UNAVAILABLE");
+      }
+    }
+
+    void loadApiEvidence();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const completeness = useMemo(() => {
     const shopComplete =
@@ -103,6 +197,7 @@ export default function ShopStatsEvidencePage() {
       evidenceStatus: completeness
         ? "COMPLETE_FOR_ROOT_CAUSE_REVIEW"
         : "PARTIAL",
+      apiEnrichmentState,
       source: {
         platform: "Etsy",
         area: "Shop Manager > Stats",
@@ -131,7 +226,8 @@ export default function ShopStatsEvidencePage() {
           views: requiredNumber(row?.views ?? ""),
           orders: requiredNumber(row?.orders ?? ""),
           revenueUsd: optionalNumber(row?.revenue ?? ""),
-          favorites: optionalNumber(row?.favorites ?? "")
+          favorites: optionalNumber(row?.favorites ?? ""),
+          apiEvidence: apiListingEvidence[String(entry.listingId)] ?? null
         };
       }),
       searchTermEvidence: noSearchTermsVisible
@@ -190,8 +286,10 @@ export default function ShopStatsEvidencePage() {
           <h2>Live Etsy Shop Stats</h2>
           <p>
             Use one consistent date range for the shop metrics and all six
-            listing rows. Do not estimate missing values.
+            listing rows. Do not estimate missing values. Favorites are
+            auto-filled from the read-only Etsy Open API when available.
           </p>
+          <p>API enrichment: <strong>{apiEnrichmentState}</strong></p>
         </div>
         <a className="connectButton" href={STATS_URL} target="_blank" rel="noreferrer">
           Open Etsy Stats
@@ -252,7 +350,7 @@ export default function ShopStatsEvidencePage() {
                 <th>Views *</th>
                 <th>Orders *</th>
                 <th>Revenue USD</th>
-                <th>Favorites</th>
+                <th>Favorites (API)</th>
               </tr>
             </thead>
             <tbody>
@@ -268,6 +366,11 @@ export default function ShopStatsEvidencePage() {
                           inputMode={field === "revenue" ? "decimal" : "numeric"}
                           aria-label={`${entry.productId} ${field}`}
                           value={row[field]}
+                          readOnly={
+                            field === "favorites" &&
+                            typeof apiListingEvidence[String(entry.listingId)]
+                              ?.favoriteCount === "number"
+                          }
                           onChange={(e) =>
                             updateListing(entry.listingId, field, e.target.value)
                           }
