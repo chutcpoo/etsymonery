@@ -1,14 +1,19 @@
-import { cookies } from "next/headers";
-import { ETSY_SCOPES, getEtsyCredentials } from "../../../lib/etsy";
+import {
+  ETSY_SCOPES,
+  getEtsyCredentials
+} from "../../../lib/etsy";
+import {
+  hasStoredEtsyTokens,
+  isTokenStoreConfigured
+} from "../../../lib/token-store";
 
 export const dynamic = "force-dynamic";
 
 export default async function EtsyConnectPage() {
-  const store = await cookies();
-  const connected = Boolean(
-    store.get("etsy_access_token")?.value &&
-      store.get("etsy_refresh_token")?.value
-  );
+  const persistenceConfigured = isTokenStoreConfigured();
+  const connected = persistenceConfigured
+    ? await hasStoredEtsyTokens()
+    : false;
   const credentials = getEtsyCredentials();
 
   return (
@@ -23,21 +28,32 @@ export default async function EtsyConnectPage() {
           </p>
         </div>
         <div className="badge">
-          {connected ? "CONNECTED" : credentials.configured ? "READY TO AUTHORIZE" : "API KEY REQUIRED"}
+          {connected
+            ? "CONNECTED"
+            : !persistenceConfigured
+              ? "TOKEN STORE REQUIRED"
+              : credentials.configured
+                ? "READY TO AUTHORIZE"
+                : "API KEY REQUIRED"}
         </div>
       </section>
 
       <section className="panel compact">
         <div>
           <p className="eyebrow">STATUS</p>
-          <h2>{connected ? "Etsy authorization active" : "Etsy authorization pending"}</h2>
+          <h2>
+            {connected ? "Etsy authorization active" : "Etsy authorization pending"}
+          </h2>
           <p>
-            Requested scopes: {ETSY_SCOPES.join(", ")}. Marketplace writes remain
+            Requested scopes: {ETSY_SCOPES.join(", ")}. OAuth tokens are stored
+            server-side with application-layer encryption. Marketplace writes remain
             disabled until the production publish adapter passes verification.
           </p>
         </div>
 
-        {credentials.configured ? (
+        {!persistenceConfigured ? (
+          <code>Set DATABASE_URL + TOKEN_ENCRYPTION_KEY</code>
+        ) : credentials.configured ? (
           <a className="connectButton" href="/api/etsy/oauth/start">
             {connected ? "Reconnect Etsy" : "Connect Etsy"}
           </a>
