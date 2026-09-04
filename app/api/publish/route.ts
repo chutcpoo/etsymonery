@@ -44,7 +44,8 @@ async function createVerifiedEtsyDraft(pack: ProductPack, plan: ChannelPlan) {
     return NextResponse.json(
       {
         error: "ETSY_DRAFT_WRITES_DISABLED",
-        candidateFingerprint: plan.candidateFingerprint
+        candidateFingerprint: plan.candidateFingerprint,
+        listingFingerprint: plan.listingFingerprint
       },
       { status: 403 }
     );
@@ -60,7 +61,7 @@ async function createVerifiedEtsyDraft(pack: ProductPack, plan: ChannelPlan) {
     ...etsyApiHeaders(accessToken),
     "content-type": "application/x-www-form-urlencoded"
   };
-  const tags = (pack.tags ?? []).map((tag) => tag.trim());
+  const tags = normalizeStringArray(pack.tags);
 
   const body = new URLSearchParams({
     quantity: String(pack.etsy?.quantity),
@@ -90,7 +91,8 @@ async function createVerifiedEtsyDraft(pack: ProductPack, plan: ChannelPlan) {
         error: "ETSY_DRAFT_CREATE_FAILED",
         statusCode: createResponse.status,
         detail: created,
-        candidateFingerprint: plan.candidateFingerprint
+        candidateFingerprint: plan.candidateFingerprint,
+        listingFingerprint: plan.listingFingerprint
       },
       { status: 502 }
     );
@@ -116,6 +118,7 @@ async function createVerifiedEtsyDraft(pack: ProductPack, plan: ChannelPlan) {
         statusCode: typeResponse.status,
         detail: typeResult,
         candidateFingerprint: plan.candidateFingerprint,
+        listingFingerprint: plan.listingFingerprint,
         state: "DRAFT_CREATED_PARTIAL"
       },
       { status: 502 }
@@ -139,7 +142,8 @@ async function createVerifiedEtsyDraft(pack: ProductPack, plan: ChannelPlan) {
         listingId,
         statusCode: readBackResponse.status,
         detail: readBack,
-        candidateFingerprint: plan.candidateFingerprint
+        candidateFingerprint: plan.candidateFingerprint,
+        listingFingerprint: plan.listingFingerprint
       },
       { status: 502 }
     );
@@ -167,15 +171,22 @@ async function createVerifiedEtsyDraft(pack: ProductPack, plan: ChannelPlan) {
       typeof readBackPrice === "number" && Math.abs(readBackPrice - pack.priceUsd) < 0.005,
     type: listingType === "download"
   };
-  const persisted = Object.values(checks).every(Boolean);
+  const listingPersisted = Object.values(checks).every(Boolean);
 
   return NextResponse.json(
     {
-      status: persisted ? "PERSISTED_DRAFT_VERIFIED" : "PERSISTENCE_MISMATCH",
+      status: listingPersisted
+        ? "PERSISTED_LISTING_DRAFT_VERIFIED"
+        : "LISTING_PERSISTENCE_MISMATCH",
       listingId,
       candidateFingerprint: plan.candidateFingerprint,
+      listingFingerprint: plan.listingFingerprint,
       releaseState: plan.releaseState,
+      persistedScope: "LISTING_METADATA_ONLY",
       checks,
+      buyerFilesPersisted: false,
+      candidateFullyPersisted: false,
+      nextGate: listingPersisted ? "ASSET_UPLOAD_REQUIRED" : "FIX_PERSISTENCE_MISMATCH",
       readBack: {
         state: readBack.state,
         title: readBack.title,
@@ -189,7 +200,7 @@ async function createVerifiedEtsyDraft(pack: ProductPack, plan: ChannelPlan) {
       },
       liveWritePerformed: false
     },
-    { status: persisted ? 201 : 409 }
+    { status: listingPersisted ? 201 : 409 }
   );
 }
 
