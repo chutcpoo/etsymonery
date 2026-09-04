@@ -31,14 +31,19 @@ jobs:
 
           VALID='{"productId":"TEST-001","title":"Digital Operations Template","description":"Verified test description","priceUsd":9.99,"files":["buyer.zip"],"channels":["etsy"],"productTruthVerified":true,"tags":["digital planner","small business","operations","workflow","business tool","etsy template","printable pdf","spreadsheet","daily planner","shop workflow","owner toolkit","business system","instant download"],"etsy":{"taxonomyId":1234,"quantity":999,"whoMade":"i_did","whenMade":"2020_2026","release":{"productionBuildFrozen":true}}}'
           PLAN=$(curl -fsS -X POST http://127.0.0.1:3000/api/publish -H 'content-type: application/json' --data "$VALID")
-          node -e 'const x=JSON.parse(process.argv[1]); if(x.status!=="READY"||!x.channels?.[0]?.candidateFingerprint||x.channels[0].draftWriteAllowed!==false||x.channels[0].liveWriteAllowed!==false||x.channels[0].releaseState!=="TESTER_PENDING") process.exit(1)' "$PLAN"
+          node -e 'const x=JSON.parse(process.argv[1]); const c=x.channels?.[0]; if(x.status!=="READY"||!c?.candidateFingerprint||!c?.listingFingerprint||c.assetPersistenceRequired!==true||c.draftWriteAllowed!==false||c.liveWriteAllowed!==false||c.releaseState!=="TESTER_PENDING") process.exit(1)' "$PLAN"
 
           INVALID='{"productId":"TEST-002","title":"Digital Operations Template","description":"Verified test description","priceUsd":9.99,"files":["buyer.zip"],"channels":["etsy"],"productTruthVerified":true,"tags":["only one"],"etsy":{"taxonomyId":1234,"quantity":999,"whoMade":"i_did","whenMade":"2020_2026","release":{"productionBuildFrozen":true}}}'
           CODE=$(curl -sS -o /tmp/invalid.json -w '%{http_code}' -X POST http://127.0.0.1:3000/api/publish -H 'content-type: application/json' --data "$INVALID")
           test "$CODE" = "422"
           node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync("/tmp/invalid.json","utf8")); if(!x.gate?.errors?.includes("ETSY_TAG_COUNT_MUST_BE_13")) process.exit(1)'
 
+          MALFORMED='{"productId":"TEST-003","title":123,"description":false,"priceUsd":"9.99","files":["buyer.zip"],"channels":["etsy"],"productTruthVerified":true,"tags":[1,2,3],"etsy":{"taxonomyId":1234,"quantity":999,"whoMade":"invalid","whenMade":2026,"release":{"productionBuildFrozen":"yes"}}}'
+          CODE=$(curl -sS -o /tmp/malformed.json -w '%{http_code}' -X POST http://127.0.0.1:3000/api/publish -H 'content-type: application/json' --data "$MALFORMED")
+          test "$CODE" = "422"
+          node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync("/tmp/malformed.json","utf8")); const e=x.gate?.errors??[]; if(!e.includes("MISSING_TITLE")||!e.includes("MISSING_DESCRIPTION")||!e.includes("INVALID_PRICE")||!e.includes("ETSY_WHO_MADE_INVALID")||!e.includes("PRODUCTION_BUILD_NOT_FROZEN")) process.exit(1)'
+
           WRITE=$(node -e 'const x=JSON.parse(process.argv[1]); x.operation="CREATE_ETSY_DRAFT"; process.stdout.write(JSON.stringify(x))' "$VALID")
           CODE=$(curl -sS -o /tmp/write.json -w '%{http_code}' -X POST http://127.0.0.1:3000/api/publish -H 'content-type: application/json' --data "$WRITE")
           test "$CODE" = "403"
-          node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync("/tmp/write.json","utf8")); if(x.error!=="ETSY_DRAFT_WRITES_DISABLED") process.exit(1)'
+          node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync("/tmp/write.json","utf8")); if(x.error!=="ETSY_DRAFT_WRITES_DISABLED"||!x.candidateFingerprint||!x.listingFingerprint) process.exit(1)'
