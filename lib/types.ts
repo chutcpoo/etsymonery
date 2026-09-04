@@ -46,9 +46,11 @@ export type ChannelPlan = {
   action: "CREATE_DRAFT";
   payload: Record<string, unknown>;
   candidateFingerprint?: string;
+  listingFingerprint?: string;
   releaseState?: EtsyReleaseState;
   draftWriteAllowed?: boolean;
   liveWriteAllowed?: boolean;
+  assetPersistenceRequired?: boolean;
 };
 
 export type PublishPlan = {
