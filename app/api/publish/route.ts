@@ -1,11 +1,20 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getValidEtsyAccessToken } from "../../../lib/etsy-auth";
 import { etsyApiHeaders } from "../../../lib/etsy";
 import { buildPublishPlan } from "../../../lib/publisher";
 import type { ChannelPlan, ProductPack } from "../../../lib/types";
 
+const DRAFT_WRITE_HEADER = "x-autodigitalpublisher-write-token";
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function secureEqual(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 function etsyPlanFrom(channels: ChannelPlan[]) {
@@ -39,7 +48,21 @@ async function parseJson(response: Response) {
   }
 }
 
-async function createVerifiedEtsyDraft(pack: ProductPack, plan: ChannelPlan) {
+function validateDraftWriteAuthorization(request: Request) {
+  const expected = process.env.ETSY_DRAFT_WRITE_TOKEN?.trim();
+  if (!expected) {
+    return NextResponse.json({ error: "ETSY_DRAFT_WRITE_AUTH_NOT_CONFIGURED" }, { status: 503 });
+  }
+
+  const supplied = request.headers.get(DRAFT_WRITE_HEADER)?.trim() ?? "";
+  if (!supplied || !secureEqual(supplied, expected)) {
+    return NextResponse.json({ error: "ETSY_DRAFT_WRITE_UNAUTHORIZED" }, { status: 401 });
+  }
+
+  return null;
+}
+
+async function createVerifiedEtsyDraft(pack: ProductPack, plan: ChannelPlan, request: Request) {
   if (!plan.draftWriteAllowed) {
     return NextResponse.json(
       {
@@ -50,6 +73,9 @@ async function createVerifiedEtsyDraft(pack: ProductPack, plan: ChannelPlan) {
       { status: 403 }
     );
   }
+
+  const authorizationError = validateDraftWriteAuthorization(request);
+  if (authorizationError) return authorizationError;
 
   const shopId = Number(process.env.ETSY_SHOP_ID);
   if (!Number.isSafeInteger(shopId) || shopId <= 0) {
@@ -240,7 +266,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    return await createVerifiedEtsyDraft(pack, etsyPlan);
+    return await createVerifiedEtsyDraft(pack, etsyPlan, request);
   } catch (error) {
     return NextResponse.json(
       {
