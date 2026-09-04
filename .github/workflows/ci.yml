@@ -17,3 +17,28 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run build
+      - name: Gate-safe publish API smoke tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm start >/tmp/autodigitalpublisher.log 2>&1 &
+          APP_PID=$!
+          trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/api/health >/dev/null; then break; fi
+            sleep 1
+          done
+
+          VALID='{"productId":"TEST-001","title":"Digital Operations Template","description":"Verified test description","priceUsd":9.99,"files":["buyer.zip"],"channels":["etsy"],"productTruthVerified":true,"tags":["digital planner","small business","operations","workflow","business tool","etsy template","printable pdf","spreadsheet","daily planner","shop workflow","owner toolkit","business system","instant download"],"etsy":{"taxonomyId":1234,"quantity":999,"whoMade":"i_did","whenMade":"2020_2026","release":{"productionBuildFrozen":true}}}'
+          PLAN=$(curl -fsS -X POST http://127.0.0.1:3000/api/publish -H 'content-type: application/json' --data "$VALID")
+          node -e 'const x=JSON.parse(process.argv[1]); if(x.status!=="READY"||!x.channels?.[0]?.candidateFingerprint||x.channels[0].draftWriteAllowed!==false||x.channels[0].liveWriteAllowed!==false||x.channels[0].releaseState!=="TESTER_PENDING") process.exit(1)' "$PLAN"
+
+          INVALID='{"productId":"TEST-002","title":"Digital Operations Template","description":"Verified test description","priceUsd":9.99,"files":["buyer.zip"],"channels":["etsy"],"productTruthVerified":true,"tags":["only one"],"etsy":{"taxonomyId":1234,"quantity":999,"whoMade":"i_did","whenMade":"2020_2026","release":{"productionBuildFrozen":true}}}'
+          CODE=$(curl -sS -o /tmp/invalid.json -w '%{http_code}' -X POST http://127.0.0.1:3000/api/publish -H 'content-type: application/json' --data "$INVALID")
+          test "$CODE" = "422"
+          node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync("/tmp/invalid.json","utf8")); if(!x.gate?.errors?.includes("ETSY_TAG_COUNT_MUST_BE_13")) process.exit(1)'
+
+          WRITE=$(node -e 'const x=JSON.parse(process.argv[1]); x.operation="CREATE_ETSY_DRAFT"; process.stdout.write(JSON.stringify(x))' "$VALID")
+          CODE=$(curl -sS -o /tmp/write.json -w '%{http_code}' -X POST http://127.0.0.1:3000/api/publish -H 'content-type: application/json' --data "$WRITE")
+          test "$CODE" = "403"
+          node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync("/tmp/write.json","utf8")); if(x.error!=="ETSY_DRAFT_WRITES_DISABLED") process.exit(1)'
