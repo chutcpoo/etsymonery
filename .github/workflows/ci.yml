@@ -23,7 +23,8 @@ jobs:
           set -euo pipefail
           npm start >/tmp/autodigitalpublisher.log 2>&1 &
           APP_PID=$!
-          trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
+          AUTH_PID=""
+          trap 'kill "$APP_PID" 2>/dev/null || true; if [ -n "$AUTH_PID" ]; then kill "$AUTH_PID" 2>/dev/null || true; fi' EXIT
           for i in {1..30}; do
             if curl -fsS http://127.0.0.1:3000/api/health >/dev/null; then break; fi
             sleep 1
@@ -47,3 +48,23 @@ jobs:
           CODE=$(curl -sS -o /tmp/write.json -w '%{http_code}' -X POST http://127.0.0.1:3000/api/publish -H 'content-type: application/json' --data "$WRITE")
           test "$CODE" = "403"
           node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync("/tmp/write.json","utf8")); if(x.error!=="ETSY_DRAFT_WRITES_DISABLED"||!x.candidateFingerprint||!x.listingFingerprint) process.exit(1)'
+
+          kill "$APP_PID" 2>/dev/null || true
+          wait "$APP_PID" 2>/dev/null || true
+          ETSY_DRAFT_WRITES_ENABLED=true ETSY_DRAFT_WRITE_TOKEN=ci-secret PORT=3001 npm start >/tmp/autodigitalpublisher-auth.log 2>&1 &
+          AUTH_PID=$!
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3001/api/health >/dev/null; then break; fi
+            sleep 1
+          done
+
+          CODE=$(curl -sS -o /tmp/noauth.json -w '%{http_code}' -X POST http://127.0.0.1:3001/api/publish -H 'content-type: application/json' --data "$WRITE")
+          test "$CODE" = "401"
+          node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync("/tmp/noauth.json","utf8")); if(x.error!=="ETSY_DRAFT_WRITE_UNAUTHORIZED") process.exit(1)'
+
+          CODE=$(curl -sS -o /tmp/badauth.json -w '%{http_code}' -X POST http://127.0.0.1:3001/api/publish -H 'content-type: application/json' -H 'x-autodigitalpublisher-write-token: wrong-secret' --data "$WRITE")
+          test "$CODE" = "401"
+
+          CODE=$(curl -sS -o /tmp/goodauth.json -w '%{http_code}' -X POST http://127.0.0.1:3001/api/publish -H 'content-type: application/json' -H 'x-autodigitalpublisher-write-token: ci-secret' --data "$WRITE")
+          test "$CODE" = "503"
+          node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync("/tmp/goodauth.json","utf8")); if(x.error!=="ETSY_SHOP_ID_NOT_CONFIGURED") process.exit(1)'
