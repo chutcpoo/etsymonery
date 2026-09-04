@@ -139,8 +139,7 @@ function etsyListingIdentity(pack: ProductPack) {
 function channelPlan(
   channel: Channel,
   pack: ProductPack,
-  etsyDraftWritesEnabled: boolean,
-  liveWritesEnabled: boolean
+  etsyDraftWritesEnabled: boolean
 ): ChannelPlan {
   const base = basePayload(pack);
 
@@ -162,7 +161,7 @@ function channelPlan(
       listingFingerprint: fingerprint(listingIdentity),
       releaseState,
       draftWriteAllowed: etsyDraftWritesEnabled,
-      liveWriteAllowed: liveWritesEnabled && releaseState === "PRODUCTION_AUTHORIZED",
+      liveWriteAllowed: false,
       assetPersistenceRequired: base.files.length > 0
     };
   }
@@ -208,9 +207,7 @@ export function buildPublishPlan(pack: ProductPack): PublishPlan {
     productId: cleanString(pack.productId),
     status: "READY",
     gate,
-    channels: pack.channels.map((channel) =>
-      channelPlan(channel, pack, etsyDraftWritesEnabled, writesEnabled)
-    ),
+    channels: pack.channels.map((channel) => channelPlan(channel, pack, etsyDraftWritesEnabled)),
     writesEnabled,
     etsyDraftWritesEnabled
   };
