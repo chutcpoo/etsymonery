@@ -1,6 +1,52 @@
-import type { Channel, ChannelPlan, GateResult, ProductPack, PublishPlan } from "./types";
+import { createHash } from "node:crypto";
+import type {
+  Channel,
+  ChannelPlan,
+  EtsyReleaseState,
+  GateResult,
+  ProductPack,
+  PublishPlan
+} from "./types";
 
 const SUPPORTED_CHANNELS: Channel[] = ["etsy", "gumroad", "payhip"];
+
+function normalizeTags(tags: string[] | undefined) {
+  return (tags ?? []).map((tag) => tag.trim()).filter(Boolean);
+}
+
+function validateEtsy(pack: ProductPack, errors: string[]) {
+  if (!pack.channels?.includes("etsy")) return;
+
+  const tags = normalizeTags(pack.tags);
+  const etsy = pack.etsy;
+
+  if (pack.title.trim().length > 140) errors.push("ETSY_TITLE_TOO_LONG");
+  if (tags.length !== 13) errors.push("ETSY_TAG_COUNT_MUST_BE_13");
+  if (new Set(tags.map((tag) => tag.toLowerCase())).size !== tags.length) {
+    errors.push("ETSY_TAGS_MUST_BE_UNIQUE");
+  }
+  if (tags.some((tag) => tag.length > 20)) errors.push("ETSY_TAG_TOO_LONG");
+
+  if (!etsy) {
+    errors.push("ETSY_DRAFT_INPUT_REQUIRED");
+    return;
+  }
+
+  if (!Number.isSafeInteger(etsy.taxonomyId) || Number(etsy.taxonomyId) <= 0) {
+    errors.push("ETSY_TAXONOMY_ID_REQUIRED");
+  }
+  if (!Number.isSafeInteger(etsy.quantity) || Number(etsy.quantity) <= 0) {
+    errors.push("ETSY_QUANTITY_REQUIRED");
+  }
+  if (!etsy.whoMade) errors.push("ETSY_WHO_MADE_REQUIRED");
+  if (!etsy.whenMade?.trim()) errors.push("ETSY_WHEN_MADE_REQUIRED");
+  if (!etsy.release?.productionBuildFrozen) errors.push("PRODUCTION_BUILD_NOT_FROZEN");
+
+  if (etsy.release?.productionAuthorized) {
+    if (!etsy.release.testerPass) errors.push("PRODUCTION_AUTH_REQUIRES_TESTER_PASS");
+    if (!etsy.release.finalQcPass) errors.push("PRODUCTION_AUTH_REQUIRES_FINAL_QC_PASS");
+  }
+}
 
 export function validateProductPack(input: ProductPack): GateResult {
   const errors: string[] = [];
@@ -17,6 +63,8 @@ export function validateProductPack(input: ProductPack): GateResult {
     if (!SUPPORTED_CHANNELS.includes(channel)) errors.push(`UNSUPPORTED_CHANNEL:${channel}`);
   }
 
+  validateEtsy(input, errors);
+
   return { pass: errors.length === 0, errors };
 }
 
@@ -27,23 +75,52 @@ function basePayload(pack: ProductPack) {
     description: pack.description.trim(),
     priceUsd: Number(pack.priceUsd.toFixed(2)),
     files: pack.files,
-    tags: pack.tags ?? []
+    tags: normalizeTags(pack.tags)
   };
 }
 
-function channelPlan(channel: Channel, pack: ProductPack): ChannelPlan {
+function fingerprint(payload: Record<string, unknown>) {
+  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+}
+
+function etsyReleaseState(pack: ProductPack): EtsyReleaseState {
+  const release = pack.etsy?.release;
+  if (!release?.productionBuildFrozen) return "BLOCKED";
+  if (!release.testerPass) return "TESTER_PENDING";
+  if (!release.finalQcPass) return "QC_PENDING";
+  if (!release.productionAuthorized) return "PRODUCTION_AUTHORIZATION_PENDING";
+  return "PRODUCTION_AUTHORIZED";
+}
+
+function channelPlan(
+  channel: Channel,
+  pack: ProductPack,
+  etsyDraftWritesEnabled: boolean,
+  liveWritesEnabled: boolean
+): ChannelPlan {
   const base = basePayload(pack);
 
   if (channel === "etsy") {
+    const releaseState = etsyReleaseState(pack);
+    const payload = {
+      ...base,
+      quantity: pack.etsy?.quantity,
+      who_made: pack.etsy?.whoMade,
+      when_made: pack.etsy?.whenMade?.trim(),
+      taxonomy_id: pack.etsy?.taxonomyId,
+      type: "download",
+      listingState: "draft",
+      digital: true
+    };
+
     return {
       channel,
       action: "CREATE_DRAFT",
-      payload: {
-        ...base,
-        listingState: "draft",
-        digital: true,
-        taxonomyStatus: "NEEDS_CATEGORY_MAPPING"
-      }
+      payload,
+      candidateFingerprint: fingerprint(payload),
+      releaseState,
+      draftWriteAllowed: etsyDraftWritesEnabled,
+      liveWriteAllowed: liveWritesEnabled && releaseState === "PRODUCTION_AUTHORIZED"
     };
   }
 
@@ -71,6 +148,7 @@ function channelPlan(channel: Channel, pack: ProductPack): ChannelPlan {
 export function buildPublishPlan(pack: ProductPack): PublishPlan {
   const gate = validateProductPack(pack);
   const writesEnabled = process.env.PUBLISH_WRITES_ENABLED === "true";
+  const etsyDraftWritesEnabled = process.env.ETSY_DRAFT_WRITES_ENABLED === "true";
 
   if (!gate.pass) {
     return {
@@ -78,7 +156,8 @@ export function buildPublishPlan(pack: ProductPack): PublishPlan {
       status: "BLOCKED",
       gate,
       channels: [],
-      writesEnabled
+      writesEnabled,
+      etsyDraftWritesEnabled
     };
   }
 
@@ -86,7 +165,10 @@ export function buildPublishPlan(pack: ProductPack): PublishPlan {
     productId: pack.productId,
     status: "READY",
     gate,
-    channels: pack.channels.map((channel) => channelPlan(channel, pack)),
-    writesEnabled
+    channels: pack.channels.map((channel) =>
+      channelPlan(channel, pack, etsyDraftWritesEnabled, writesEnabled)
+    ),
+    writesEnabled,
+    etsyDraftWritesEnabled
   };
 }
