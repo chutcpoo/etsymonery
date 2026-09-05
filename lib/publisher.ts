@@ -1,4 +1,7 @@
-import { createHash } from "node:crypto";
+import {
+  createCandidateFingerprint,
+  createListingFingerprint
+} from "./candidate-fingerprint";
 import type {
   Channel,
   ChannelPlan,
@@ -108,10 +111,6 @@ function basePayload(pack: ProductPack) {
   };
 }
 
-function fingerprint(payload: Record<string, unknown>) {
-  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
-}
-
 function etsyReleaseState(pack: ProductPack): EtsyReleaseState {
   const release = pack.etsy?.release;
   if (release?.productionBuildFrozen !== true) return "BLOCKED";
@@ -157,8 +156,8 @@ function channelPlan(
       channel,
       action: "CREATE_DRAFT",
       payload,
-      candidateFingerprint: fingerprint(payload),
-      listingFingerprint: fingerprint(listingIdentity),
+      candidateFingerprint: createCandidateFingerprint(payload),
+      listingFingerprint: createListingFingerprint(listingIdentity),
       releaseState,
       draftWriteAllowed: etsyDraftWritesEnabled,
       liveWriteAllowed: false,
