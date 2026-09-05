@@ -1,0 +1,18 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { buildOperatorDashboard } from "../lib/operator-dashboard";
+import { evaluateGateChain, type GateBindingRequirements } from "../lib/gate-invalidation-engine";
+import { FACTORY_DOMAIN_SCHEMA_VERSION, type GateRecord } from "../lib/factory-domain-schemas";
+import type { CanonicalProductRecord } from "../lib/product-registry";
+const FP="a".repeat(64); const NOW="2026-09-05T06:00:00.000Z";
+function product():CanonicalProductRecord{return{schemaVersion:"1.0.0",productId:"P1",productVersion:"1",registryRevision:1,importedSource:{driveFileId:"D",fileName:"catalog.xlsx",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",accessMode:"READ_ONLY"},currentState:{value:"PERSISTENCE_PASS",evidenceReference:"E-STATE"},references:{listings:[],candidateIds:["C1"],candidateFingerprints:[FP],passRecordIds:[],authorizationIds:[],evidenceIds:["E-2","E-1"]},migrationReview:{status:"CLEAR",reasons:[]}};}
+const req:GateBindingRequirements={PRODUCT_TEST:{candidateId:"C1",candidateFingerprint:FP},LISTING_TEST:{candidateId:"C1",candidateFingerprint:FP},PERSISTENCE_VERIFY:{candidateId:"C1",candidateFingerprint:FP},INDEPENDENT_FINAL_QC:{candidateId:"C1",candidateFingerprint:FP}};
+function gate(gateType:GateRecord["gateType"]):GateRecord{return{schemaVersion:FACTORY_DOMAIN_SCHEMA_VERSION,gateRecordId:`G-${gateType}`,gateType,result:"PASS",candidateId:"C1",candidateFingerprint:FP,executionId:"EX",actorId:"A",createdAt:NOW,evidenceIds:[`E-${gateType}`]};}
+test("dashboard shows required read-only operator fields",()=>{const d=buildOperatorDashboard({product:product()});assert.equal(d.readOnly,true);assert.equal(d.mutationMode,"SEPARATE_AUTHORIZED_ACTIONS");assert.equal(d.productId,"P1");assert.equal(d.currentState,"PERSISTENCE_PASS");assert.equal(d.fingerprint,FP);assert.equal(d.nextExecutableStage,"FINAL_QC_PASS");});
+test("unobserved gates are never guessed as PASS",()=>{const d=buildOperatorDashboard({product:product()});assert.deepEqual(d.gates.map(g=>g.status),["NOT_OBSERVED","NOT_OBSERVED","NOT_OBSERVED","NOT_OBSERVED"]);});
+test("exact IMP-301 gate chain is rendered without reinterpretation",()=>{const chain=evaluateGateChain(req,[gate("PRODUCT_TEST"),gate("LISTING_TEST"),gate("PERSISTENCE_VERIFY"),gate("INDEPENDENT_FINAL_QC")]);const d=buildOperatorDashboard({product:product(),gateChain:chain});assert.deepEqual(d.gates.map(g=>g.status),["PASS","PASS","PASS","PASS"]);assert.ok(d.evidenceIds.includes("E-INDEPENDENT_FINAL_QC"));});
+test("explicit blocker is preserved",()=>{const d=buildOperatorDashboard({product:product(),blocker:{code:"API_OFFLINE",recoveryAction:"RETRY"}});assert.deepEqual(d.blocker,{code:"API_OFFLINE",recoveryAction:"RETRY"});});
+test("migration ambiguity becomes blocker instead of guessed next stage",()=>{const p=product();p.migrationReview={status:"MIGRATION_REVIEW_REQUIRED",reasons:["LEGACY_UNKNOWN"]};const d=buildOperatorDashboard({product:p});assert.equal(d.blocker?.code,"LEGACY_UNKNOWN");assert.equal(d.nextExecutableStage,"MIGRATION_REVIEW_REQUIRED");});
+test("multiple historical fingerprints are not guessed as active",()=>{const p=product();p.references.candidateFingerprints=[FP,"b".repeat(64)];assert.equal(buildOperatorDashboard({product:p}).fingerprint,null);});
+test("explicit active fingerprint must be valid SHA-256",()=>{assert.throws(()=>buildOperatorDashboard({product:product(),activeCandidateFingerprint:"bad"}),/INVALID_DASHBOARD_FINGERPRINT/);});
+test("dashboard projection is read-only",()=>{const p=product();const before=structuredClone(p);buildOperatorDashboard({product:p});assert.deepEqual(p,before);});
