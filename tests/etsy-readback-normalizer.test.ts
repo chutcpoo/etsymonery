@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";import test from "node:test";import {createListingFingerprint} from "../lib/candidate-fingerprint";import {normalizeEtsyReadBack,verifyEtsyReadBackIdentity} from "../lib/etsy-readback-normalizer";
+function obs(overrides:Record<string,unknown>={}){return{title:" Planner ",description:" Desc ",price:{amount:1490,divisor:100,currency_code:"USD"},tags:["one","two"],quantity:999,who_made:"i_did",when_made:"2020_2025",taxonomy_id:123,type:"download",state:"draft",...overrides};}
+function expected(){return createListingFingerprint({title:"Planner",description:"Desc",priceUsd:14.9,tags:["one","two"],quantity:999,who_made:"i_did",when_made:"2020_2025",taxonomy_id:123,type:"download",state:"draft"});}
+test("normalizes Etsy read-back into listing fingerprint schema",()=>{assert.deepEqual(normalizeEtsyReadBack(obs()),{title:"Planner",description:"Desc",priceUsd:14.9,tags:["one","two"],quantity:999,who_made:"i_did",when_made:"2020_2025",taxonomy_id:123,type:"download",state:"draft"});});
+test("exact normalized read-back matches expected fingerprint",()=>{const x=verifyEtsyReadBackIdentity(expected(),obs());assert.equal(x.status,"MATCH");assert.equal(x.action,"CONTINUE");});
+test("true title drift stops",()=>{const x=verifyEtsyReadBackIdentity(expected(),obs({title:"Different"}));assert.equal(x.status,"IDENTITY_MISMATCH");assert.equal(x.action,"STOP");});
+test("true price drift stops",()=>{assert.equal(verifyEtsyReadBackIdentity(expected(),obs({price:"15.00"})).status,"IDENTITY_MISMATCH");});
+test("tag order remains identity-significant",()=>{assert.equal(verifyEtsyReadBackIdentity(expected(),obs({tags:["two","one"]})).status,"IDENTITY_MISMATCH");});
+test("money string and amount/divisor normalize equivalently",()=>{assert.equal(verifyEtsyReadBackIdentity(expected(),obs({price:"14.90"})).status,"MATCH");assert.equal(verifyEtsyReadBackIdentity(expected(),obs({price:14.9})).status,"MATCH");});
+test("camelCase aliases normalize to canonical Etsy keys",()=>{const o:any=obs();delete o.who_made;delete o.when_made;delete o.taxonomy_id;o.whoMade="i_did";o.whenMade="2020_2025";o.taxonomyId=123;assert.equal(verifyEtsyReadBackIdentity(expected(),o).status,"MATCH");});
+test("omitted Etsy type/state use canonical download/draft defaults",()=>{const o:any=obs();delete o.type;delete o.state;assert.equal(verifyEtsyReadBackIdentity(expected(),o).status,"MATCH");});
+test("invalid expected fingerprint fails closed",()=>{assert.throws(()=>verifyEtsyReadBackIdentity("bad",obs()),/INVALID_EXPECTED_LISTING_FINGERPRINT/);});
+test("invalid price fails closed",()=>{assert.throws(()=>normalizeEtsyReadBack(obs({price:{amount:1,divisor:0}}) as any),/INVALID_ETSY_READBACK_PRICE/);});
+test("invalid tags fail closed",()=>{assert.throws(()=>normalizeEtsyReadBack(obs({tags:"one"}) as any),/INVALID_ETSY_READBACK_TAGS/);});
+test("normalization is read-only",()=>{const o=obs();const before=structuredClone(o);normalizeEtsyReadBack(o as any);assert.deepEqual(o,before);});
