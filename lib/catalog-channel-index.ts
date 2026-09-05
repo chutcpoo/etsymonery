@@ -9,7 +9,7 @@
 export const CANONICAL_CATALOG_SOURCE = {
   driveId: "1XoIRHCVGGG81ddMhLfyP4TBE9mCgbOft",
   title: "DIGITAL_PRODUCT_CATALOG_MASTER.xlsx",
-  snapshotModifiedAt: "2026-09-03T04:38:31.308Z",
+  snapshotModifiedAt: "2026-09-05T14:17:18.431Z",
   authority: "IDENTIFIER_PROJECTION_ONLY"
 } as const;
 
@@ -19,5 +19,7 @@ export const ETSY_CHANNEL_INDEX = [
   { productId: "PD-REST-003", listingId: 4561819638 },
   { productId: "PD-COFFEE-002", listingId: 4561793463 },
   { productId: "PD-CLEAN-004", listingId: 4561795303 },
-  { productId: "PD-STOCK-005", listingId: 4561821192 }
+  { productId: "PD-STOCK-005", listingId: 4561821192 },
+  { productId: "PDT-PCSO-001", listingId: 4569445414 },
+  { productId: "PDT-POGO-001", listingId: 4568730165 }
 ] as const;
