@@ -1,3 +1,4 @@
+import { getControlCenterV2Snapshot } from "../../lib/control-center-v2";
 import { getSalesControlCenterSnapshot } from "../../lib/etsy-sales";
 
 export const runtime = "nodejs";
@@ -11,41 +12,51 @@ function signalClass(value: string) {
 
 export default async function SalesControlCenterPage() {
   try {
-    const snapshot = await getSalesControlCenterSnapshot();
+    const [snapshot, control] = await Promise.all([
+      getSalesControlCenterSnapshot(),
+      getControlCenterV2Snapshot()
+    ]);
 
     return (
       <main className="shell salesShell">
         <section className="hero">
           <div>
-            <p className="eyebrow">ETSY SALES CONTROL CENTER</p>
+            <p className="eyebrow">ETSY SALES CONTROL CENTER V2</p>
             <h1>Sell by evidence.</h1>
             <p className="lede">
-              Live Etsy evidence reconciled against the exact six Listing IDs from
-              the canonical Catalog identifier projection. No listing writes are
-              performed from this screen.
+              Live Etsy channel state is shown separately from the canonical
+              Catalog identifier projection. Deep diagnosis stays limited to
+              catalog-tracked listings; live-only listings are never promoted to
+              Product Truth by the UI.
             </p>
           </div>
-          <div className="badge">READ ONLY · 6 LISTINGS</div>
+          <div className="badge">
+            READ ONLY · {control.live.activeCount ?? "?"} LIVE
+          </div>
         </section>
 
         <section className="metrics">
           <article className="metricCard">
             <span>Shop ID</span>
-            <strong>{snapshot.shopId}</strong>
+            <strong>{control.live.shopId ?? snapshot.shopId}</strong>
           </article>
           <article className="metricCard">
-            <span>Exact Listings</span>
-            <strong>{snapshot.exactListingCount}</strong>
+            <span>Live active</span>
+            <strong>{control.live.activeCount ?? "UNKNOWN"}</strong>
           </article>
           <article className="metricCard">
-            <span>Sales Scope</span>
+            <span>Catalog tracked</span>
+            <strong>{control.live.catalogTrackedCount}</strong>
+          </article>
+          <article className="metricCard">
+            <span>Live-only gap</span>
+            <strong>{control.live.liveOnlyCount ?? "UNKNOWN"}</strong>
+          </article>
+          <article className="metricCard">
+            <span>Sales scope</span>
             <strong>
               {snapshot.transactionScopeGranted ? "CONNECTED" : "RE-AUTH REQUIRED"}
             </strong>
-          </article>
-          <article className="metricCard">
-            <span>Catalog</span>
-            <strong>CANONICAL ID LOCK</strong>
           </article>
         </section>
 
@@ -55,9 +66,8 @@ export default async function SalesControlCenterPage() {
               <p className="eyebrow">ONE-TIME ACTION</p>
               <h2>Re-authorize Etsy for sales evidence</h2>
               <p>
-                The Sales Control Center now requests transactions_r so it can
-                read sales transaction counts. It still performs no marketplace
-                writes.
+                The Sales Control Center requests transactions_r so it can read
+                sales transaction counts. It performs no marketplace writes.
               </p>
             </div>
             <a className="connectButton" href="/api/etsy/oauth/start">
@@ -65,6 +75,49 @@ export default async function SalesControlCenterPage() {
             </a>
           </section>
         ) : null}
+
+        <section className="notice">
+          <div>
+            <p className="eyebrow">LIVE CHANNEL RECONCILIATION</p>
+            <h2>
+              {control.live.activeCount ?? "Unknown"} active Etsy listings · {control.live.catalogTrackedCount} catalog tracked
+            </h2>
+            <p>
+              Listings outside the current canonical identifier projection remain
+              LIVE ONLY until the Catalog projection is explicitly refreshed from
+              Google Drive authority.
+            </p>
+          </div>
+          <div className="badge">NO UI WRITES</div>
+        </section>
+
+        <section className="listingStack">
+          {control.live.listings.map((listing) => (
+            <article className="listingCard" key={`live-${listing.listingId}`}>
+              <div className="listingTop">
+                <div>
+                  <p className="eyebrow">
+                    {listing.catalogTracked
+                      ? listing.productId
+                      : "LIVE ONLY · NOT IN CATALOG PROJECTION"}
+                  </p>
+                  <h2>{listing.title ?? `Listing ${listing.listingId}`}</h2>
+                  <p>
+                    Etsy #{listing.listingId} · {listing.state ?? "UNKNOWN"}
+                  </p>
+                </div>
+                <div className="badge">
+                  {listing.catalogTracked ? "CATALOG TRACKED" : "LIVE ONLY"}
+                </div>
+              </div>
+              {listing.url ? (
+                <a className="textLink" href={listing.url}>
+                  Open Etsy listing
+                </a>
+              ) : null}
+            </article>
+          ))}
+        </section>
 
         <section className="notice">
           <div>
@@ -79,6 +132,18 @@ export default async function SalesControlCenterPage() {
           <a className="connectButton" href="/stats-evidence">
             Capture Shop Stats
           </a>
+        </section>
+
+        <section className="notice">
+          <div>
+            <p className="eyebrow">CATALOG-TRACKED DIAGNOSIS</p>
+            <h2>{snapshot.exactListingCount} listings with canonical identifier projection</h2>
+            <p>
+              The detailed funnel diagnostics below remain bound to the exact
+              read-only Product_ID ↔ Etsy Listing_ID projection from the canonical
+              Catalog.
+            </p>
+          </div>
         </section>
 
         <section className="listingStack">
@@ -103,7 +168,13 @@ export default async function SalesControlCenterPage() {
                     </p>
                   </div>
                 </div>
-                <span className={`rootState ${listing.rootCauseState === "NOT_YET_CONFIRMED" ? "neutral" : "warn"}`}>
+                <span
+                  className={`rootState ${
+                    listing.rootCauseState === "NOT_YET_CONFIRMED"
+                      ? "neutral"
+                      : "warn"
+                  }`}
+                >
                   {listing.rootCauseState}
                 </span>
               </div>
@@ -204,7 +275,7 @@ export default async function SalesControlCenterPage() {
       <main className="shell">
         <section className="hero">
           <div>
-            <p className="eyebrow">ETSY SALES CONTROL CENTER</p>
+            <p className="eyebrow">ETSY SALES CONTROL CENTER V2</p>
             <h1>Runtime prerequisite blocked.</h1>
             <p className="lede">
               {error instanceof Error ? error.message : "UNKNOWN"}
@@ -214,8 +285,8 @@ export default async function SalesControlCenterPage() {
         </section>
         <section className="notice">
           <p>
-            Finish encrypted Etsy token persistence and Shop Identity Test,
-            then reload this page. Production listing writes remain disabled.
+            Restore the read-only Etsy/Neon prerequisites and reload this page.
+            Marketplace writes are never performed from the Sales dashboard.
           </p>
         </section>
       </main>
