@@ -98,6 +98,7 @@ async function createVerifiedEtsyDraft(pack: ProductPack, plan: ChannelPlan, req
     who_made: String(pack.etsy?.whoMade),
     when_made: String(pack.etsy?.whenMade?.trim()),
     taxonomy_id: String(pack.etsy?.taxonomyId),
+    type: "download",
     tags: tags.join(",")
   });
 
