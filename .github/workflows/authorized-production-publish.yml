@@ -1,0 +1,102 @@
+name: Authorized Production Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type the exact authorized operationId to allow one production POST
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: authorized-production-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PUBLISH_URL: https://autodigitalpublisher.vercel.app/api/publish
+      WRITE_TOKEN: ${{ secrets.ETSY_DRAFT_WRITE_TOKEN }}
+      REQUEST_JSON: ${{ secrets.AUTHORIZED_PUBLISH_REQUEST_JSON }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+    steps:
+      - name: Preflight exact authorized candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$WRITE_TOKEN" || { echo "Missing GitHub secret ETSY_DRAFT_WRITE_TOKEN"; exit 1; }
+          test -n "$REQUEST_JSON" || { echo "Missing GitHub secret AUTHORIZED_PUBLISH_REQUEST_JSON"; exit 1; }
+          node <<'NODE'
+          const body = JSON.parse(process.env.REQUEST_JSON);
+          const expected = {
+            operation: "AUTHORIZED_PUBLISH",
+            operationId: "PCSO-4569445414-72b49cda9330-STAGE13R-PUBLISH-C",
+            candidateId: "ETSY-CANDIDATE-PDT-PCSO-001-V1-EXCEL-FIX-FILENAME-2026-09-05-B",
+            candidateFingerprint: "72b49cda93304ee4efe7e63f9f4b4832f1d954c745e12817eb53bdb84d80153c",
+            expectedListingFingerprint: "fe36c4ebd78d93a0ec233d27822848d8c2e4753d1229f775bd02dac3a8b460cc",
+            draftListingId: "4569445414",
+            channel: "etsy"
+          };
+
+          if (process.env.CONFIRMATION !== expected.operationId) {
+            throw new Error("CONFIRMATION_OPERATION_ID_MISMATCH");
+          }
+
+          for (const [key, value] of Object.entries(expected)) {
+            if (body[key] !== value) {
+              throw new Error(`REQUEST_${key.toUpperCase()}_MISMATCH`);
+            }
+          }
+
+          if (!body.authorization || typeof body.authorization !== "object") {
+            throw new Error("REQUEST_AUTHORIZATION_MISSING");
+          }
+          if (!body.authorization.authorization || typeof body.authorization.authorization !== "object") {
+            throw new Error("REQUEST_AUTHORIZATION_PAYLOAD_MISSING");
+          }
+          if (body.authorization.authorization.state !== "ACTIVE") {
+            throw new Error("REQUEST_AUTHORIZATION_NOT_ACTIVE");
+          }
+
+          console.log("Preflight PASS: exact Stage 13R candidate and ACTIVE authorization payload present.");
+          NODE
+
+      - name: Execute exactly one production POST
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.PUBLISH_URL, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-autodigitalpublisher-write-token": process.env.WRITE_TOKEN
+            },
+            body: process.env.REQUEST_JSON
+          });
+
+          const text = await response.text();
+          let payload;
+          try {
+            payload = text ? JSON.parse(text) : {};
+          } catch {
+            payload = { raw: text };
+          }
+
+          console.log(`HTTP ${response.status}`);
+          console.log(JSON.stringify(payload, null, 2));
+
+          if (!response.ok) {
+            throw new Error(`AUTHORIZED_PUBLISH_HTTP_${response.status}`);
+          }
+
+          const acceptable = new Set(["PUBLISHED", "REPLAY", "RECONCILED"]);
+          if (!acceptable.has(payload.status)) {
+            throw new Error(`AUTHORIZED_PUBLISH_NONTERMINAL_${payload.status ?? "UNKNOWN"}`);
+          }
+          NODE
