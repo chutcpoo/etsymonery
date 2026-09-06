@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { handleAuthorizedActiveListingUpdate } from "../lib/authorized-active-listing-update";
 import { createListingFingerprint } from "../lib/candidate-fingerprint";
+import { hashOperationRequest, MemoryOperationLedgerRepository } from "../lib/operation-ledger";
 
 const SHOP_ID = "23582741";
 const LISTING_ID = "4560696421";
@@ -78,11 +79,13 @@ function request(token?: string) {
   return new Request("https://example.test/api/publish", { method: "POST", headers });
 }
 
-async function withEnv<T>(values: { writes?: string; token?: string; shop?: string }, fn: () => Promise<T>) {
-  const prior = { writes: process.env.PUBLISH_WRITES_ENABLED, token: process.env.ETSY_DRAFT_WRITE_TOKEN, shop: process.env.ETSY_SHOP_ID };
+async function withEnv<T>(values: { writes?: string; token?: string; shop?: string; authorizationHash?: string }, fn: () => Promise<T>) {
+  const prior = { writes: process.env.PUBLISH_WRITES_ENABLED, token: process.env.ETSY_DRAFT_WRITE_TOKEN, shop: process.env.ETSY_SHOP_ID, apiKey: process.env.ETSY_API_KEY, sharedSecret: process.env.ETSY_SHARED_SECRET, authorizationHash: process.env.ETSY_ACTIVE_UPDATE_B01_REQUEST_SHA256 };
   const set = (key: string, value: string | undefined) => value === undefined ? delete process.env[key] : process.env[key] = value;
   set("PUBLISH_WRITES_ENABLED", values.writes); set("ETSY_DRAFT_WRITE_TOKEN", values.token); set("ETSY_SHOP_ID", values.shop);
-  try { return await fn(); } finally { set("PUBLISH_WRITES_ENABLED", prior.writes); set("ETSY_DRAFT_WRITE_TOKEN", prior.token); set("ETSY_SHOP_ID", prior.shop); }
+  set("ETSY_API_KEY", "test-api-key"); set("ETSY_SHARED_SECRET", "test-shared-secret");
+  set("ETSY_ACTIVE_UPDATE_B01_REQUEST_SHA256", values.authorizationHash ?? hashOperationRequest(body()));
+  try { return await fn(); } finally { set("PUBLISH_WRITES_ENABLED", prior.writes); set("ETSY_DRAFT_WRITE_TOKEN", prior.token); set("ETSY_SHOP_ID", prior.shop); set("ETSY_API_KEY", prior.apiKey); set("ETSY_SHARED_SECRET", prior.sharedSecret); set("ETSY_ACTIVE_UPDATE_B01_REQUEST_SHA256", prior.authorizationHash); }
 }
 
 function response(value: unknown, status = 200) {
@@ -105,7 +108,9 @@ test("fails closed on invalid token and performs no fetch", async () => {
 
 test("pre-identity mismatch stops before PATCH", async () => {
   const methods: string[] = [];
-  const result = await withEnv({ writes: "true", token: "secret", shop: SHOP_ID }, () => handleAuthorizedActiveListingUpdate(body({ expectedBeforeListingFingerprint: "f".repeat(64) }), request("secret"), {
+  const mismatchedBody = body({ expectedBeforeListingFingerprint: "f".repeat(64) });
+  const result = await withEnv({ writes: "true", token: "secret", shop: SHOP_ID, authorizationHash: hashOperationRequest(mismatchedBody) }, () => handleAuthorizedActiveListingUpdate(mismatchedBody, request("secret"), {
+    repository: new MemoryOperationLedgerRepository(),
     getAccessToken: async () => "token",
     fetchImpl: async (_url, init) => { methods.push(String(init?.method)); return response(BEFORE); }
   }));
@@ -116,7 +121,9 @@ test("pre-identity mismatch stops before PATCH", async () => {
 test("exact active listing identity updates once and verifies exact after identity", async () => {
   const methods: string[] = [];
   let reads = 0;
+  const repository = new MemoryOperationLedgerRepository();
   const result = await withEnv({ writes: "true", token: "secret", shop: SHOP_ID }, () => handleAuthorizedActiveListingUpdate(body(), request("secret"), {
+    repository,
     getAccessToken: async () => "token",
     fetchImpl: async (_url, init) => {
       const method = String(init?.method);
@@ -129,6 +136,93 @@ test("exact active listing identity updates once and verifies exact after identi
   const json = await result.json() as Record<string, unknown>;
   assert.equal(result.status, 200);
   assert.equal(json.status, "UPDATED_AND_VERIFIED");
-  assert.equal(json.buildId, "ETSY-RESET-V1-PDT-BOBA-001-BUILD-20260906-B01");
+  assert.equal(json.ledgerStatus, "SUCCEEDED");
+  assert.match(String(json.requestHash), /^[a-f0-9]{64}$/);
+  assert.equal((json.receipt as Record<string, unknown>).buildId, "ETSY-RESET-V1-PDT-BOBA-001-BUILD-20260906-B01");
+  assert.equal((json.receipt as Record<string, unknown>).candidateFingerprint, "e".repeat(64));
+  assert.equal((json.receipt as Record<string, unknown>).listingId, LISTING_ID);
   assert.deepEqual(methods, ["GET", "PATCH", "GET"]);
+});
+
+test("successful replay returns the same correlation and receipt without another Etsy call", async () => {
+  const repository = new MemoryOperationLedgerRepository();
+  const methods: string[] = [];
+  let reads = 0;
+  const runtime = {
+    repository,
+    getAccessToken: async () => "token",
+    fetchImpl: async (_url: URL | RequestInfo, init?: RequestInit) => {
+      const method = String(init?.method);
+      methods.push(method);
+      if (method === "PATCH") return response({ listing_id: Number(LISTING_ID), state: "active" });
+      reads += 1;
+      return response(reads === 1 ? BEFORE : AFTER);
+    }
+  };
+
+  const first = await withEnv({ writes: "true", token: "secret", shop: SHOP_ID }, () =>
+    handleAuthorizedActiveListingUpdate(body(), request("secret"), runtime)
+  );
+  const firstJson = await first.json() as Record<string, unknown>;
+  const replay = await withEnv({ writes: "true", token: "secret", shop: SHOP_ID }, () =>
+    handleAuthorizedActiveListingUpdate(body(), request("secret"), runtime)
+  );
+  const replayJson = await replay.json() as Record<string, unknown>;
+
+  assert.equal(replay.status, 200);
+  assert.equal(replayJson.status, "REPLAY");
+  assert.equal(replayJson.requestHash, firstJson.requestHash);
+  assert.deepEqual(replayJson.receipt, firstJson.receipt);
+  assert.deepEqual(methods, ["GET", "PATCH", "GET"]);
+});
+
+test("B01 rejects any other listing or build before ledger or Etsy access", async () => {
+  let calls = 0;
+  const result = await withEnv({ writes: "true", token: "secret", shop: SHOP_ID }, () =>
+    handleAuthorizedActiveListingUpdate(body({ listingId: "4568730165" }), request("secret"), {
+      repository: new MemoryOperationLedgerRepository(),
+      getAccessToken: async () => { calls += 1; return "token"; },
+      fetchImpl: async () => { calls += 1; return response({}); }
+    })
+  );
+  assert.equal(result.status, 409);
+  assert.equal(calls, 0);
+});
+
+test("same B01 operation with changed identity is rejected without a second PATCH", async () => {
+  const repository = new MemoryOperationLedgerRepository();
+  let patches = 0;
+  let reads = 0;
+  const runtime = {
+    repository,
+    getAccessToken: async () => "token",
+    fetchImpl: async (_url: URL | RequestInfo, init?: RequestInit) => {
+      if (init?.method === "PATCH") { patches += 1; return response({ state: "active" }); }
+      reads += 1;
+      return response(reads === 1 ? BEFORE : AFTER);
+    }
+  };
+  await withEnv({ writes: "true", token: "secret", shop: SHOP_ID }, () =>
+    handleAuthorizedActiveListingUpdate(body(), request("secret"), runtime)
+  );
+  const changed = await withEnv({ writes: "true", token: "secret", shop: SHOP_ID }, () =>
+    handleAuthorizedActiveListingUpdate(body({ candidateFingerprint: "a".repeat(64) }), request("secret"), runtime)
+  );
+  assert.equal(changed.status, 409);
+  assert.equal(patches, 1);
+});
+
+test("server-side B01 request hash rejects a changed patch before ledger or Etsy access", async () => {
+  let calls = 0;
+  const changed = body({ patch: { ...body().patch as Record<string, unknown>, title: "Unauthorized title" } });
+  const result = await withEnv({ writes: "true", token: "secret", shop: SHOP_ID }, () =>
+    handleAuthorizedActiveListingUpdate(changed, request("secret"), {
+      repository: new MemoryOperationLedgerRepository(),
+      getAccessToken: async () => { calls += 1; return "token"; },
+      fetchImpl: async () => { calls += 1; return response({}); }
+    })
+  );
+  assert.equal(result.status, 409);
+  assert.deepEqual(await result.json(), { error: "B01_ACTIVE_UPDATE_REQUEST_HASH_MISMATCH" });
+  assert.equal(calls, 0);
 });

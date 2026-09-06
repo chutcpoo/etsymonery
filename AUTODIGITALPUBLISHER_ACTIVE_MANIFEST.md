@@ -41,7 +41,8 @@ INPUT
 - Etsy non-production Draft writes require all of: valid Etsy OAuth, `ETSY_DRAFT_WRITES_ENABLED=true`, configured `ETSY_DRAFT_WRITE_TOKEN`, and the matching `x-autodigitalpublisher-write-token` request header.
 - `ETSY_DRAFT_WRITES_ENABLED` defaults to false.
 - `PUBLISH_WRITES_ENABLED` defaults to false and does not by itself create a live-state operation.
-- No Etsy active-state publish/update operation is implemented in V1.4.
+- The only implemented active-listing update is the exact B01 operation for Etsy Listing `4560696421`; it requires the write token, write flag, canonical request-hash allowlist, active-state fingerprint checks, and an atomic operation-ledger claim.
+- `UPDATE_ACTIVE_LISTING` is available only from its dedicated endpoint and must not be dispatched through Draft-create or Publish routes.
 - Metadata read-back must never be reported as full candidate persistence while buyer files/images are not uploaded and verified.
 - The Etsy Sales Control Center and Shop Stats capture are read-only and must not perform listing writes.
 - Shop Stats values that are not available from the Etsy Open API must remain UNKNOWN and must not be inferred.
@@ -61,6 +62,7 @@ ACTIVE:
 - Etsy Draft-first validation, release-state gating, candidate fingerprint and listing fingerprint
 - Authenticated non-production Etsy Draft metadata adapter implemented behind default-OFF feature gate
 - Fresh Etsy Draft metadata read-back with listing-only persistence semantics
+- Dedicated, default-off B01 active-listing update endpoint with exact request binding, at-most-once execution, read-back reconciliation, correlation hash, and receipt
 - CI typecheck/build plus gate-safe API smoke tests, including malformed-input and write-authorization coverage
 - Health endpoint
 
@@ -69,13 +71,13 @@ PENDING / NOT AUTHORIZED:
 - Etsy listing image upload automation
 - Etsy buyer-file upload automation from the authorized Google Drive source
 - Full candidate persistence verification including buyer assets
-- Live Etsy create/update/activate adapter
+- General-purpose live Etsy create/update/activate adapters
 - Auto-Tune live PATCH operations
 - Persistent audit-log storage
 - Persistent Etsy Shop Stats evidence ingestion/storage
 - Exact search-impression/click evidence for CTR when available
 - Gumroad/Payhip live authentication
-- Listing update/reconciliation
+- General-purpose listing update/reconciliation outside the exact B01 operation
 - Scheduled publishing queue
 
 ## Release rule
