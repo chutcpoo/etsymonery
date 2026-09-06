@@ -4,6 +4,7 @@ import {
 } from "./catalog-channel-index";
 import { etsyApiHeaders } from "./etsy";
 import { getValidEtsyAccessToken } from "./etsy-auth";
+import { fetchExactListingSales } from "./etsy-listing-sales";
 import { getStoredEtsyShopId, loadEtsyTokens } from "./token-store";
 
 type EtsyMoney = {
@@ -39,12 +40,6 @@ type EtsyListingsResponse = {
   error?: string;
 };
 
-type EtsyTransactions = {
-  count?: number;
-  results?: unknown[];
-  error?: string;
-};
-
 export type FunnelSignal =
   | "UNKNOWN_SHOP_STATS_REQUIRED"
   | "NO_SALES_SIGNAL"
@@ -70,6 +65,7 @@ export type ListingDiagnosis = {
   tags: string[];
   favoriteCount: number | null;
   transactionCount: number | null;
+  unitsSold: number | null;
   transactionEvidence: "VERIFIED" | "AUTH_SCOPE_REQUIRED" | "API_ERROR";
   seoChecks: {
     usesAll13Tags: boolean;
@@ -166,35 +162,13 @@ async function fetchShopListings(
   return { listings };
 }
 
-async function fetchTransactionCount(
-  accessToken: string,
-  shopId: number,
-  listingId: number
-): Promise<{ count: number | null; state: "VERIFIED" | "API_ERROR" }> {
-  const response = await fetch(
-    `https://api.etsy.com/v3/application/shops/${shopId}/listings/${listingId}/transactions?limit=1`,
-    {
-      method: "GET",
-      headers: etsyApiHeaders(accessToken),
-      cache: "no-store"
-    }
-  );
-
-  const payload = (await response.json()) as EtsyTransactions;
-
-  if (!response.ok || typeof payload.count !== "number") {
-    return { count: null, state: "API_ERROR" };
-  }
-
-  return { count: payload.count, state: "VERIFIED" };
-}
-
 function diagnose(
   productId: string,
   listingId: number,
   listing: EtsyListing | null,
   listingError: string | undefined,
   transactionCount: number | null,
+  unitsSold: number | null,
   transactionEvidence: "VERIFIED" | "AUTH_SCOPE_REQUIRED" | "API_ERROR"
 ): ListingDiagnosis {
   if (!listing) {
@@ -212,6 +186,7 @@ function diagnose(
       tags: [],
       favoriteCount: null,
       transactionCount,
+      unitsSold,
       transactionEvidence,
       seoChecks: {
         usesAll13Tags: false,
@@ -307,6 +282,7 @@ function diagnose(
     tags,
     favoriteCount: favorites,
     transactionCount,
+    unitsSold,
     transactionEvidence,
     seoChecks: {
       usesAll13Tags: tags.length === 13,
@@ -347,19 +323,25 @@ export async function getSalesControlCenterSnapshot() {
       (listing ? undefined : "LISTING_NOT_RETURNED_BY_GET_LISTINGS_BY_SHOP");
 
     let transactionCount: number | null = null;
+    let unitsSold: number | null = null;
     let transactionEvidence:
       | "VERIFIED"
       | "AUTH_SCOPE_REQUIRED"
       | "API_ERROR" = "AUTH_SCOPE_REQUIRED";
 
     if (transactionScopeGranted && listing) {
-      const transactionResult = await fetchTransactionCount(
-        accessToken,
-        shopId,
-        entry.listingId
-      );
-      transactionCount = transactionResult.count;
-      transactionEvidence = transactionResult.state;
+      try {
+        const transactionResult = await fetchExactListingSales({
+          accessToken,
+          shopId,
+          listingId: entry.listingId
+        });
+        transactionCount = transactionResult.transactionCount;
+        unitsSold = transactionResult.unitsSold;
+        transactionEvidence = "VERIFIED";
+      } catch {
+        transactionEvidence = "API_ERROR";
+      }
       await sleep(230);
     }
 
@@ -370,6 +352,7 @@ export async function getSalesControlCenterSnapshot() {
         listing,
         listingError,
         transactionCount,
+        unitsSold,
         transactionEvidence
       )
     );

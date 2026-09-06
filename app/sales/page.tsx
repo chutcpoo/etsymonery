@@ -193,6 +193,14 @@ export default async function SalesControlCenterPage() {
                   </strong>
                 </div>
                 <div>
+                  <span>Units sold</span>
+                  <strong>
+                    {listing.transactionEvidence === "VERIFIED"
+                      ? listing.unitsSold
+                      : listing.transactionEvidence}
+                  </strong>
+                </div>
+                <div>
                   <span>Tags</span>
                   <strong>{listing.tagCount}/13</strong>
                 </div>
