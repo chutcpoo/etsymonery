@@ -2,7 +2,10 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "../../../../lib/etsy";
 import { getValidEtsyAccessToken } from "../../../../lib/etsy-auth";
-import { verifyEtsyReadBackIdentity } from "../../../../lib/etsy-readback-normalizer";
+import {
+  verifyEtsyReadBackIdentity,
+  type EtsyReadBackObservation
+} from "../../../../lib/etsy-readback-normalizer";
 import {
   beginOperation,
   NeonOperationLedgerRepository,
@@ -43,11 +46,11 @@ async function parseJson(response: Response) {
   try { return JSON.parse(text) as unknown; } catch { return {}; }
 }
 
-function toObservation(value: Record<string, unknown>) {
+function toObservation(value: Record<string, unknown>): EtsyReadBackObservation {
   return {
     title: value.title,
     description: value.description,
-    price: value.price as { amount?: number; divisor?: number; currency_code?: string },
+    price: value.price as EtsyReadBackObservation["price"],
     tags: value.tags,
     quantity: value.quantity,
     who_made: value.who_made,
