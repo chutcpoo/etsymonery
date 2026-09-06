@@ -4,6 +4,7 @@ import { getValidEtsyAccessToken } from "../../../lib/etsy-auth";
 import { etsyApiHeaders } from "../../../lib/etsy";
 import { buildPublishPlan } from "../../../lib/publisher";
 import { handleAuthorizedPublishOperation } from "../../../lib/authorized-publish-api";
+import { handleAuthorizedActiveListingUpdate } from "../../../lib/authorized-active-listing-update";
 import type { ChannelPlan, ProductPack } from "../../../lib/types";
 
 const DRAFT_WRITE_HEADER = "x-autodigitalpublisher-write-token";
@@ -249,6 +250,9 @@ export async function POST(request: Request) {
 
   if (operation === "AUTHORIZED_PUBLISH") {
     return handleAuthorizedPublishOperation(body, request);
+  }
+  if (operation === "UPDATE_ACTIVE_LISTING") {
+    return handleAuthorizedActiveListingUpdate(body, request);
   }
 
   const packSource = isRecord(body.product) ? body.product : body;
