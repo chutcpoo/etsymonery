@@ -114,7 +114,7 @@ test("CREATE_ETSY_DRAFT sends type=download in the initial Etsy POST body", asyn
         quantity: 999,
         whoMade: "i_did",
         whenMade: "2020_2026",
-        release: { productionBuildFrozen: true }
+        release: { productionBuildFrozen: true, testerPass: true, finalQcPass: true }
       }
     })
   });
