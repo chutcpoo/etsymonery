@@ -8,6 +8,13 @@ import { getStoredEtsyShopId } from "./token-store";
 
 type JsonRecord = Record<string, unknown>;
 
+const PROVIDER_UNAVAILABLE_STRINGS = new Set([
+  "NOT_AVAILABLE",
+  "BYTE_HASH_NOT_AVAILABLE_FROM_PROVIDER",
+  "SHA256_NOT_AVAILABLE_FROM_PROVIDER",
+  "NOT_AVAILABLE_FROM_CURRENT_ETSY_API_PATH"
+]);
+
 export type PublicCatalogItem = {
   productId: string;
   listingId: number;
@@ -40,8 +47,11 @@ function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function asString(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
+export function normalizeProviderText(value: unknown) {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  if (!normalized || PROVIDER_UNAVAILABLE_STRINGS.has(normalized)) return null;
+  return normalized;
 }
 
 function asNumber(value: unknown) {
@@ -51,7 +61,9 @@ function asNumber(value: unknown) {
 
 function asStringArray(value: unknown) {
   return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    ? value
+        .map(normalizeProviderText)
+        .filter((item): item is string => item !== null)
     : [];
 }
 
@@ -60,10 +72,10 @@ function trackedIdentity(listingId: number) {
 }
 
 export function formatEtsyMoney(value: unknown) {
-  if (!isRecord(value)) return asString(value);
+  if (!isRecord(value)) return normalizeProviderText(value);
   const amount = asNumber(value.amount);
   const divisor = asNumber(value.divisor);
-  const currency = asString(value.currency_code);
+  const currency = normalizeProviderText(value.currency_code);
   if (amount == null || divisor == null || divisor <= 0 || !currency) return null;
 
   try {
@@ -83,15 +95,15 @@ function galleryFromEvidence(value: unknown, fallbackAlt: string) {
     if (!isRecord(rawImage)) return [];
     const urls = isRecord(rawImage.urls) ? rawImage.urls : {};
     const url =
-      asString(urls.url_fullxfull) ??
-      asString(urls.url_570xN) ??
-      asString(urls.url_170x135);
+      normalizeProviderText(urls.url_fullxfull) ??
+      normalizeProviderText(urls.url_570xN) ??
+      normalizeProviderText(urls.url_170x135);
     if (!url) return [];
 
     return [
       {
         url,
-        altText: asString(rawImage.alt_text) ?? fallbackAlt,
+        altText: normalizeProviderText(rawImage.alt_text) ?? fallbackAlt,
         width: asNumber(rawImage.full_width),
         height: asNumber(rawImage.full_height)
       }
@@ -162,8 +174,8 @@ export const getPublicProduct = cache(async (listingId: number): Promise<PublicP
       return { status: "NOT_FOUND", reason: "ETSY_LISTING_NOT_ACTIVE" };
     }
 
-    const title = asString(listing.title) ?? `Etsy listing ${listingId}`;
-    const description = asString(listing.description) ?? "";
+    const title = normalizeProviderText(listing.title) ?? `Etsy listing ${listingId}`;
+    const description = normalizeProviderText(listing.description) ?? "";
     const gallery = galleryFromEvidence(rawEvidence.gallery, title);
 
     return {
@@ -181,7 +193,7 @@ export const getPublicProduct = cache(async (listingId: number): Promise<PublicP
           typeof listing.is_digital === "boolean" ? listing.is_digital : null,
         gallery,
         etsyUrl: `https://www.etsy.com/listing/${listingId}`,
-        providerGeneratedAt: asString(rawEvidence.generatedAt)
+        providerGeneratedAt: normalizeProviderText(rawEvidence.generatedAt)
       }
     };
   } catch (error) {
