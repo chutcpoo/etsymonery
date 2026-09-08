@@ -14,8 +14,8 @@ const WRITE_HEADER = "x-autodigitalpublisher-write-token";
 
 export const PD_STOCK_005_B01 = Object.freeze({
   operation: "UPDATE_ACTIVE_LISTING_TITLE_TAGS_ONLY",
-  operationId: "PD-STOCK-005-B01-TITLE-TAGS-002",
-  authorizationId: "PTQC-PD-STOCK-005-AUTH-20260908-B01-02",
+  operationId: "PD-STOCK-005-B01-TITLE-TAGS-003",
+  authorizationId: "PTQC-PD-STOCK-005-AUTH-20260908-B01-03",
   productId: "PD-STOCK-005",
   productVersion: "V1",
   shopId: "23582741",
