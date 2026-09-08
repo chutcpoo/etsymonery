@@ -1,4 +1,3 @@
-import { createPublicKey, verify as verifySignature } from "node:crypto";
 import { NextResponse } from "next/server";
 import {
   handlePdStock005B01TitleTags,
@@ -68,12 +67,17 @@ async function verifyGithubOidcToken(token: string) {
   const key = jwks.keys?.find((candidate) => candidate.kid === header.kid && candidate.kty === "RSA");
   if (!key) throw new Error("AUTHORIZED_ETSY_OIDC_KEY_NOT_FOUND");
 
-  const publicKey = createPublicKey({ key: key as JsonWebKey, format: "jwk" });
-  const signed = Buffer.from(`${encodedHeader}.${encodedClaims}`, "utf8");
+  const publicKey = await crypto.subtle.importKey(
+    "jwk",
+    key,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["verify"]
+  );
+  const signed = new TextEncoder().encode(`${encodedHeader}.${encodedClaims}`);
   const signature = Buffer.from(encodedSignature, "base64url");
-  if (!verifySignature("RSA-SHA256", signed, publicKey, signature)) {
-    throw new Error("AUTHORIZED_ETSY_OIDC_SIGNATURE_INVALID");
-  }
+  const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", publicKey, signature, signed);
+  if (!valid) throw new Error("AUTHORIZED_ETSY_OIDC_SIGNATURE_INVALID");
 }
 
 export async function POST(request: Request) {
