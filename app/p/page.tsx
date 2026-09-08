@@ -70,7 +70,12 @@ export default async function PublicProductIndexPage() {
         {catalog.status === "PASS" ? (
           <section className={styles.grid} aria-label="Active Etsy products">
             {catalog.items.map((item) => (
-              <article className={styles.card} key={item.listingId}>
+              <article
+                className={styles.card}
+                key={item.listingId}
+                data-analytics-product-id={item.productId}
+                data-analytics-listing-id={item.listingId}
+              >
                 <div className={styles.cardBody}>
                   <div className={styles.cardHeader}>
                     <p className={styles.eyebrow}>{item.productId}</p>
