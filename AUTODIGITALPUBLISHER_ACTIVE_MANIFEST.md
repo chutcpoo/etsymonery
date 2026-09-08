@@ -1,38 +1,32 @@
 # AUTODIGITALPUBLISHER ACTIVE MANIFEST
 
 STATUS: ACTIVE / PRODUCTION BASELINE / EXECUTABLE
-VERSION: V1.4 DRAFT-FIRST GATE-SAFE CANDIDATE
+VERSION: V1.5 QC-PASSED INTAKE GATE
 AUTHORITY: THIS FILE ONLY
 
 ## Mission
 
-Turn a verified canonical digital product package into channel-specific publishing plans, read-only Etsy sales evidence, and explicitly authorized non-production Etsy Draft metadata candidates while preventing unverified product claims or un-gated live marketplace changes.
+Operate as the downstream publisher only after the exact Etsy candidate has reached QC_PASSED. Read-only Etsy evidence endpoints remain available independently, but publishing intake, validation, planning, candidate staging, Draft persistence, and live execution are fail-closed before QC_PASSED.
 
 ## Executable workflow
 
-INPUT
-→ Product Truth Gate
+READ-ONLY EVIDENCE PLANE
+→ Shop Identity Test / Listing Detail / Sales Control Center / Shop Stats (NO WRITE)
+
+PUBLISHING PLANE
+QC_PASSED INPUT ONLY
+→ Exact Product ID + candidate/fingerprint validation
 → Required-field validation
-→ Channel selection
 → Channel payload generation
-→ Etsy candidate + listing fingerprint generation
-→ Production Build Freeze Gate
-→ Etsy OAuth Authorization Gate
-→ Shop Identity Test
-→ Read-only Listing Test
-→ Sales Control Center evidence
-→ Shop Stats evidence capture when Open API evidence is insufficient
-→ Draft-first plan
-→ Explicit Draft-write feature gate + write-token authorization
-→ Non-production Etsy Draft metadata create/read-back when authorized
-→ Tester
-→ Independent Final QC
+→ Optional non-production Draft staging/read-back when separately authorized
 → Production Authorization boundary
-→ Live marketplace adapter only when separately implemented and authorized
-→ Publish result + audit log
+→ Live marketplace adapter only when separately implemented and explicitly authorized
+→ Post-release read-back + audit/correlation evidence
 
 ## Hard gates
 
+- **PUBLISHER INTAKE GATE:** Etsy publishing intake is rejected unless the exact candidate has `testerPass=true` and `finalQcPass=true` (normalized top-level lifecycle = `QC_PASSED` or later). This applies to PLAN, validation, candidate generation, staging/Draft persistence, and execution paths.
+- Read-only Etsy evidence endpoints are exempt because they perform no publishing intake or marketplace mutation.
 - PRODUCT_TRUTH_VERIFIED must be true.
 - Title, description, price and at least one buyer file are mandatory.
 - Unknown or unsupported claims must be omitted.
@@ -59,7 +53,7 @@ ACTIVE:
 - Read-only transaction-count evidence via `transactions_r`
 - Read-only canonical Catalog identifier projection using exact Drive ID `1XoIRHCVGGG81ddMhLfyP4TBE9mCgbOft`
 - Etsy/Gumroad/Payhip plan adapters
-- Etsy Draft-first validation, release-state gating, candidate fingerprint and listing fingerprint
+- Etsy QC_PASSED-only publishing intake, release-state gating, candidate fingerprint and listing fingerprint
 - Authenticated non-production Etsy Draft metadata adapter implemented behind default-OFF feature gate
 - Fresh Etsy Draft metadata read-back with listing-only persistence semantics
 - Dedicated, default-off B01 active-listing update endpoint with exact request binding, at-most-once execution, read-back reconciliation, correlation hash, and receipt
@@ -82,6 +76,6 @@ PENDING / NOT AUTHORIZED:
 
 ## Release rule
 
-Production Build → Tester → independent Final QC → PASS → Production.
+Production Build → Tester → independent Final QC → QC_PASSED → Publisher intake → Production Authorization → Production.
 
 A metadata Draft read-back PASS is not Production Authorization and is not permission to publish.

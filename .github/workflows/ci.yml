@@ -30,11 +30,16 @@ jobs:
             sleep 1
           done
 
-          VALID='{"productId":"TEST-001","title":"Digital Operations Template","description":"Verified test description","priceUsd":9.99,"files":["buyer.zip"],"channels":["etsy"],"productTruthVerified":true,"tags":["digital planner","small business","operations","workflow","business tool","etsy template","printable pdf","spreadsheet","daily planner","shop workflow","owner toolkit","business system","instant download"],"etsy":{"taxonomyId":1234,"quantity":999,"whoMade":"i_did","whenMade":"2020_2026","release":{"productionBuildFrozen":true}}}'
+          VALID='{"productId":"TEST-001","title":"Digital Operations Template","description":"Verified test description","priceUsd":9.99,"files":["buyer.zip"],"channels":["etsy"],"productTruthVerified":true,"tags":["digital planner","small business","operations","workflow","business tool","etsy template","printable pdf","spreadsheet","daily planner","shop workflow","owner toolkit","business system","instant download"],"etsy":{"taxonomyId":1234,"quantity":999,"whoMade":"i_did","whenMade":"2020_2026","release":{"productionBuildFrozen":true,"testerPass":true,"finalQcPass":true}}}'
           PLAN=$(curl -fsS -X POST http://127.0.0.1:3000/api/publish -H 'content-type: application/json' --data "$VALID")
-          node -e 'const x=JSON.parse(process.argv[1]); const c=x.channels?.[0]; if(x.status!=="READY"||!c?.candidateFingerprint||!c?.listingFingerprint||c.assetPersistenceRequired!==true||c.draftWriteAllowed!==false||c.liveWriteAllowed!==false||c.releaseState!=="TESTER_PENDING") process.exit(1)' "$PLAN"
+          node -e 'const x=JSON.parse(process.argv[1]); const c=x.channels?.[0]; if(x.status!=="READY"||!c?.candidateFingerprint||!c?.listingFingerprint||c.assetPersistenceRequired!==true||c.draftWriteAllowed!==false||c.liveWriteAllowed!==false||c.releaseState!=="PRODUCTION_AUTHORIZATION_PENDING") process.exit(1)' "$PLAN"
 
-          INVALID='{"productId":"TEST-002","title":"Digital Operations Template","description":"Verified test description","priceUsd":9.99,"files":["buyer.zip"],"channels":["etsy"],"productTruthVerified":true,"tags":["only one"],"etsy":{"taxonomyId":1234,"quantity":999,"whoMade":"i_did","whenMade":"2020_2026","release":{"productionBuildFrozen":true}}}'
+          PRE_QC=$(node -e 'const x=JSON.parse(process.argv[1]); x.etsy.release.finalQcPass=false; process.stdout.write(JSON.stringify(x))' "$VALID")
+          CODE=$(curl -sS -o /tmp/pre-qc.json -w '%{http_code}' -X POST http://127.0.0.1:3000/api/publish -H 'content-type: application/json' --data "$PRE_QC")
+          test "$CODE" = "422"
+          node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync("/tmp/pre-qc.json","utf8")); if(x.status!=="BLOCKED"||x.channels?.length!==0||!x.gate?.errors?.includes("PUBLISHER_REQUIRES_QC_PASSED")) process.exit(1)'
+
+          INVALID='{"productId":"TEST-002","title":"Digital Operations Template","description":"Verified test description","priceUsd":9.99,"files":["buyer.zip"],"channels":["etsy"],"productTruthVerified":true,"tags":["only one"],"etsy":{"taxonomyId":1234,"quantity":999,"whoMade":"i_did","whenMade":"2020_2026","release":{"productionBuildFrozen":true,"testerPass":true,"finalQcPass":true}}}'
           CODE=$(curl -sS -o /tmp/invalid.json -w '%{http_code}' -X POST http://127.0.0.1:3000/api/publish -H 'content-type: application/json' --data "$INVALID")
           test "$CODE" = "422"
           node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync("/tmp/invalid.json","utf8")); if(!x.gate?.errors?.includes("ETSY_TAG_COUNT_MUST_BE_13")) process.exit(1)'

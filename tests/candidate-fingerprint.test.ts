@@ -94,7 +94,7 @@ test("publisher uses the shared versioned fingerprints for Etsy plans", () => {
       quantity: 999,
       whoMade: "i_did",
       whenMade: "2020_2026",
-      release: { productionBuildFrozen: true }
+      release: { productionBuildFrozen: true, testerPass: true, finalQcPass: true }
     }
   });
   const channel = plan.channels[0];

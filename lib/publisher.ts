@@ -68,6 +68,9 @@ function validateEtsy(pack: ProductPack, errors: string[]) {
   }
   if (!cleanString(etsy.whenMade)) errors.push("ETSY_WHEN_MADE_REQUIRED");
   if (release?.productionBuildFrozen !== true) errors.push("PRODUCTION_BUILD_NOT_FROZEN");
+  if (release?.testerPass !== true || release?.finalQcPass !== true) {
+    errors.push("PUBLISHER_REQUIRES_QC_PASSED");
+  }
 
   if (release?.productionAuthorized === true) {
     if (release.testerPass !== true) errors.push("PRODUCTION_AUTH_REQUIRES_TESTER_PASS");
