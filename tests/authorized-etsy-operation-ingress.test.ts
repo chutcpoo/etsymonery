@@ -17,7 +17,8 @@ test("durable authorized Etsy ingress uses GitHub OIDC and keeps Etsy write secr
   assert.match(route, /GITHUB_REF = "refs\/heads\/main"/);
   assert.match(route, /GITHUB_EVENT = "workflow_dispatch"/);
   assert.match(route, /execute-authorized-etsy-operation\.yml@refs\/heads\/main/);
-  assert.match(route, /verifySignature\("RSA-SHA256"/);
+  assert.match(route, /crypto\.subtle\.importKey/);
+  assert.match(route, /crypto\.subtle\.verify/);
   assert.match(route, /process\.env\.ETSY_B01_WRITE_TOKEN/);
   assert.match(route, /operationId !== confirmation/);
   assert.match(route, /operationId !== PD_STOCK_005_B01\.operationId/);
