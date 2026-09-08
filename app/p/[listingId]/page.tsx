@@ -113,11 +113,7 @@ export default async function PublicProductPage({ params }: PageProps) {
   const product = result.product;
 
   return (
-    <main
-      className={`${styles.page} ${styles.productPage}`}
-      data-analytics-product-id={product.productId}
-      data-analytics-listing-id={product.listingId}
-    >
+    <main className={`${styles.page} ${styles.productPage}`}>
       <div className={styles.shell}>
         <PublicHeader />
 
@@ -126,7 +122,11 @@ export default async function PublicProductPage({ params }: PageProps) {
           <span>Etsy #{product.listingId}</span>
         </div>
 
-        <section className={styles.productHero}>
+        <section
+          className={styles.productHero}
+          data-analytics-product-id={product.productId}
+          data-analytics-listing-id={product.listingId}
+        >
           <div className={styles.gallery} aria-label="Current Etsy listing gallery">
             {product.gallery.length > 0 ? (
               product.gallery.map((image, index) => (
@@ -185,7 +185,11 @@ export default async function PublicProductPage({ params }: PageProps) {
         <PublicFooter />
       </div>
 
-      <div className={styles.mobileStickyCta}>
+      <div
+        className={styles.mobileStickyCta}
+        data-analytics-product-id={product.productId}
+        data-analytics-listing-id={product.listingId}
+      >
         <div>
           <span className={styles.stickyLabel}>View this product on Etsy</span>
           {product.priceLabel ? <strong>{product.priceLabel}</strong> : null}
