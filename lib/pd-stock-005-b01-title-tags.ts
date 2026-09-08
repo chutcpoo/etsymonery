@@ -123,6 +123,17 @@ async function parseJson(response: Response) {
   try { return JSON.parse(text) as unknown; } catch { return {}; }
 }
 
+function sanitizeProviderRejection(value: unknown) {
+  if (!isRecord(value)) return {};
+  const sanitized: Record<string, string | number | boolean> = {};
+  for (const key of ["error", "code", "message", "error_code", "error_message"] as const) {
+    const raw = value[key];
+    if (typeof raw === "string") sanitized[key] = raw.slice(0, 500);
+    else if (typeof raw === "number" || typeof raw === "boolean") sanitized[key] = raw;
+  }
+  return sanitized;
+}
+
 function tagsMatch(value: unknown) {
   return Array.isArray(value) && JSON.stringify(value) === JSON.stringify(PD_STOCK_005_B01.tags);
 }
@@ -247,10 +258,23 @@ export async function handlePdStock005B01TitleTags(
     await recordOperationResult(repository, input.operationId, begun.record.requestHash, "RECONCILIATION_REQUIRED", now, { recoveryPoint: "POST_PATCH_READBACK" });
     return NextResponse.json({ error: "PD_STOCK_005_B01_PATCH_AMBIGUOUS", providerPatchCount: 1 }, { status: 202 });
   }
-  await parseJson(updateResponse);
+  const updateBody = await parseJson(updateResponse);
   if (!updateResponse.ok) {
-    await recordOperationResult(repository, input.operationId, begun.record.requestHash, "FAILED", now, { recoveryPoint: "PATCH_REJECTED" });
-    return NextResponse.json({ error: "PD_STOCK_005_B01_PATCH_REJECTED", statusCode: updateResponse.status, providerPatchCount: 1 }, { status: 502 });
+    const providerError = sanitizeProviderRejection(updateBody);
+    await recordOperationResult(repository, input.operationId, begun.record.requestHash, "FAILED", now, {
+      recoveryPoint: "PATCH_REJECTED",
+      receipt: {
+        providerPatchCount: 1,
+        updateStatusCode: updateResponse.status,
+        providerError
+      }
+    });
+    return NextResponse.json({
+      error: "PD_STOCK_005_B01_PATCH_REJECTED",
+      statusCode: updateResponse.status,
+      providerPatchCount: 1,
+      providerError
+    }, { status: 502 });
   }
 
   const after = await read();
