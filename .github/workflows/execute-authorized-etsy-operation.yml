@@ -1,0 +1,75 @@
+name: Execute Authorized Etsy Operation
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation_id:
+        description: Exact authorized operationId
+        required: true
+        type: string
+      confirmation:
+        description: Re-type the exact authorized operationId
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: authorized-etsy-operation-${{ inputs.operation_id }}
+  cancel-in-progress: false
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      EXECUTION_URL: https://autodigitalpublisher.vercel.app/api/internal/etsy/authorized-operation
+      TRIGGER_TOKEN: ${{ secrets.AUTODIGITALPUBLISHER_GITHUB_TRIGGER_TOKEN }}
+      OPERATION_ID: ${{ inputs.operation_id }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+    steps:
+      - name: Fail closed on missing trigger secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$TRIGGER_TOKEN" || { echo "Missing AUTODIGITALPUBLISHER_GITHUB_TRIGGER_TOKEN"; exit 1; }
+          test "$OPERATION_ID" = "$CONFIRMATION" || { echo "Operation confirmation mismatch"; exit 1; }
+
+      - name: Execute exact authorized operation once
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.EXECUTION_URL, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-autodigitalpublisher-trigger-token": process.env.TRIGGER_TOKEN
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION
+            })
+          });
+
+          const text = await response.text();
+          let payload;
+          try { payload = text ? JSON.parse(text) : {}; }
+          catch { payload = { raw: text }; }
+
+          console.log(`HTTP ${response.status}`);
+          console.log(JSON.stringify(payload, null, 2));
+
+          if (response.status === 202) {
+            throw new Error("RECONCILIATION_REQUIRED_DO_NOT_RETRY");
+          }
+          if (!response.ok) {
+            throw new Error(`AUTHORIZED_ETSY_HTTP_${response.status}`);
+          }
+
+          const acceptable = new Set(["UPDATED_AND_VERIFIED", "RECONCILED", "REPLAY"]);
+          if (!acceptable.has(payload.status)) {
+            throw new Error(`AUTHORIZED_ETSY_NONTERMINAL_${payload.status ?? "UNKNOWN"}`);
+          }
+          NODE
