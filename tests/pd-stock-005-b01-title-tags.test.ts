@@ -48,7 +48,8 @@ const afterListing = { ...beforeListing, title: PD_STOCK_005_B01.title, tags: [.
 
 function enable() {
   process.env.PUBLISH_WRITES_ENABLED = "true";
-  process.env.ETSY_DRAFT_WRITE_TOKEN = "test-write-token";
+  process.env.ETSY_B01_WRITE_TOKEN = "test-write-token";
+  process.env.ETSY_DRAFT_WRITE_TOKEN = "different-draft-token";
   process.env.ETSY_SHOP_ID = PD_STOCK_005_B01.shopId;
   process.env.ETSY_API_KEY = "test-api-key";
   process.env.ETSY_SHARED_SECRET = "test-shared-secret";
