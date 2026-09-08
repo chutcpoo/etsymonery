@@ -108,7 +108,7 @@ function exactInput(body: Record<string, unknown>): ExactInput | null {
 }
 
 function validateWriteAuthorization(request: Request) {
-  const expected = process.env.ETSY_DRAFT_WRITE_TOKEN?.trim() ?? "";
+  const expected = process.env.ETSY_B01_WRITE_TOKEN?.trim() ?? "";
   const supplied = request.headers.get(WRITE_HEADER)?.trim() ?? "";
   if (!expected) return NextResponse.json({ error: "PD_STOCK_005_B01_AUTH_NOT_CONFIGURED" }, { status: 503 });
   if (!supplied || !secureEqual(supplied, expected)) {
