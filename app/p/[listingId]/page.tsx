@@ -22,6 +22,42 @@ function metadataDescription(description: string, title: string) {
   return normalized.length <= 155 ? normalized : `${normalized.slice(0, 152).trimEnd()}…`;
 }
 
+function PublicHeader() {
+  return (
+    <header className={styles.header}>
+      <Link className={styles.brand} href="/p">PoonthaiDigital</Link>
+      <nav className={styles.desktopNav} aria-label="Main navigation">
+        <Link className={styles.navLink} href="/p">Products</Link>
+        <a className={styles.navCta} href="https://www.etsy.com/shop/PoonthaiDigital" rel="noopener noreferrer">
+          Etsy Shop ↗
+        </a>
+      </nav>
+      <details className={styles.mobileMenu}>
+        <summary aria-label="Open menu">Menu</summary>
+        <nav className={styles.mobileNav} aria-label="Mobile navigation">
+          <Link href="/p">Products</Link>
+          <a href="https://www.etsy.com/shop/PoonthaiDigital" rel="noopener noreferrer">Etsy Shop ↗</a>
+        </nav>
+      </details>
+    </header>
+  );
+}
+
+function PublicFooter() {
+  return (
+    <footer className={styles.footer}>
+      <div>
+        <strong>PoonthaiDigital</strong>
+        <p>Current listing information is read from Etsy. Checkout and digital delivery remain on Etsy.</p>
+      </div>
+      <div className={styles.footerLinks}>
+        <Link href="/p">Products</Link>
+        <a href="https://www.etsy.com/shop/PoonthaiDigital" rel="noopener noreferrer">Visit Etsy Shop ↗</a>
+      </div>
+    </footer>
+  );
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { listingId: rawListingId } = await params;
   const listingId = parseListingId(rawListingId);
@@ -62,15 +98,13 @@ export default async function PublicProductPage({ params }: PageProps) {
     return (
       <main className={styles.page}>
         <div className={styles.shell}>
-          <div className={styles.topbar}>
-            <Link className={styles.brand} href="/p">PoonthaiDigital</Link>
-            <Link className={styles.backLink} href="/p">← All products</Link>
-          </div>
+          <PublicHeader />
           <section className={styles.statusBox}>
             <p className={styles.eyebrow}>Temporarily unavailable</p>
             <h1>This Etsy listing could not be refreshed right now.</h1>
             <p>The public page is read-only and does not fall back to stale or invented product data.</p>
           </section>
+          <PublicFooter />
         </div>
       </main>
     );
@@ -80,14 +114,16 @@ export default async function PublicProductPage({ params }: PageProps) {
 
   return (
     <main
-      className={styles.page}
+      className={`${styles.page} ${styles.productPage}`}
       data-analytics-product-id={product.productId}
       data-analytics-listing-id={product.listingId}
     >
       <div className={styles.shell}>
-        <div className={styles.topbar}>
-          <Link className={styles.brand} href="/p">PoonthaiDigital</Link>
+        <PublicHeader />
+
+        <div className={styles.breadcrumbRow}>
           <Link className={styles.backLink} href="/p">← All products</Link>
+          <span>Etsy #{product.listingId}</span>
         </div>
 
         <section className={styles.productHero}>
@@ -113,8 +149,9 @@ export default async function PublicProductPage({ params }: PageProps) {
             <h1>{product.title}</h1>
             {product.priceLabel ? <p className={styles.price}>{product.priceLabel}</p> : null}
             <a className={styles.cta} href={product.etsyUrl} rel="noopener noreferrer">
-              View on Etsy
+              View on Etsy ↗
             </a>
+            <Link className={styles.secondaryCta} href="/p">Browse all products</Link>
             <p className={styles.finePrint}>
               Checkout, payment and digital delivery are completed on Etsy. This page mirrors current
               read-only listing information and does not modify the Etsy listing.
@@ -144,6 +181,16 @@ export default async function PublicProductPage({ params }: PageProps) {
             ) : null}
           </aside>
         </section>
+
+        <PublicFooter />
+      </div>
+
+      <div className={styles.mobileStickyCta}>
+        <div>
+          <span className={styles.stickyLabel}>View this product on Etsy</span>
+          {product.priceLabel ? <strong>{product.priceLabel}</strong> : null}
+        </div>
+        <a href={product.etsyUrl} rel="noopener noreferrer">View on Etsy ↗</a>
       </div>
     </main>
   );
