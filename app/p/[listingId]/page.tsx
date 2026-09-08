@@ -25,7 +25,10 @@ function metadataDescription(description: string, title: string) {
 function PublicHeader() {
   return (
     <header className={styles.header}>
-      <Link className={styles.brand} href="/p">PoonthaiDigital</Link>
+      <Link className={styles.brand} href="/p" aria-label="PoonthaiDigital products">
+        <span className={styles.brandMark}>P</span>
+        <span>PoonthaiDigital</span>
+      </Link>
       <nav className={styles.desktopNav} aria-label="Main navigation">
         <Link className={styles.navLink} href="/p">Products</Link>
         <a className={styles.navCta} href="https://www.etsy.com/shop/PoonthaiDigital" rel="noopener noreferrer">
@@ -46,9 +49,12 @@ function PublicHeader() {
 function PublicFooter() {
   return (
     <footer className={styles.footer}>
-      <div>
-        <strong>PoonthaiDigital</strong>
-        <p>Current listing information is read from Etsy. Checkout and digital delivery remain on Etsy.</p>
+      <div className={styles.footerBrand}>
+        <span className={styles.brandMark}>P</span>
+        <div>
+          <strong>PoonthaiDigital</strong>
+          <p>Current listing information is read from Etsy. Checkout and digital delivery remain on Etsy.</p>
+        </div>
       </div>
       <div className={styles.footerLinks}>
         <Link href="/p">Products</Link>
@@ -111,6 +117,8 @@ export default async function PublicProductPage({ params }: PageProps) {
   }
 
   const product = result.product;
+  const primaryImage = product.gallery[0] ?? null;
+  const previewImages = product.gallery.slice(1);
 
   return (
     <main className={`${styles.page} ${styles.productPage}`}>
@@ -127,51 +135,87 @@ export default async function PublicProductPage({ params }: PageProps) {
           data-analytics-product-id={product.productId}
           data-analytics-listing-id={product.listingId}
         >
-          <div className={styles.gallery} aria-label="Current Etsy listing gallery">
-            {product.gallery.length > 0 ? (
-              product.gallery.map((image, index) => (
+          <div className={styles.visualColumn}>
+            {primaryImage ? (
+              <div className={styles.primaryVisual}>
                 <img
-                  key={`${image.url}-${index}`}
-                  src={image.url}
-                  alt={image.altText}
-                  width={image.width ?? undefined}
-                  height={image.height ?? undefined}
-                  loading={index === 0 ? "eager" : "lazy"}
+                  src={primaryImage.url}
+                  alt={primaryImage.altText}
+                  width={primaryImage.width ?? undefined}
+                  height={primaryImage.height ?? undefined}
+                  loading="eager"
                 />
-              ))
+              </div>
             ) : (
               <div className={styles.statusBox}>Gallery temporarily unavailable from Etsy.</div>
             )}
+
+            {previewImages.length > 0 ? (
+              <div className={styles.previewSection}>
+                <div className={styles.previewHeading}>
+                  <span>More previews</span>
+                  <span>{product.gallery.length} images</span>
+                </div>
+                <div className={styles.previewStrip} aria-label="Current Etsy listing gallery">
+                  {previewImages.map((image, index) => (
+                    <img
+                      key={`${image.url}-${index}`}
+                      src={image.url}
+                      alt={image.altText}
+                      width={image.width ?? undefined}
+                      height={image.height ?? undefined}
+                      loading="lazy"
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <aside className={styles.buyPanel}>
-            <p className={styles.eyebrow}>{product.productId} · Etsy #{product.listingId}</p>
+            <div className={styles.productIdentityRow}>
+              <span className={styles.productCode}>{product.productId}</span>
+              <span className={styles.liveBadge}>Live on Etsy</span>
+            </div>
             <h1>{product.title}</h1>
             {product.priceLabel ? <p className={styles.price}>{product.priceLabel}</p> : null}
+
+            <div className={styles.factGrid}>
+              <div>
+                <span>Type</span>
+                <strong>{product.isDigital === false ? "Physical item" : "Digital item"}</strong>
+              </div>
+              <div>
+                <span>Gallery</span>
+                <strong>{product.gallery.length} images</strong>
+              </div>
+            </div>
+
             <a className={styles.cta} href={product.etsyUrl} rel="noopener noreferrer">
               View on Etsy ↗
             </a>
             <Link className={styles.secondaryCta} href="/p">Browse all products</Link>
             <p className={styles.finePrint}>
-              Checkout, payment and digital delivery are completed on Etsy. This page mirrors current
-              read-only listing information and does not modify the Etsy listing.
+              Checkout, payment and digital delivery are completed on Etsy. This page mirrors current read-only listing information.
             </p>
           </aside>
         </section>
 
-        <section className={styles.details}>
-          <article className={styles.panel}>
-            <p className={styles.eyebrow}>Current Etsy description</p>
-            <h2>About this listing</h2>
-            <div className={styles.description}>{product.description || "Description unavailable from Etsy."}</div>
-          </article>
-
-          <aside className={styles.panel}>
+        <section className={styles.detailStack}>
+          <div className={styles.panelCompact}>
             <p className={styles.eyebrow}>Listing details</p>
-            {product.categoryPath.length > 0 ? (
-              <p>{product.categoryPath.join(" → ")}</p>
-            ) : null}
-            {product.isDigital != null ? <p>{product.isDigital ? "Digital item" : "Physical item"}</p> : null}
+            <div className={styles.detailRows}>
+              <div>
+                <span>Listing</span>
+                <strong>#{product.listingId}</strong>
+              </div>
+              {product.categoryPath.length > 0 ? (
+                <div>
+                  <span>Category</span>
+                  <strong>{product.categoryPath.join(" → ")}</strong>
+                </div>
+              ) : null}
+            </div>
             {product.tags.length > 0 ? (
               <div className={styles.tags} aria-label="Current Etsy tags">
                 {product.tags.map((tag) => (
@@ -179,7 +223,18 @@ export default async function PublicProductPage({ params }: PageProps) {
                 ))}
               </div>
             ) : null}
-          </aside>
+          </div>
+
+          <details className={styles.descriptionDisclosure}>
+            <summary>
+              <div>
+                <p className={styles.eyebrow}>Current Etsy description</p>
+                <strong>Read full listing description</strong>
+              </div>
+              <span aria-hidden="true">+</span>
+            </summary>
+            <div className={styles.description}>{product.description || "Description unavailable from Etsy."}</div>
+          </details>
         </section>
 
         <PublicFooter />
@@ -191,7 +246,7 @@ export default async function PublicProductPage({ params }: PageProps) {
         data-analytics-listing-id={product.listingId}
       >
         <div>
-          <span className={styles.stickyLabel}>View this product on Etsy</span>
+          <span className={styles.stickyLabel}>Etsy</span>
           {product.priceLabel ? <strong>{product.priceLabel}</strong> : null}
         </div>
         <a href={product.etsyUrl} rel="noopener noreferrer">View on Etsy ↗</a>
