@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 
-test("durable authorized Etsy ingress keeps Etsy write secret server-side", async () => {
+test("durable authorized Etsy ingress uses GitHub OIDC and keeps Etsy write secret server-side", async () => {
   const route = await readFile(
     new URL("../app/api/internal/etsy/authorized-operation/route.ts", import.meta.url),
     "utf8"
@@ -12,17 +12,28 @@ test("durable authorized Etsy ingress keeps Etsy write secret server-side", asyn
     "utf8"
   );
 
-  assert.match(route, /AUTODIGITALPUBLISHER_GITHUB_TRIGGER_TOKEN/);
+  assert.match(route, /token\.actions\.githubusercontent\.com/);
+  assert.match(route, /GITHUB_REPOSITORY = "chutcpoo\/etsymonery"/);
+  assert.match(route, /GITHUB_REF = "refs\/heads\/main"/);
+  assert.match(route, /GITHUB_EVENT = "workflow_dispatch"/);
+  assert.match(route, /execute-authorized-etsy-operation\.yml@refs\/heads\/main/);
+  assert.match(route, /crypto\.subtle\.importKey/);
+  assert.match(route, /crypto\.subtle\.verify/);
   assert.match(route, /process\.env\.ETSY_B01_WRITE_TOKEN/);
   assert.match(route, /operationId !== confirmation/);
   assert.match(route, /operationId !== PD_STOCK_005_B01\.operationId/);
   assert.match(route, /handlePdStock005B01TitleTags\(exactBody, delegated\)/);
+  assert.doesNotMatch(route, /AUTODIGITALPUBLISHER_GITHUB_TRIGGER_TOKEN/);
   assert.doesNotMatch(route, /api\.etsy\.com/);
   assert.doesNotMatch(route, /method:\s*"PATCH"/);
 
   assert.match(workflow, /workflow_dispatch/);
-  assert.match(workflow, /AUTODIGITALPUBLISHER_GITHUB_TRIGGER_TOKEN/);
+  assert.match(workflow, /id-token: write/);
+  assert.match(workflow, /ACTIONS_ID_TOKEN_REQUEST_URL/);
+  assert.match(workflow, /ACTIONS_ID_TOKEN_REQUEST_TOKEN/);
+  assert.match(workflow, /authorization.*Bearer/);
   assert.match(workflow, /RECONCILIATION_REQUIRED_DO_NOT_RETRY/);
+  assert.doesNotMatch(workflow, /AUTODIGITALPUBLISHER_GITHUB_TRIGGER_TOKEN/);
   assert.doesNotMatch(workflow, /ETSY_B01_WRITE_TOKEN/);
   assert.doesNotMatch(workflow, /api\.etsy\.com/);
 });

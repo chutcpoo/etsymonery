@@ -1,4 +1,3 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import {
   handlePdStock005B01TitleTags,
@@ -8,23 +7,92 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const TRIGGER_HEADER = "x-autodigitalpublisher-trigger-token";
+const GITHUB_OIDC_ISSUER = "https://token.actions.githubusercontent.com";
+const GITHUB_OIDC_AUDIENCE = "https://autodigitalpublisher.vercel.app/api/internal/etsy/authorized-operation";
+const GITHUB_REPOSITORY = "chutcpoo/etsymonery";
+const GITHUB_REF = "refs/heads/main";
+const GITHUB_EVENT = "workflow_dispatch";
+const GITHUB_WORKFLOW_REF = "chutcpoo/etsymonery/.github/workflows/execute-authorized-etsy-operation.yml@refs/heads/main";
 
-function secureEqual(left: string, right: string) {
-  const a = Buffer.from(left);
-  const b = Buffer.from(right);
-  return a.length === b.length && timingSafeEqual(a, b);
+type JwtHeader = { alg?: string; kid?: string; typ?: string };
+type JwtClaims = {
+  iss?: string;
+  aud?: string | string[];
+  exp?: number;
+  nbf?: number;
+  repository?: string;
+  ref?: string;
+  event_name?: string;
+  workflow_ref?: string;
+};
+
+type Jwk = JsonWebKey & { kid?: string; alg?: string; use?: string };
+
+function decodeJsonSegment<T>(segment: string): T {
+  return JSON.parse(Buffer.from(segment, "base64url").toString("utf8")) as T;
+}
+
+function audienceMatches(aud: JwtClaims["aud"]) {
+  return typeof aud === "string" ? aud === GITHUB_OIDC_AUDIENCE : Array.isArray(aud) && aud.includes(GITHUB_OIDC_AUDIENCE);
+}
+
+async function verifyGithubOidcToken(token: string) {
+  const parts = token.split(".");
+  if (parts.length !== 3) throw new Error("AUTHORIZED_ETSY_OIDC_MALFORMED");
+
+  const [encodedHeader, encodedClaims, encodedSignature] = parts;
+  const header = decodeJsonSegment<JwtHeader>(encodedHeader);
+  const claims = decodeJsonSegment<JwtClaims>(encodedClaims);
+
+  if (header.alg !== "RS256" || !header.kid) throw new Error("AUTHORIZED_ETSY_OIDC_HEADER_INVALID");
+  if (claims.iss !== GITHUB_OIDC_ISSUER) throw new Error("AUTHORIZED_ETSY_OIDC_ISSUER_INVALID");
+  if (!audienceMatches(claims.aud)) throw new Error("AUTHORIZED_ETSY_OIDC_AUDIENCE_INVALID");
+
+  const now = Math.floor(Date.now() / 1000);
+  if (!claims.exp || claims.exp < now - 30) throw new Error("AUTHORIZED_ETSY_OIDC_EXPIRED");
+  if (claims.nbf && claims.nbf > now + 30) throw new Error("AUTHORIZED_ETSY_OIDC_NOT_YET_VALID");
+  if (claims.repository !== GITHUB_REPOSITORY) throw new Error("AUTHORIZED_ETSY_OIDC_REPOSITORY_INVALID");
+  if (claims.ref !== GITHUB_REF) throw new Error("AUTHORIZED_ETSY_OIDC_REF_INVALID");
+  if (claims.event_name !== GITHUB_EVENT) throw new Error("AUTHORIZED_ETSY_OIDC_EVENT_INVALID");
+  if (claims.workflow_ref !== GITHUB_WORKFLOW_REF) throw new Error("AUTHORIZED_ETSY_OIDC_WORKFLOW_INVALID");
+
+  const discoveryResponse = await fetch(`${GITHUB_OIDC_ISSUER}/.well-known/openid-configuration`, { cache: "no-store" });
+  if (!discoveryResponse.ok) throw new Error("AUTHORIZED_ETSY_OIDC_DISCOVERY_FAILED");
+  const discovery = await discoveryResponse.json() as { jwks_uri?: string };
+  if (!discovery.jwks_uri) throw new Error("AUTHORIZED_ETSY_OIDC_JWKS_URI_MISSING");
+
+  const jwksResponse = await fetch(discovery.jwks_uri, { cache: "no-store" });
+  if (!jwksResponse.ok) throw new Error("AUTHORIZED_ETSY_OIDC_JWKS_FAILED");
+  const jwks = await jwksResponse.json() as { keys?: Jwk[] };
+  const key = jwks.keys?.find((candidate) => candidate.kid === header.kid && candidate.kty === "RSA");
+  if (!key) throw new Error("AUTHORIZED_ETSY_OIDC_KEY_NOT_FOUND");
+
+  const publicKey = await crypto.subtle.importKey(
+    "jwk",
+    key,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["verify"]
+  );
+  const signed = new TextEncoder().encode(`${encodedHeader}.${encodedClaims}`);
+  const signature = Buffer.from(encodedSignature, "base64url");
+  const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", publicKey, signature, signed);
+  if (!valid) throw new Error("AUTHORIZED_ETSY_OIDC_SIGNATURE_INVALID");
 }
 
 export async function POST(request: Request) {
-  const expectedTrigger = process.env.AUTODIGITALPUBLISHER_GITHUB_TRIGGER_TOKEN?.trim() ?? "";
-  const suppliedTrigger = request.headers.get(TRIGGER_HEADER)?.trim() ?? "";
-
-  if (!expectedTrigger) {
-    return NextResponse.json({ error: "AUTHORIZED_ETSY_TRIGGER_NOT_CONFIGURED" }, { status: 503 });
+  const authorization = request.headers.get("authorization")?.trim() ?? "";
+  if (!authorization.startsWith("Bearer ")) {
+    return NextResponse.json({ error: "AUTHORIZED_ETSY_OIDC_MISSING" }, { status: 401 });
   }
-  if (!suppliedTrigger || !secureEqual(suppliedTrigger, expectedTrigger)) {
-    return NextResponse.json({ error: "AUTHORIZED_ETSY_TRIGGER_UNAUTHORIZED" }, { status: 401 });
+
+  try {
+    await verifyGithubOidcToken(authorization.slice("Bearer ".length).trim());
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "AUTHORIZED_ETSY_OIDC_INVALID" },
+      { status: 401 }
+    );
   }
 
   let payload: unknown;
