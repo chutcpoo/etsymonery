@@ -68,7 +68,7 @@ async function verifyGithubOidcToken(token: string) {
   const key = jwks.keys?.find((candidate) => candidate.kid === header.kid && candidate.kty === "RSA");
   if (!key) throw new Error("AUTHORIZED_ETSY_OIDC_KEY_NOT_FOUND");
 
-  const publicKey = createPublicKey({ key, format: "jwk" });
+  const publicKey = createPublicKey({ key: key as JsonWebKey, format: "jwk" });
   const signed = Buffer.from(`${encodedHeader}.${encodedClaims}`, "utf8");
   const signature = Buffer.from(encodedSignature, "base64url");
   if (!verifySignature("RSA-SHA256", signed, publicKey, signature)) {
