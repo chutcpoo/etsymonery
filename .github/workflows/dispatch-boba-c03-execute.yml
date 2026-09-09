@@ -1,0 +1,46 @@
+name: Dispatch Boba C03 Authorized Execute
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/boba-c03-execute-trigger
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail closed on exact trigger identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fx 'operationId=PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001' .github/boba-c03-execute-trigger
+          grep -Fx 'authorizationId=PTQC-PDT-BOBA-001-AUTH-20260909-C03-01' .github/boba-c03-execute-trigger
+          grep -Fx 'requestHash=51e041288218b3954e3f7a7d9e2d277fb100ef9d7c3e8b8c37b65f1cb14cece2' .github/boba-c03-execute-trigger
+          grep -Fx 'ac19=EXACT_MATCH_REQUIRED' .github/boba-c03-execute-trigger
+
+      - name: Dispatch exact authorized execution once
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          API_URL: https://api.github.com/repos/${{ github.repository }}/actions/workflows/execute-authorized-etsy-operation.yml/dispatches
+          OPERATION_ID: PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001
+        run: |
+          set -euo pipefail
+          body="$(jq -nc --arg op "$OPERATION_ID" '{ref:"main",inputs:{operation_id:$op,confirmation:$op,action:"execute"}}')"
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            --data "$body" \
+            "$API_URL"
+          echo "Dispatched exact authorized execution once."
