@@ -3,6 +3,11 @@ import {
   handlePdStock005B01TitleTags,
   PD_STOCK_005_B01
 } from "../../../../../lib/pd-stock-005-b01-title-tags";
+import {
+  exactPdRest003A02Body,
+  handlePdRest003A02TitleTagsImage1,
+  PD_REST_003_A02
+} from "../../../../../lib/pd-rest-003-a02-title-tags-image1";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -113,13 +118,21 @@ export async function POST(request: Request) {
   if (!operationId || operationId !== confirmation) {
     return NextResponse.json({ error: "AUTHORIZED_ETSY_CONFIRMATION_MISMATCH" }, { status: 409 });
   }
-  if (operationId !== PD_STOCK_005_B01.operationId) {
+  if (operationId !== PD_STOCK_005_B01.operationId && operationId !== PD_REST_003_A02.operationId) {
     return NextResponse.json({ error: "AUTHORIZED_ETSY_OPERATION_NOT_REGISTERED" }, { status: 409 });
   }
 
   const writeToken = process.env.ETSY_B01_WRITE_TOKEN?.trim() ?? "";
   if (!writeToken) {
     return NextResponse.json({ error: "AUTHORIZED_ETSY_WRITE_TOKEN_NOT_CONFIGURED" }, { status: 503 });
+  }
+
+  if (operationId === PD_REST_003_A02.operationId) {
+    const delegated = new Request(request.url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken }
+    });
+    return handlePdRest003A02TitleTagsImage1(exactPdRest003A02Body(), delegated);
   }
 
   const exactBody = {
