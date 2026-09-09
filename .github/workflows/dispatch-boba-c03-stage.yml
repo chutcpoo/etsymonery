@@ -1,0 +1,61 @@
+name: Dispatch Boba C03 Source Staging
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/boba-c03-stage-trigger
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail closed on exact trigger identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fx 'operationId=PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001' .github/boba-c03-stage-trigger
+          grep -Fx 'authorizationId=PTQC-PDT-BOBA-001-AUTH-20260909-C03-01' .github/boba-c03-stage-trigger
+          grep -Fx 'requestHash=51e041288218b3954e3f7a7d9e2d277fb100ef9d7c3e8b8c37b65f1cb14cece2' .github/boba-c03-stage-trigger
+
+      - name: Dispatch exact 12 source-staging operations
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          API_URL: https://api.github.com/repos/${{ github.repository }}/actions/workflows/execute-authorized-etsy-operation.yml/dispatches
+          OPERATION_ID: PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001
+        run: |
+          set -euo pipefail
+          hashes=(
+            2a10612957cc8d2b44851bbb666e0b4329f50c3f2b03ead9ef06aa77e68134a4
+            d357574a199de799a6e71ec1a17746f44d8cddcc9d0ac81ac338ccc3627233a4
+            7f917adffa7f94f474e976cab1b9d29d436aa79dc2f4c293a12452f482d1078c
+            b3e84671071a0690c3f115305f57fd6091e1f3a44c6c069ccdb6b0800444745d
+            625815ec960fb99712487388a003695c55fb47e7ce0b666bf925d10326aa81a7
+            e6bb3abb0461de41b5c578719b2d03f6cf8829858bc6f9e22d78a3a206155722
+            17174fcb6c31e3e59de7a507bd13cf6177024a1b2f4a0994efc9069d70e88b12
+            b1298d695d649c9dfb99cf434e26b0d2c7ef3d841d7f3a50e6d5992375e54430
+            322e8451b6f70ac568201d2f93be5ea9688b03dec841ee9bf8ae3c29526c2dbe
+            41a03a6119e814b79d7423097a68c604be18e5a1511c21e5856252e9cc9b869f
+            76cc4e9f129c402cae403a0f7efefcddd43167c5620ed29ba3442d59a522fb7f
+            69c4f207191e6a2b2c3d9450bc26c7d98e426528cf36ecd38dee88511422787b
+          )
+          for sha in "${hashes[@]}"; do
+            body="$(jq -nc --arg op "$OPERATION_ID" --arg sha "$sha" '{ref:"main",inputs:{operation_id:$op,confirmation:$op,action:"stage_asset_from_source",asset_sha256:$sha}}')"
+            curl --fail --silent --show-error \
+              -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              -H "Content-Type: application/json" \
+              --data "$body" \
+              "$API_URL"
+          done
+          echo "Dispatched ${#hashes[@]} exact source-staging runs."
