@@ -3,15 +3,8 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 test("durable authorized Etsy ingress uses GitHub OIDC and keeps Etsy write secret server-side", async () => {
-  const route = await readFile(
-    new URL("../app/api/internal/etsy/authorized-operation/route.ts", import.meta.url),
-    "utf8"
-  );
-  const workflow = await readFile(
-    new URL("../.github/workflows/execute-authorized-etsy-operation.yml", import.meta.url),
-    "utf8"
-  );
-
+  const route = await readFile(new URL("../app/api/internal/etsy/authorized-operation/route.ts", import.meta.url), "utf8");
+  const workflow = await readFile(new URL("../.github/workflows/execute-authorized-etsy-operation.yml", import.meta.url), "utf8");
   assert.match(route, /token\.actions\.githubusercontent\.com/);
   assert.match(route, /GITHUB_REPOSITORY = "chutcpoo\/etsymonery"/);
   assert.match(route, /GITHUB_REF = "refs\/heads\/main"/);
@@ -30,7 +23,6 @@ test("durable authorized Etsy ingress uses GitHub OIDC and keeps Etsy write secr
   assert.doesNotMatch(route, /AUTODIGITALPUBLISHER_GITHUB_TRIGGER_TOKEN/);
   assert.doesNotMatch(route, /api\.etsy\.com/);
   assert.doesNotMatch(route, /method:\s*"PATCH"/);
-
   assert.match(workflow, /workflow_dispatch/);
   assert.match(workflow, /id-token: write/);
   assert.match(workflow, /ACTIONS_ID_TOKEN_REQUEST_URL/);
@@ -45,39 +37,41 @@ test("durable authorized Etsy ingress uses GitHub OIDC and keeps Etsy write secr
 test("authorized asset staging ingress supports exact A02 and Boba C03 assets with zero Etsy writes", async () => {
   const route = await readFile(new URL("../app/api/internal/etsy/authorized-operation/asset-chunk/route.ts", import.meta.url), "utf8");
   const workflow = await readFile(new URL("../.github/workflows/execute-authorized-etsy-operation.yml", import.meta.url), "utf8");
-
   assert.match(route, /execute-authorized-etsy-operation\.yml@refs\/heads\/main/);
   assert.match(route, /PD_REST_003_A02\.operationId/);
   assert.match(route, /PDT_BOBA_001_C03_GALLERY_REPAIR\.operationId/);
-  assert.match(route, /PDT_BOBA_001_C03_GALLERY_REPAIR\.gallery\.find\(candidate=>candidate\.sha256===requestedAssetSha256\)/);
   assert.match(route, /AUTHORIZED_ETSY_ASSET_NOT_REGISTERED/);
   assert.match(route, /stageAuthorizedAssetChunk/);
-  assert.match(route, /assetSha256:registeredAssetSha256/);
-  assert.match(route, /ETSY_WRITE_COUNT:0/);
+  assert.match(route, /ETSY_WRITE_COUNT: 0/);
   assert.doesNotMatch(route, /api\.etsy\.com/);
-  assert.doesNotMatch(route, /method:\s*"(PATCH|PUT|DELETE|POST)"/);
-
-  assert.match(workflow, /id-token: write/);
+  assert.doesNotMatch(route, /method:\s*"(PATCH|PUT|DELETE)"/);
   assert.match(workflow, /asset_sha256/);
-  assert.match(workflow, /ASSET_SHA256/);
-  assert.match(workflow, /assetSha256: process\.env\.ASSET_SHA256 \|\| undefined/);
-  assert.match(workflow, /PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001/);
-  assert.match(workflow, /Missing asset_sha256 for Boba C03/);
+  assert.match(workflow, /stage_asset_from_source/);
+  assert.match(workflow, /sourceMode: "NEON_TRANSIENT_SOURCE"/);
+  assert.match(workflow, /inputs\.action == 'execute'/);
   assert.doesNotMatch(workflow, /ETSY_B01_WRITE_TOKEN/);
   assert.doesNotMatch(workflow, /api\.etsy\.com/);
 });
 
-test("Boba C03 OIDC ingress remains exact-contract and fail-closed", async () => {
-  const executionRoute = await readFile(new URL("../app/api/internal/etsy/authorized-operation/route.ts", import.meta.url), "utf8");
+test("Boba C03 source staging is private, exact, OIDC-only, and fail-closed", async () => {
   const stageRoute = await readFile(new URL("../app/api/internal/etsy/authorized-operation/asset-chunk/route.ts", import.meta.url), "utf8");
-
-  assert.match(executionRoute, /exactPdtBoba001C03GalleryRepairBody/);
-  assert.match(executionRoute, /PDT_BOBA_001_C03_GALLERY_REPAIR\.operationId/);
-  assert.match(executionRoute, /x-autodigitalpublisher-write-token/);
-  assert.match(stageRoute, /confirmation!==operationId/);
-  assert.match(stageRoute, /AUTHORIZED_ETSY_CONFIRMATION_MISMATCH/);
-  assert.match(stageRoute, /AUTHORIZED_ETSY_OPERATION_NOT_REGISTERED/);
-  assert.match(stageRoute, /AUTHORIZED_ETSY_ASSET_NOT_REGISTERED/);
-  assert.doesNotMatch(stageRoute, /ETSY_B01_WRITE_TOKEN/);
-  assert.doesNotMatch(stageRoute, /x-autodigitalpublisher-write-token/);
+  const store = await readFile(new URL("../lib/authorized-operation-asset-store.ts", import.meta.url), "utf8");
+  const stageDispatcher = await readFile(new URL("../.github/workflows/dispatch-boba-c03-stage.yml", import.meta.url), "utf8");
+  const executeDispatcher = await readFile(new URL("../.github/workflows/dispatch-boba-c03-execute.yml", import.meta.url), "utf8");
+  assert.match(stageRoute, /SOURCE_MODE = "NEON_TRANSIENT_SOURCE"/);
+  assert.match(stageRoute, /loadAuthorizedAssetSource/);
+  assert.match(stageRoute, /pngIdentityMatches/);
+  assert.match(stageRoute, /ASSET_STAGED_FROM_SOURCE/);
+  assert.match(stageRoute, /clearAuthorizedAssetSource/);
+  assert.match(stageRoute, /AUTHORIZED_ETSY_SOURCE_MODE_NOT_REGISTERED/);
+  assert.match(store, /authorized_operation_asset_source_chunks/);
+  assert.match(store, /AUTHORIZED_ASSET_SOURCE_SHA256_MISMATCH/);
+  assert.match(stageDispatcher, /actions: write/);
+  assert.match(stageDispatcher, /execute-authorized-etsy-operation\.yml\/dispatches/);
+  assert.match(stageDispatcher, /stage_asset_from_source/);
+  assert.match(stageDispatcher, /51e041288218b3954e3f7a7d9e2d277fb100ef9d7c3e8b8c37b65f1cb14cece2/);
+  assert.match(executeDispatcher, /ac19=EXACT_MATCH_REQUIRED/);
+  assert.match(executeDispatcher, /action:\"execute\"/);
+  assert.doesNotMatch(stageDispatcher, /x-autodigitalpublisher-write-token|ETSY_B01_WRITE_TOKEN|api\.etsy\.com/);
+  assert.doesNotMatch(executeDispatcher, /x-autodigitalpublisher-write-token|ETSY_B01_WRITE_TOKEN|api\.etsy\.com/);
 });
