@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { PD_REST_003_A02 } from "../../../../../../lib/pd-rest-003-a02-title-tags-image1";
+import { PDT_BOBA_001_C03_GALLERY_REPAIR } from "../../../../../../lib/pdt-boba-001-c03-gallery-mobile-safe-repair";
 import { stageAuthorizedAssetChunk } from "../../../../../../lib/authorized-operation-asset-store";
 
 export const runtime = "nodejs";
@@ -36,10 +37,27 @@ export async function POST(request:Request){
   try{await verify(authorization.slice(7).trim());}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"AUTHORIZED_ETSY_OIDC_INVALID"},{status:401});}
   let value:unknown;try{value=await request.json();}catch{return NextResponse.json({error:"INVALID_JSON"},{status:400});}
   if(!value||typeof value!=="object"||Array.isArray(value))return NextResponse.json({error:"INVALID_BODY"},{status:400});
-  const body=value as Record<string,unknown>, operationId=typeof body.operationId==="string"?body.operationId:"", confirmation=typeof body.confirmation==="string"?body.confirmation:"";
-  if(operationId!==PD_REST_003_A02.operationId||confirmation!==operationId)return NextResponse.json({error:"AUTHORIZED_ETSY_OPERATION_NOT_REGISTERED"},{status:409});
+
+  const body=value as Record<string,unknown>;
+  const operationId=typeof body.operationId==="string"?body.operationId:"";
+  const confirmation=typeof body.confirmation==="string"?body.confirmation:"";
+  const requestedAssetSha256=typeof body.assetSha256==="string"?body.assetSha256:"";
+  if(!operationId||confirmation!==operationId)return NextResponse.json({error:"AUTHORIZED_ETSY_CONFIRMATION_MISMATCH"},{status:409});
+
+  let registeredAssetSha256="";
+  if(operationId===PD_REST_003_A02.operationId){
+    if(requestedAssetSha256&&requestedAssetSha256!==PD_REST_003_A02.image.sha256)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
+    registeredAssetSha256=PD_REST_003_A02.image.sha256;
+  }else if(operationId===PDT_BOBA_001_C03_GALLERY_REPAIR.operationId){
+    const asset=PDT_BOBA_001_C03_GALLERY_REPAIR.gallery.find(candidate=>candidate.sha256===requestedAssetSha256);
+    if(!asset)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
+    registeredAssetSha256=asset.sha256;
+  }else{
+    return NextResponse.json({error:"AUTHORIZED_ETSY_OPERATION_NOT_REGISTERED"},{status:409});
+  }
+
   const chunkIndex=Number(body.chunkIndex), chunkCount=Number(body.chunkCount), dataBase64=typeof body.dataBase64==="string"?body.dataBase64:"";
-  try{await stageAuthorizedAssetChunk({operationId,assetSha256:PD_REST_003_A02.image.sha256,chunkIndex,chunkCount,dataBase64});}
-  catch(error){return NextResponse.json({error:error instanceof Error?error.message:"ASSET_STAGE_FAILED"},{status:409});}
-  return NextResponse.json({status:"ASSET_CHUNK_STAGED",operationId,chunkIndex,chunkCount,assetSha256:PD_REST_003_A02.image.sha256,ETSY_WRITE_COUNT:0});
+  try{await stageAuthorizedAssetChunk({operationId,assetSha256:registeredAssetSha256,chunkIndex,chunkCount,dataBase64});}
+  catch(error){return NextResponse.json({error:error instanceof Error?error.message:"ASSET_STAGE_FAILED",ETSY_WRITE_COUNT:0},{status:409});}
+  return NextResponse.json({status:"ASSET_CHUNK_STAGED",operationId,chunkIndex,chunkCount,assetSha256:registeredAssetSha256,ETSY_WRITE_COUNT:0});
 }
