@@ -8,6 +8,11 @@ import {
   handlePdRest003A02TitleTagsImage1,
   PD_REST_003_A02
 } from "../../../../../lib/pd-rest-003-a02-title-tags-image1";
+import {
+  exactPdtBoba001C03GalleryRepairBody,
+  handlePdtBoba001C03GalleryRepair,
+  PDT_BOBA_001_C03_GALLERY_REPAIR
+} from "../../../../../lib/pdt-boba-001-c03-gallery-mobile-safe-repair";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -118,7 +123,11 @@ export async function POST(request: Request) {
   if (!operationId || operationId !== confirmation) {
     return NextResponse.json({ error: "AUTHORIZED_ETSY_CONFIRMATION_MISMATCH" }, { status: 409 });
   }
-  if (operationId !== PD_STOCK_005_B01.operationId && operationId !== PD_REST_003_A02.operationId) {
+  if (
+    operationId !== PD_STOCK_005_B01.operationId &&
+    operationId !== PD_REST_003_A02.operationId &&
+    operationId !== PDT_BOBA_001_C03_GALLERY_REPAIR.operationId
+  ) {
     return NextResponse.json({ error: "AUTHORIZED_ETSY_OPERATION_NOT_REGISTERED" }, { status: 409 });
   }
 
@@ -133,6 +142,14 @@ export async function POST(request: Request) {
       headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken }
     });
     return handlePdRest003A02TitleTagsImage1(exactPdRest003A02Body(), delegated);
+  }
+
+  if (operationId === PDT_BOBA_001_C03_GALLERY_REPAIR.operationId) {
+    const delegated = new Request(request.url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken }
+    });
+    return handlePdtBoba001C03GalleryRepair(exactPdtBoba001C03GalleryRepairBody(), delegated);
   }
 
   const exactBody = {
