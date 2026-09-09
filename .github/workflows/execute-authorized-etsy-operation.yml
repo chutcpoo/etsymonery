@@ -16,6 +16,11 @@ on:
         required: false
         default: execute
         type: string
+      asset_sha256:
+        description: Exact authorized asset SHA-256; required for Boba C03 stage_asset_chunk
+        required: false
+        default: ""
+        type: string
       chunk_index:
         description: Zero-based asset chunk index for stage_asset_chunk
         required: false
@@ -50,6 +55,7 @@ jobs:
       OPERATION_ID: ${{ inputs.operation_id }}
       CONFIRMATION: ${{ inputs.confirmation }}
       ACTION: ${{ inputs.action }}
+      ASSET_SHA256: ${{ inputs.asset_sha256 }}
       CHUNK_INDEX: ${{ inputs.chunk_index }}
       CHUNK_COUNT: ${{ inputs.chunk_count }}
       ASSET_CHUNK_BASE64: ${{ inputs.asset_chunk_base64 }}
@@ -66,6 +72,9 @@ jobs:
               test "$CHUNK_COUNT" -ge 1 || { echo "Invalid chunk_count"; exit 1; }
               test "$CHUNK_INDEX" -ge 0 || { echo "Invalid chunk_index"; exit 1; }
               test -n "$ASSET_CHUNK_BASE64" || { echo "Missing asset chunk"; exit 1; }
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for Boba C03"; exit 1; }
+              fi
               ;;
             *) echo "Invalid action"; exit 1 ;;
           esac
@@ -105,6 +114,7 @@ jobs:
             body: JSON.stringify({
               operationId: process.env.OPERATION_ID,
               confirmation: process.env.CONFIRMATION,
+              assetSha256: process.env.ASSET_SHA256 || undefined,
               chunkIndex: Number(process.env.CHUNK_INDEX),
               chunkCount: Number(process.env.CHUNK_COUNT),
               dataBase64: process.env.ASSET_CHUNK_BASE64
@@ -115,6 +125,7 @@ jobs:
           console.log(JSON.stringify({
             status: payload.status,
             operationId: payload.operationId,
+            assetSha256: payload.assetSha256,
             chunkIndex: payload.chunkIndex,
             chunkCount: payload.chunkCount,
             ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
