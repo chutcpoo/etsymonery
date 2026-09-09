@@ -32,7 +32,7 @@ export async function stageAuthorizedAssetChunk(input: AuthorizedAssetChunk) {
   if (!input.operationId.trim()) throw new Error("INVALID_OPERATION_ID");
   if (!/^[a-f0-9]{64}$/.test(input.assetSha256)) throw new Error("INVALID_ASSET_SHA256");
   if (!Number.isSafeInteger(input.chunkIndex) || input.chunkIndex < 0) throw new Error("INVALID_CHUNK_INDEX");
-  if (!Number.isSafeInteger(input.chunkCount) || input.chunkCount < 1 || input.chunkCount > 8 || input.chunkIndex >= input.chunkCount) {
+  if (!Number.isSafeInteger(input.chunkCount) || input.chunkCount < 1 || input.chunkCount > 16 || input.chunkIndex >= input.chunkCount) {
     throw new Error("INVALID_CHUNK_COUNT");
   }
   if (!input.dataBase64 || input.dataBase64.length > 60000) throw new Error("INVALID_CHUNK_DATA");
