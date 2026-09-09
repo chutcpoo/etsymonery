@@ -13,6 +13,9 @@ on:
 jobs:
   targeted-regression:
     runs-on: ubuntu-latest
+    env:
+      ETSY_API_KEY: test-key
+      ETSY_SHARED_SECRET: test-secret
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
