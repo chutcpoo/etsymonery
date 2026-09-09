@@ -11,6 +11,26 @@ on:
         description: Re-type the exact authorized operationId
         required: true
         type: string
+      action:
+        description: execute or stage_asset_chunk
+        required: false
+        default: execute
+        type: string
+      chunk_index:
+        description: Zero-based asset chunk index for stage_asset_chunk
+        required: false
+        default: "0"
+        type: string
+      chunk_count:
+        description: Total asset chunk count for stage_asset_chunk
+        required: false
+        default: "0"
+        type: string
+      asset_chunk_base64:
+        description: Exact base64 asset chunk; used only for stage_asset_chunk
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -26,16 +46,29 @@ jobs:
     timeout-minutes: 5
     env:
       EXECUTION_URL: https://autodigitalpublisher.vercel.app/api/internal/etsy/authorized-operation
-      OIDC_AUDIENCE: https://autodigitalpublisher.vercel.app/api/internal/etsy/authorized-operation
+      STAGE_URL: https://autodigitalpublisher.vercel.app/api/internal/etsy/authorized-operation/asset-chunk
       OPERATION_ID: ${{ inputs.operation_id }}
       CONFIRMATION: ${{ inputs.confirmation }}
+      ACTION: ${{ inputs.action }}
+      CHUNK_INDEX: ${{ inputs.chunk_index }}
+      CHUNK_COUNT: ${{ inputs.chunk_count }}
+      ASSET_CHUNK_BASE64: ${{ inputs.asset_chunk_base64 }}
     steps:
-      - name: Fail closed on confirmation mismatch
+      - name: Fail closed on request mismatch
         shell: bash
         run: |
           set -euo pipefail
           test -n "$OPERATION_ID" || { echo "Missing operation_id"; exit 1; }
           test "$OPERATION_ID" = "$CONFIRMATION" || { echo "Operation confirmation mismatch"; exit 1; }
+          case "$ACTION" in
+            execute) ;;
+            stage_asset_chunk)
+              test "$CHUNK_COUNT" -ge 1 || { echo "Invalid chunk_count"; exit 1; }
+              test "$CHUNK_INDEX" -ge 0 || { echo "Invalid chunk_index"; exit 1; }
+              test -n "$ASSET_CHUNK_BASE64" || { echo "Missing asset chunk"; exit 1; }
+              ;;
+            *) echo "Invalid action"; exit 1 ;;
+          esac
 
       - name: Acquire GitHub OIDC token
         id: oidc
@@ -44,13 +77,55 @@ jobs:
           set -euo pipefail
           test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "GitHub OIDC request URL unavailable"; exit 1; }
           test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" || { echo "GitHub OIDC request token unavailable"; exit 1; }
+          if [ "$ACTION" = "stage_asset_chunk" ]; then
+            AUDIENCE="$STAGE_URL"
+          else
+            AUDIENCE="$EXECUTION_URL"
+          fi
           RESPONSE="$(curl --fail --silent --show-error \
             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${OIDC_AUDIENCE}")"
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUDIENCE}")"
           TOKEN="$(node -e 'const v=JSON.parse(process.argv[1]).value; if(!v) process.exit(1); process.stdout.write(v)' "$RESPONSE")"
           echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
 
+      - name: Stage exact asset chunk without Etsy write
+        if: ${{ inputs.action == 'stage_asset_chunk' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.STAGE_URL, {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              chunkIndex: Number(process.env.CHUNK_INDEX),
+              chunkCount: Number(process.env.CHUNK_COUNT),
+              dataBase64: process.env.ASSET_CHUNK_BASE64
+            })
+          });
+          const text = await response.text();
+          const payload = text ? JSON.parse(text) : {};
+          console.log(JSON.stringify({
+            status: payload.status,
+            operationId: payload.operationId,
+            chunkIndex: payload.chunkIndex,
+            chunkCount: payload.chunkCount,
+            ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+          }));
+          if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+            throw new Error(`AUTHORIZED_ETSY_ASSET_STAGE_HTTP_${response.status}`);
+          }
+          NODE
+
       - name: Execute exact authorized operation once
+        if: ${{ inputs.action != 'stage_asset_chunk' }}
         shell: bash
         env:
           OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
