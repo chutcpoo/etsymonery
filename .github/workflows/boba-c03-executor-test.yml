@@ -1,0 +1,24 @@
+name: Boba C03 Executor Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/pdt-boba-001-c03-gallery-mobile-safe-repair.ts"
+      - "lib/authorized-operation-asset-store.ts"
+      - "app/api/etsy/pdt-boba-001/**"
+      - "tests/pdt-boba-001-c03-gallery-mobile-safe-repair.test.ts"
+      - ".github/workflows/boba-c03-executor-test.yml"
+
+jobs:
+  targeted-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: node --experimental-test-module-mocks --import tsx --test tests/pdt-boba-001-c03-gallery-mobile-safe-repair.test.ts
+      - run: npm run build
