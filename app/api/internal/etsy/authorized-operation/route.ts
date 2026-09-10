@@ -9,6 +9,12 @@ import {
   PD_REST_003_A02
 } from "../../../../../lib/pd-rest-003-a02-title-tags-image1";
 import {
+  exactPdRest003A01Body,
+  handlePdRest003A01TitleTags,
+  PD_REST_003_A01,
+  verifyPdRest003A01ProtectedState
+} from "../../../../../lib/pd-rest-003-a01-title-tags";
+import {
   exactPdtBoba001C03GalleryRepairBody,
   handlePdtBoba001C03GalleryRepair,
   PDT_BOBA_001_C03_GALLERY_REPAIR
@@ -46,29 +52,23 @@ type JwtClaims = {
   event_name?: string;
   workflow_ref?: string;
 };
-
 type Jwk = JsonWebKey & { kid?: string; alg?: string; use?: string };
 
 function decodeJsonSegment<T>(segment: string): T {
   return JSON.parse(Buffer.from(segment, "base64url").toString("utf8")) as T;
 }
-
 function audienceMatches(aud: JwtClaims["aud"]) {
   return typeof aud === "string" ? aud === GITHUB_OIDC_AUDIENCE : Array.isArray(aud) && aud.includes(GITHUB_OIDC_AUDIENCE);
 }
-
 async function verifyGithubOidcToken(token: string) {
   const parts = token.split(".");
   if (parts.length !== 3) throw new Error("AUTHORIZED_ETSY_OIDC_MALFORMED");
-
   const [encodedHeader, encodedClaims, encodedSignature] = parts;
   const header = decodeJsonSegment<JwtHeader>(encodedHeader);
   const claims = decodeJsonSegment<JwtClaims>(encodedClaims);
-
   if (header.alg !== "RS256" || !header.kid) throw new Error("AUTHORIZED_ETSY_OIDC_HEADER_INVALID");
   if (claims.iss !== GITHUB_OIDC_ISSUER) throw new Error("AUTHORIZED_ETSY_OIDC_ISSUER_INVALID");
   if (!audienceMatches(claims.aud)) throw new Error("AUTHORIZED_ETSY_OIDC_AUDIENCE_INVALID");
-
   const now = Math.floor(Date.now() / 1000);
   if (!claims.exp || claims.exp < now - 30) throw new Error("AUTHORIZED_ETSY_OIDC_EXPIRED");
   if (claims.nbf && claims.nbf > now + 30) throw new Error("AUTHORIZED_ETSY_OIDC_NOT_YET_VALID");
@@ -76,25 +76,16 @@ async function verifyGithubOidcToken(token: string) {
   if (claims.ref !== GITHUB_REF) throw new Error("AUTHORIZED_ETSY_OIDC_REF_INVALID");
   if (claims.event_name !== GITHUB_EVENT) throw new Error("AUTHORIZED_ETSY_OIDC_EVENT_INVALID");
   if (claims.workflow_ref !== GITHUB_WORKFLOW_REF) throw new Error("AUTHORIZED_ETSY_OIDC_WORKFLOW_INVALID");
-
   const discoveryResponse = await fetch(`${GITHUB_OIDC_ISSUER}/.well-known/openid-configuration`, { cache: "no-store" });
   if (!discoveryResponse.ok) throw new Error("AUTHORIZED_ETSY_OIDC_DISCOVERY_FAILED");
   const discovery = await discoveryResponse.json() as { jwks_uri?: string };
   if (!discovery.jwks_uri) throw new Error("AUTHORIZED_ETSY_OIDC_JWKS_URI_MISSING");
-
   const jwksResponse = await fetch(discovery.jwks_uri, { cache: "no-store" });
   if (!jwksResponse.ok) throw new Error("AUTHORIZED_ETSY_OIDC_JWKS_FAILED");
   const jwks = await jwksResponse.json() as { keys?: Jwk[] };
   const key = jwks.keys?.find((candidate) => candidate.kid === header.kid && candidate.kty === "RSA");
   if (!key) throw new Error("AUTHORIZED_ETSY_OIDC_KEY_NOT_FOUND");
-
-  const publicKey = await crypto.subtle.importKey(
-    "jwk",
-    key,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["verify"]
-  );
+  const publicKey = await crypto.subtle.importKey("jwk", key, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
   const signed = new TextEncoder().encode(`${encodedHeader}.${encodedClaims}`);
   const signature = Buffer.from(encodedSignature, "base64url");
   const valid = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", publicKey, signature, signed);
@@ -103,88 +94,58 @@ async function verifyGithubOidcToken(token: string) {
 
 export async function POST(request: Request) {
   const authorization = request.headers.get("authorization")?.trim() ?? "";
-  if (!authorization.startsWith("Bearer ")) {
-    return NextResponse.json({ error: "AUTHORIZED_ETSY_OIDC_MISSING" }, { status: 401 });
-  }
-
-  try {
-    await verifyGithubOidcToken(authorization.slice("Bearer ".length).trim());
-  } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "AUTHORIZED_ETSY_OIDC_INVALID" },
-      { status: 401 }
-    );
-  }
+  if (!authorization.startsWith("Bearer ")) return NextResponse.json({ error: "AUTHORIZED_ETSY_OIDC_MISSING" }, { status: 401 });
+  try { await verifyGithubOidcToken(authorization.slice("Bearer ".length).trim()); }
+  catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "AUTHORIZED_ETSY_OIDC_INVALID" }, { status: 401 }); }
 
   let payload: unknown;
-  try {
-    payload = await request.json();
-  } catch {
-    return NextResponse.json({ error: "AUTHORIZED_ETSY_INVALID_JSON" }, { status: 400 });
-  }
-
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    return NextResponse.json({ error: "AUTHORIZED_ETSY_INVALID_PAYLOAD" }, { status: 400 });
-  }
-
+  try { payload = await request.json(); }
+  catch { return NextResponse.json({ error: "AUTHORIZED_ETSY_INVALID_JSON" }, { status: 400 }); }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return NextResponse.json({ error: "AUTHORIZED_ETSY_INVALID_PAYLOAD" }, { status: 400 });
   const input = payload as Record<string, unknown>;
   const operationId = typeof input.operationId === "string" ? input.operationId : "";
   const confirmation = typeof input.confirmation === "string" ? input.confirmation : "";
+  if (!operationId || operationId !== confirmation) return NextResponse.json({ error: "AUTHORIZED_ETSY_CONFIRMATION_MISMATCH" }, { status: 409 });
 
-  if (!operationId || operationId !== confirmation) {
-    return NextResponse.json({ error: "AUTHORIZED_ETSY_CONFIRMATION_MISMATCH" }, { status: 409 });
-  }
   if (
     operationId !== PD_STOCK_005_B01.operationId &&
     operationId !== PD_REST_003_A02.operationId &&
+    operationId !== PD_REST_003_A01.operationId &&
     operationId !== PDT_BOBA_001_C03_GALLERY_REPAIR.operationId &&
     operationId !== PDT_BOBA_001_B01_DESCRIPTION.operationId &&
     operationId !== PDT_PCSO_001_C03.operationId
-  ) {
-    return NextResponse.json({ error: "AUTHORIZED_ETSY_OPERATION_NOT_REGISTERED" }, { status: 409 });
-  }
+  ) return NextResponse.json({ error: "AUTHORIZED_ETSY_OPERATION_NOT_REGISTERED" }, { status: 409 });
 
-  if (operationId === PDT_BOBA_001_B01_DESCRIPTION.operationId && input.action === "verify_protected_state") {
-    return verifyPdtBoba001B01ProtectedState();
-  }
+  if (operationId === PDT_BOBA_001_B01_DESCRIPTION.operationId && input.action === "verify_protected_state") return verifyPdtBoba001B01ProtectedState();
+  if (operationId === PD_REST_003_A01.operationId && input.action === "verify_protected_state") return verifyPdRest003A01ProtectedState();
 
   const writeToken = process.env.ETSY_B01_WRITE_TOKEN?.trim() ?? "";
-  if (!writeToken) {
-    return NextResponse.json({ error: "AUTHORIZED_ETSY_WRITE_TOKEN_NOT_CONFIGURED" }, { status: 503 });
-  }
+  if (!writeToken) return NextResponse.json({ error: "AUTHORIZED_ETSY_WRITE_TOKEN_NOT_CONFIGURED" }, { status: 503 });
 
+  if (operationId === PD_REST_003_A01.operationId) {
+    const authorizationId = process.env.ETSY_PD_REST_003_A01_AUTHORIZATION_ID?.trim() ?? "";
+    if (!authorizationId) return NextResponse.json({ error: "PD_REST_003_A01_PRODUCTION_AUTH_NOT_CONFIGURED" }, { status: 503 });
+    const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
+    return handlePdRest003A01TitleTags(exactPdRest003A01Body(authorizationId), delegated);
+  }
   if (operationId === PD_REST_003_A02.operationId) {
-    const delegated = new Request(request.url, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken }
-    });
+    const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
     return handlePdRest003A02TitleTagsImage1(exactPdRest003A02Body(), delegated);
   }
-
   if (operationId === PDT_BOBA_001_C03_GALLERY_REPAIR.operationId) {
-    const delegated = new Request(request.url, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken }
-    });
+    const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
     return handlePdtBoba001C03GalleryRepair(exactPdtBoba001C03GalleryRepairBody(), delegated);
   }
-
   if (operationId === PDT_BOBA_001_B01_DESCRIPTION.operationId) {
     const authorizationId = process.env.ETSY_BOBA_B01_DESCRIPTION_AUTHORIZATION_ID?.trim() ?? "";
     if (!authorizationId) return NextResponse.json({ error: "PDT_BOBA_001_B01_PRODUCTION_AUTH_NOT_CONFIGURED" }, { status: 503 });
     const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
     return handlePdtBoba001B01Description(exactPdtBoba001B01DescriptionBody(authorizationId), delegated);
   }
-
   if (operationId === PDT_PCSO_001_C03.operationId) {
     const authorizationId = process.env.ETSY_PCSO_C03_AUTHORIZATION_ID?.trim() ?? "";
-    if (!authorizationId) {
-      return NextResponse.json({ error: "PDT_PCSO_001_C03_PRODUCTION_AUTH_NOT_CONFIGURED" }, { status: 503 });
-    }
-    const delegated = new Request(request.url, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken }
-    });
+    if (!authorizationId) return NextResponse.json({ error: "PDT_PCSO_001_C03_PRODUCTION_AUTH_NOT_CONFIGURED" }, { status: 503 });
+    const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
     return handlePdtPcso001C03TitleTagsDescription(exactPdtPcso001C03Body(authorizationId), delegated);
   }
 
@@ -203,19 +164,8 @@ export async function POST(request: Request) {
     acceptanceCriteriaVersion: PD_STOCK_005_B01.acceptanceCriteriaVersion,
     acceptanceCriteriaSha256: PD_STOCK_005_B01.acceptanceCriteriaSha256,
     protectedFieldSnapshotSha256: PD_STOCK_005_B01.protectedFieldSnapshotSha256,
-    patch: {
-      title: PD_STOCK_005_B01.title,
-      tags: [...PD_STOCK_005_B01.tags]
-    }
+    patch: { title: PD_STOCK_005_B01.title, tags: [...PD_STOCK_005_B01.tags] }
   };
-
-  const delegated = new Request(request.url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-autodigitalpublisher-write-token": writeToken
-    }
-  });
-
+  const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
   return handlePdStock005B01TitleTags(exactBody, delegated);
 }
