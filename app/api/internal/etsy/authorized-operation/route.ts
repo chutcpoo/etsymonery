@@ -21,6 +21,12 @@ import {
   verifyPdRest003B01ProtectedState
 } from "../../../../../lib/pd-rest-003-b01-title-tags";
 import {
+  exactPdtPogo001B01Body,
+  handlePdtPogo001B01TitleTags,
+  PDT_POGO_001_B01,
+  verifyPdtPogo001B01ProtectedState
+} from "../../../../../lib/pdt-pogo-001-b01-title-tags";
+import {
   exactPdtBoba001C03GalleryRepairBody,
   handlePdtBoba001C03GalleryRepair,
   PDT_BOBA_001_C03_GALLERY_REPAIR
@@ -104,6 +110,7 @@ export async function POST(request: Request) {
     operationId !== PD_REST_003_A02.operationId &&
     operationId !== PD_REST_003_A01.operationId &&
     operationId !== PD_REST_003_B01.operationId &&
+    operationId !== PDT_POGO_001_B01.operationId &&
     operationId !== PDT_BOBA_001_C03_GALLERY_REPAIR.operationId &&
     operationId !== PDT_BOBA_001_B01_DESCRIPTION.operationId &&
     operationId !== PDT_PCSO_001_C03.operationId
@@ -112,10 +119,17 @@ export async function POST(request: Request) {
   if (operationId === PDT_BOBA_001_B01_DESCRIPTION.operationId && input.action === "verify_protected_state") return verifyPdtBoba001B01ProtectedState();
   if (operationId === PD_REST_003_A01.operationId && input.action === "verify_protected_state") return verifyPdRest003A01ProtectedState();
   if (operationId === PD_REST_003_B01.operationId && input.action === "verify_protected_state") return verifyPdRest003B01ProtectedState();
+  if (operationId === PDT_POGO_001_B01.operationId && input.action === "verify_protected_state") return verifyPdtPogo001B01ProtectedState();
 
   const writeToken = process.env.ETSY_B01_WRITE_TOKEN?.trim() ?? "";
   if (!writeToken) return NextResponse.json({ error: "AUTHORIZED_ETSY_WRITE_TOKEN_NOT_CONFIGURED" }, { status: 503 });
 
+  if (operationId === PDT_POGO_001_B01.operationId) {
+    const authorizationId = process.env.ETSY_PDT_POGO_001_B01_AUTHORIZATION_ID?.trim() ?? "";
+    if (!authorizationId) return NextResponse.json({ error: "PDT_POGO_001_B01_PRODUCTION_AUTH_NOT_CONFIGURED" }, { status: 503 });
+    const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
+    return handlePdtPogo001B01TitleTags(exactPdtPogo001B01Body(authorizationId), delegated);
+  }
   if (operationId === PD_REST_003_B01.operationId) {
     const authorizationId = process.env.ETSY_PD_REST_003_B01_AUTHORIZATION_ID?.trim() ?? "";
     if (!authorizationId) return NextResponse.json({ error: "PD_REST_003_B01_PRODUCTION_AUTH_NOT_CONFIGURED" }, { status: 503 });
