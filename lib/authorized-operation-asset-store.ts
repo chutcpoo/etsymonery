@@ -28,7 +28,20 @@ async function ensureTable() {
   )`;
 }
 
-export async function stageAuthorizedAssetChunk(input: AuthorizedAssetChunk) {
+async function ensureSourceTable() {
+  const q = sql();
+  await q`CREATE TABLE IF NOT EXISTS authorized_operation_asset_source_chunks (
+    operation_id text NOT NULL,
+    asset_sha256 text NOT NULL,
+    chunk_index integer NOT NULL,
+    chunk_count integer NOT NULL,
+    data_base64 text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY(operation_id, asset_sha256, chunk_index)
+  )`;
+}
+
+function validateChunk(input: AuthorizedAssetChunk) {
   if (!input.operationId.trim()) throw new Error("INVALID_OPERATION_ID");
   if (!/^[a-f0-9]{64}$/.test(input.assetSha256)) throw new Error("INVALID_ASSET_SHA256");
   if (!Number.isSafeInteger(input.chunkIndex) || input.chunkIndex < 0) throw new Error("INVALID_CHUNK_INDEX");
@@ -40,6 +53,28 @@ export async function stageAuthorizedAssetChunk(input: AuthorizedAssetChunk) {
   if (bytes.length < 1 || bytes.length > 45000 || bytes.toString("base64").replace(/=+$/u, "") !== input.dataBase64.replace(/=+$/u, "")) {
     throw new Error("INVALID_CHUNK_BASE64");
   }
+}
+
+async function loadChunkSet(table: "authorized" | "source", operationId: string, assetSha256: string) {
+  const q = sql();
+  const rows = table === "authorized"
+    ? await q`SELECT chunk_index, chunk_count, data_base64 FROM authorized_operation_asset_chunks
+        WHERE operation_id=${operationId} AND asset_sha256=${assetSha256} ORDER BY chunk_index ASC` as Array<Record<string, unknown>>
+    : await q`SELECT chunk_index, chunk_count, data_base64 FROM authorized_operation_asset_source_chunks
+        WHERE operation_id=${operationId} AND asset_sha256=${assetSha256} ORDER BY chunk_index ASC` as Array<Record<string, unknown>>;
+  if (rows.length < 1) throw new Error(table === "authorized" ? "AUTHORIZED_ASSET_CHUNKS_MISSING" : "AUTHORIZED_ASSET_SOURCE_CHUNKS_MISSING");
+  const chunkCount = Number(rows[0].chunk_count);
+  if (!Number.isSafeInteger(chunkCount) || rows.length !== chunkCount || rows.some((row, index) => Number(row.chunk_index) !== index || Number(row.chunk_count) !== chunkCount)) {
+    throw new Error(table === "authorized" ? "AUTHORIZED_ASSET_CHUNK_SET_MISMATCH" : "AUTHORIZED_ASSET_SOURCE_CHUNK_SET_MISMATCH");
+  }
+  const bytes = Buffer.concat(rows.map((row) => Buffer.from(String(row.data_base64), "base64")));
+  const actualSha = createHash("sha256").update(bytes).digest("hex");
+  if (actualSha !== assetSha256) throw new Error(table === "authorized" ? "AUTHORIZED_ASSET_SHA256_MISMATCH" : "AUTHORIZED_ASSET_SOURCE_SHA256_MISMATCH");
+  return bytes;
+}
+
+export async function stageAuthorizedAssetChunk(input: AuthorizedAssetChunk) {
+  validateChunk(input);
   await ensureTable();
   const q = sql();
   await q`INSERT INTO authorized_operation_asset_chunks(operation_id, asset_sha256, chunk_index, chunk_count, data_base64)
@@ -50,22 +85,22 @@ export async function stageAuthorizedAssetChunk(input: AuthorizedAssetChunk) {
 
 export async function loadAuthorizedAsset(operationId: string, assetSha256: string) {
   await ensureTable();
-  const q = sql();
-  const rows = await q`SELECT chunk_index, chunk_count, data_base64 FROM authorized_operation_asset_chunks
-    WHERE operation_id=${operationId} AND asset_sha256=${assetSha256} ORDER BY chunk_index ASC` as Array<Record<string, unknown>>;
-  if (rows.length < 1) throw new Error("AUTHORIZED_ASSET_CHUNKS_MISSING");
-  const chunkCount = Number(rows[0].chunk_count);
-  if (!Number.isSafeInteger(chunkCount) || rows.length !== chunkCount || rows.some((row, index) => Number(row.chunk_index) !== index || Number(row.chunk_count) !== chunkCount)) {
-    throw new Error("AUTHORIZED_ASSET_CHUNK_SET_MISMATCH");
-  }
-  const bytes = Buffer.concat(rows.map((row) => Buffer.from(String(row.data_base64), "base64")));
-  const actualSha = createHash("sha256").update(bytes).digest("hex");
-  if (actualSha !== assetSha256) throw new Error("AUTHORIZED_ASSET_SHA256_MISMATCH");
-  return bytes;
+  return loadChunkSet("authorized", operationId, assetSha256);
+}
+
+export async function loadAuthorizedAssetSource(operationId: string, assetSha256: string) {
+  await ensureSourceTable();
+  return loadChunkSet("source", operationId, assetSha256);
 }
 
 export async function clearAuthorizedAsset(operationId: string, assetSha256: string) {
   await ensureTable();
   const q = sql();
   await q`DELETE FROM authorized_operation_asset_chunks WHERE operation_id=${operationId} AND asset_sha256=${assetSha256}`;
+}
+
+export async function clearAuthorizedAssetSource(operationId: string, assetSha256: string) {
+  await ensureSourceTable();
+  const q = sql();
+  await q`DELETE FROM authorized_operation_asset_source_chunks WHERE operation_id=${operationId} AND asset_sha256=${assetSha256}`;
 }

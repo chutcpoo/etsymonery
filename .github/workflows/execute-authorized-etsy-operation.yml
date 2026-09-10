@@ -12,12 +12,12 @@ on:
         required: true
         type: string
       action:
-        description: execute or stage_asset_chunk
+        description: execute, stage_asset_chunk, or stage_asset_from_source
         required: false
         default: execute
         type: string
       asset_sha256:
-        description: Exact authorized asset SHA-256; required for Boba C03 stage_asset_chunk
+        description: Exact authorized asset SHA-256 for Boba C03 staging
         required: false
         default: ""
         type: string
@@ -42,7 +42,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: authorized-etsy-operation-${{ inputs.operation_id }}
+  group: authorized-etsy-operation-${{ inputs.operation_id }}-${{ inputs.action }}-${{ inputs.asset_sha256 }}-${{ inputs.chunk_index }}
   cancel-in-progress: false
 
 jobs:
@@ -76,6 +76,10 @@ jobs:
                 test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for Boba C03"; exit 1; }
               fi
               ;;
+            stage_asset_from_source)
+              test "$OPERATION_ID" = "PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001" || { echo "Source staging not registered for operation"; exit 1; }
+              test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for source staging"; exit 1; }
+              ;;
             *) echo "Invalid action"; exit 1 ;;
           esac
 
@@ -86,7 +90,7 @@ jobs:
           set -euo pipefail
           test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "GitHub OIDC request URL unavailable"; exit 1; }
           test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" || { echo "GitHub OIDC request token unavailable"; exit 1; }
-          if [ "$ACTION" = "stage_asset_chunk" ]; then
+          if [ "$ACTION" = "stage_asset_chunk" ] || [ "$ACTION" = "stage_asset_from_source" ]; then
             AUDIENCE="$STAGE_URL"
           else
             AUDIENCE="$EXECUTION_URL"
@@ -107,10 +111,7 @@ jobs:
           node <<'NODE'
           const response = await fetch(process.env.STAGE_URL, {
             method: "POST",
-            headers: {
-              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
-              "content-type": "application/json"
-            },
+            headers: { "authorization": `Bearer ${process.env.OIDC_TOKEN}`, "content-type": "application/json" },
             body: JSON.stringify({
               operationId: process.env.OPERATION_ID,
               confirmation: process.env.CONFIRMATION,
@@ -122,21 +123,36 @@ jobs:
           });
           const text = await response.text();
           const payload = text ? JSON.parse(text) : {};
-          console.log(JSON.stringify({
-            status: payload.status,
-            operationId: payload.operationId,
-            assetSha256: payload.assetSha256,
-            chunkIndex: payload.chunkIndex,
-            chunkCount: payload.chunkCount,
-            ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
-          }));
-          if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
-            throw new Error(`AUTHORIZED_ETSY_ASSET_STAGE_HTTP_${response.status}`);
-          }
+          console.log(JSON.stringify({ status: payload.status, operationId: payload.operationId, assetSha256: payload.assetSha256, chunkIndex: payload.chunkIndex, chunkCount: payload.chunkCount, ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT }));
+          if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) throw new Error(`AUTHORIZED_ETSY_ASSET_STAGE_HTTP_${response.status}`);
+          NODE
+
+      - name: Stage exact asset from private source without Etsy write
+        if: ${{ inputs.action == 'stage_asset_from_source' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.STAGE_URL, {
+            method: "POST",
+            headers: { "authorization": `Bearer ${process.env.OIDC_TOKEN}`, "content-type": "application/json" },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              assetSha256: process.env.ASSET_SHA256,
+              sourceMode: "NEON_TRANSIENT_SOURCE"
+            })
+          });
+          const text = await response.text();
+          const payload = text ? JSON.parse(text) : {};
+          console.log(JSON.stringify({ status: payload.status, operationId: payload.operationId, assetSha256: payload.assetSha256, chunkCount: payload.chunkCount, ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT }));
+          if (!response.ok || payload.status !== "ASSET_STAGED_FROM_SOURCE" || payload.ETSY_WRITE_COUNT !== 0) throw new Error(`AUTHORIZED_ETSY_SOURCE_STAGE_HTTP_${response.status}`);
           NODE
 
       - name: Execute exact authorized operation once
-        if: ${{ inputs.action != 'stage_asset_chunk' }}
+        if: ${{ inputs.action == 'execute' }}
         shell: bash
         env:
           OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
@@ -145,33 +161,16 @@ jobs:
           node <<'NODE'
           const response = await fetch(process.env.EXECUTION_URL, {
             method: "POST",
-            headers: {
-              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
-              "content-type": "application/json"
-            },
-            body: JSON.stringify({
-              operationId: process.env.OPERATION_ID,
-              confirmation: process.env.CONFIRMATION
-            })
+            headers: { "authorization": `Bearer ${process.env.OIDC_TOKEN}`, "content-type": "application/json" },
+            body: JSON.stringify({ operationId: process.env.OPERATION_ID, confirmation: process.env.CONFIRMATION })
           });
-
           const text = await response.text();
           let payload;
-          try { payload = text ? JSON.parse(text) : {}; }
-          catch { payload = { raw: text }; }
-
+          try { payload = text ? JSON.parse(text) : {}; } catch { payload = { raw: text }; }
           console.log(`HTTP ${response.status}`);
           console.log(JSON.stringify(payload, null, 2));
-
-          if (response.status === 202) {
-            throw new Error("RECONCILIATION_REQUIRED_DO_NOT_RETRY");
-          }
-          if (!response.ok) {
-            throw new Error(`AUTHORIZED_ETSY_HTTP_${response.status}`);
-          }
-
+          if (response.status === 202) throw new Error("RECONCILIATION_REQUIRED_DO_NOT_RETRY");
+          if (!response.ok) throw new Error(`AUTHORIZED_ETSY_HTTP_${response.status}`);
           const acceptable = new Set(["UPDATED_AND_VERIFIED", "RECONCILED", "REPLAY"]);
-          if (!acceptable.has(payload.status)) {
-            throw new Error(`AUTHORIZED_ETSY_NONTERMINAL_${payload.status ?? "UNKNOWN"}`);
-          }
+          if (!acceptable.has(payload.status)) throw new Error(`AUTHORIZED_ETSY_NONTERMINAL_${payload.status ?? "UNKNOWN"}`);
           NODE
