@@ -108,6 +108,8 @@ function enableWrites() {
   process.env.PUBLISH_WRITES_ENABLED = "true";
   process.env.ETSY_B01_WRITE_TOKEN = "test-write-token";
   process.env.ETSY_SHOP_ID = "23582741";
+  process.env.ETSY_API_KEY = "test-api-key";
+  process.env.ETSY_SHARED_SECRET = "test-shared-secret";
 }
 
 function protectedMismatchFetch() {
