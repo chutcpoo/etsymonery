@@ -79,3 +79,31 @@ PENDING / NOT AUTHORIZED:
 Production Build → Tester → independent Final QC → QC_PASSED → Publisher intake → Production Authorization → Production.
 
 A metadata Draft read-back PASS is not Production Authorization and is not permission to publish.
+
+## Cross-system artifact linkage contract
+
+This publisher must preserve one traceable release chain across **Google Drive → GitHub → Vercel → Etsy**. Google Drive is canonical artifact storage; GitHub is the code/executor control plane; Vercel is the deployed execution layer; Etsy is the marketplace state.
+
+For every production Candidate/Build or Etsy release operation, the downstream execution record must carry or be able to resolve:
+
+- `productId` and product version
+- candidate ID/fingerprint when applicable
+- build ID/build fingerprint and Acceptance Criteria identity
+- canonical Google Drive folder/file IDs and SHA-256/readback identity where supported
+- GitHub repository/ref/exact commit SHA, PR when applicable, and operation/executor identity
+- Vercel project/deployment identity and the exact deployed Git commit SHA
+- Etsy shop/listing ID, protected-state/listing fingerprint, approved mutation scope, and fresh post-release readback identity when a write is explicitly authorized
+- `ETSY_WRITE_COUNT`
+- `linkageStatus = LINKED | PARTIAL | MISMATCH | NOT_APPLICABLE`
+
+### Linkage invariants
+
+1. A frozen Build may reference only exact canonical Drive artifacts already stored and verified. Missing or stale Drive identity blocks execution.
+2. Executor code must bind to the exact Candidate/Build/AC identities and protected scope. Generic, inferred, or stale identities fail closed.
+3. Production execution is eligible only when Vercel is `READY` for a deployment whose Git commit SHA exactly matches the approved GitHub commit.
+4. Etsy payloads must target only the explicitly approved listing/action and exact operation identity. No broad mutation or silent identity substitution is permitted.
+5. After any explicitly authorized Etsy write, fresh readback evidence must be correlated back to the canonical Drive evidence set together with the GitHub and Vercel identities that produced it.
+6. Any mismatch among Drive hash, Candidate/Build fingerprint, Git commit, Vercel deployed commit, Etsy listing ID, protected live fingerprint, or authorized scope means `STOP / FAIL_CLOSED`.
+7. Buyer deliverables must not be copied into GitHub or Vercel merely to satisfy linkage. Store them canonically in Drive and reference their immutable IDs/hashes from manifests/builds/executors.
+
+This contract does not authorize any Etsy mutation. Etsy remains read-only by default until exact explicit authorization is given for the specific marketplace write.
