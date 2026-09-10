@@ -24,9 +24,12 @@ test("durable authorized Etsy ingress uses GitHub OIDC and keeps Etsy write secr
   assert.match(route, /operationId !== PD_STOCK_005_B01\.operationId/);
   assert.match(route, /operationId !== PD_REST_003_A02\.operationId/);
   assert.match(route, /operationId !== PDT_BOBA_001_C03_GALLERY_REPAIR\.operationId/);
+  assert.match(route, /operationId !== PDT_PCSO_001_C03\.operationId/);
   assert.match(route, /handlePdStock005B01TitleTags\(exactBody, delegated\)/);
   assert.match(route, /handlePdRest003A02TitleTagsImage1\(exactPdRest003A02Body\(\), delegated\)/);
   assert.match(route, /handlePdtBoba001C03GalleryRepair\(exactPdtBoba001C03GalleryRepairBody\(\), delegated\)/);
+  assert.match(route, /handlePdtPcso001C03TitleTagsDescription\(exactPdtPcso001C03Body\(authorizationId\), delegated\)/);
+  assert.match(route, /ETSY_PCSO_C03_AUTHORIZATION_ID/);
   assert.doesNotMatch(route, /AUTODIGITALPUBLISHER_GITHUB_TRIGGER_TOKEN/);
   assert.doesNotMatch(route, /api\.etsy\.com/);
   assert.doesNotMatch(route, /method:\s*"PATCH"/);
