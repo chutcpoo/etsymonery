@@ -15,6 +15,12 @@ import {
   verifyPdRest003A01ProtectedState
 } from "../../../../../lib/pd-rest-003-a01-title-tags";
 import {
+  exactPdRest003B01Body,
+  handlePdRest003B01TitleTags,
+  PD_REST_003_B01,
+  verifyPdRest003B01ProtectedState
+} from "../../../../../lib/pd-rest-003-b01-title-tags";
+import {
   exactPdtBoba001C03GalleryRepairBody,
   handlePdtBoba001C03GalleryRepair,
   PDT_BOBA_001_C03_GALLERY_REPAIR
@@ -42,24 +48,11 @@ const GITHUB_EVENT = "workflow_dispatch";
 const GITHUB_WORKFLOW_REF = "chutcpoo/etsymonery/.github/workflows/execute-authorized-etsy-operation.yml@refs/heads/main";
 
 type JwtHeader = { alg?: string; kid?: string; typ?: string };
-type JwtClaims = {
-  iss?: string;
-  aud?: string | string[];
-  exp?: number;
-  nbf?: number;
-  repository?: string;
-  ref?: string;
-  event_name?: string;
-  workflow_ref?: string;
-};
+type JwtClaims = { iss?: string; aud?: string | string[]; exp?: number; nbf?: number; repository?: string; ref?: string; event_name?: string; workflow_ref?: string };
 type Jwk = JsonWebKey & { kid?: string; alg?: string; use?: string };
 
-function decodeJsonSegment<T>(segment: string): T {
-  return JSON.parse(Buffer.from(segment, "base64url").toString("utf8")) as T;
-}
-function audienceMatches(aud: JwtClaims["aud"]) {
-  return typeof aud === "string" ? aud === GITHUB_OIDC_AUDIENCE : Array.isArray(aud) && aud.includes(GITHUB_OIDC_AUDIENCE);
-}
+function decodeJsonSegment<T>(segment: string): T { return JSON.parse(Buffer.from(segment, "base64url").toString("utf8")) as T; }
+function audienceMatches(aud: JwtClaims["aud"]) { return typeof aud === "string" ? aud === GITHUB_OIDC_AUDIENCE : Array.isArray(aud) && aud.includes(GITHUB_OIDC_AUDIENCE); }
 async function verifyGithubOidcToken(token: string) {
   const parts = token.split(".");
   if (parts.length !== 3) throw new Error("AUTHORIZED_ETSY_OIDC_MALFORMED");
@@ -97,7 +90,6 @@ export async function POST(request: Request) {
   if (!authorization.startsWith("Bearer ")) return NextResponse.json({ error: "AUTHORIZED_ETSY_OIDC_MISSING" }, { status: 401 });
   try { await verifyGithubOidcToken(authorization.slice("Bearer ".length).trim()); }
   catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "AUTHORIZED_ETSY_OIDC_INVALID" }, { status: 401 }); }
-
   let payload: unknown;
   try { payload = await request.json(); }
   catch { return NextResponse.json({ error: "AUTHORIZED_ETSY_INVALID_JSON" }, { status: 400 }); }
@@ -111,6 +103,7 @@ export async function POST(request: Request) {
     operationId !== PD_STOCK_005_B01.operationId &&
     operationId !== PD_REST_003_A02.operationId &&
     operationId !== PD_REST_003_A01.operationId &&
+    operationId !== PD_REST_003_B01.operationId &&
     operationId !== PDT_BOBA_001_C03_GALLERY_REPAIR.operationId &&
     operationId !== PDT_BOBA_001_B01_DESCRIPTION.operationId &&
     operationId !== PDT_PCSO_001_C03.operationId
@@ -118,10 +111,17 @@ export async function POST(request: Request) {
 
   if (operationId === PDT_BOBA_001_B01_DESCRIPTION.operationId && input.action === "verify_protected_state") return verifyPdtBoba001B01ProtectedState();
   if (operationId === PD_REST_003_A01.operationId && input.action === "verify_protected_state") return verifyPdRest003A01ProtectedState();
+  if (operationId === PD_REST_003_B01.operationId && input.action === "verify_protected_state") return verifyPdRest003B01ProtectedState();
 
   const writeToken = process.env.ETSY_B01_WRITE_TOKEN?.trim() ?? "";
   if (!writeToken) return NextResponse.json({ error: "AUTHORIZED_ETSY_WRITE_TOKEN_NOT_CONFIGURED" }, { status: 503 });
 
+  if (operationId === PD_REST_003_B01.operationId) {
+    const authorizationId = process.env.ETSY_PD_REST_003_B01_AUTHORIZATION_ID?.trim() ?? "";
+    if (!authorizationId) return NextResponse.json({ error: "PD_REST_003_B01_PRODUCTION_AUTH_NOT_CONFIGURED" }, { status: 503 });
+    const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
+    return handlePdRest003B01TitleTags(exactPdRest003B01Body(authorizationId), delegated);
+  }
   if (operationId === PD_REST_003_A01.operationId) {
     const authorizationId = process.env.ETSY_PD_REST_003_A01_AUTHORIZATION_ID?.trim() ?? "";
     if (!authorizationId) return NextResponse.json({ error: "PD_REST_003_A01_PRODUCTION_AUTH_NOT_CONFIGURED" }, { status: 503 });
