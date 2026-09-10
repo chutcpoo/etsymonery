@@ -13,6 +13,11 @@ import {
   handlePdtBoba001C03GalleryRepair,
   PDT_BOBA_001_C03_GALLERY_REPAIR
 } from "../../../../../lib/pdt-boba-001-c03-gallery-mobile-safe-repair";
+import {
+  exactPdtPcso001C03Body,
+  handlePdtPcso001C03TitleTagsDescription,
+  PDT_PCSO_001_C03
+} from "../../../../../lib/pdt-pcso-001-c03-title-tags-description";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -126,7 +131,8 @@ export async function POST(request: Request) {
   if (
     operationId !== PD_STOCK_005_B01.operationId &&
     operationId !== PD_REST_003_A02.operationId &&
-    operationId !== PDT_BOBA_001_C03_GALLERY_REPAIR.operationId
+    operationId !== PDT_BOBA_001_C03_GALLERY_REPAIR.operationId &&
+    operationId !== PDT_PCSO_001_C03.operationId
   ) {
     return NextResponse.json({ error: "AUTHORIZED_ETSY_OPERATION_NOT_REGISTERED" }, { status: 409 });
   }
@@ -150,6 +156,18 @@ export async function POST(request: Request) {
       headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken }
     });
     return handlePdtBoba001C03GalleryRepair(exactPdtBoba001C03GalleryRepairBody(), delegated);
+  }
+
+  if (operationId === PDT_PCSO_001_C03.operationId) {
+    const authorizationId = process.env.ETSY_PCSO_C03_AUTHORIZATION_ID?.trim() ?? "";
+    if (!authorizationId) {
+      return NextResponse.json({ error: "PDT_PCSO_001_C03_PRODUCTION_AUTH_NOT_CONFIGURED" }, { status: 503 });
+    }
+    const delegated = new Request(request.url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken }
+    });
+    return handlePdtPcso001C03TitleTagsDescription(exactPdtPcso001C03Body(authorizationId), delegated);
   }
 
   const exactBody = {
