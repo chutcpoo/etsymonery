@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       action:
-        description: execute or stage_asset_chunk
+        description: execute, verify_protected_state, or stage_asset_chunk
         required: false
         default: execute
         type: string
@@ -68,6 +68,7 @@ jobs:
           test "$OPERATION_ID" = "$CONFIRMATION" || { echo "Operation confirmation mismatch"; exit 1; }
           case "$ACTION" in
             execute) ;;
+            verify_protected_state) ;;
             stage_asset_chunk)
               test "$CHUNK_COUNT" -ge 1 || { echo "Invalid chunk_count"; exit 1; }
               test "$CHUNK_INDEX" -ge 0 || { echo "Invalid chunk_index"; exit 1; }
@@ -151,7 +152,8 @@ jobs:
             },
             body: JSON.stringify({
               operationId: process.env.OPERATION_ID,
-              confirmation: process.env.CONFIRMATION
+              confirmation: process.env.CONFIRMATION,
+              action: process.env.ACTION
             })
           });
 
@@ -163,6 +165,12 @@ jobs:
           console.log(`HTTP ${response.status}`);
           console.log(JSON.stringify(payload, null, 2));
 
+          if (process.env.ACTION === "verify_protected_state") {
+            if (!response.ok || payload.status !== "PROTECTED_STATE_MATCH" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error(`PROTECTED_STATE_VERIFICATION_HTTP_${response.status}`);
+            }
+            process.exit(0);
+          }
           if (response.status === 202) {
             throw new Error("RECONCILIATION_REQUIRED_DO_NOT_RETRY");
           }
