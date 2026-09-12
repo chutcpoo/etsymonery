@@ -255,6 +255,8 @@ code {
 
 .listingMetrics strong { overflow-wrap: anywhere; }
 
+.eventMetrics { grid-template-columns: repeat(5, 1fr); }
+
 .funnelGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
