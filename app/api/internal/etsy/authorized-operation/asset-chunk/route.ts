@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PD_REST_003_A02 } from "../../../../../../lib/pd-rest-003-a02-title-tags-image1";
 import { PDT_BOBA_001_C03_GALLERY_REPAIR } from "../../../../../../lib/pdt-boba-001-c03-gallery-mobile-safe-repair";
 import { PDT_BOBA_001_B01_BUYER_FILES } from "../../../../../../lib/pdt-boba-001-b01-buyer-files";
+import { PDT_BPSC_001_C09, PDT_BPSC_001_C09_ASSETS } from "../../../../../../lib/pdt-bpsc-001-c09-new-listing";
 import { stageAuthorizedAssetChunk } from "../../../../../../lib/authorized-operation-asset-store";
 
 export const runtime = "nodejs";
@@ -55,6 +56,10 @@ export async function POST(request:Request){
     registeredAssetSha256=asset.sha256;
   }else if(operationId===PDT_BOBA_001_B01_BUYER_FILES.operationId){
     const asset=PDT_BOBA_001_B01_BUYER_FILES.targets.find(candidate=>candidate.sha256===requestedAssetSha256);
+    if(!asset)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
+    registeredAssetSha256=asset.sha256;
+  }else if(operationId===PDT_BPSC_001_C09.operationId){
+    const asset=PDT_BPSC_001_C09_ASSETS.find(candidate=>candidate.sha256===requestedAssetSha256);
     if(!asset)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
     registeredAssetSha256=asset.sha256;
   }else{
