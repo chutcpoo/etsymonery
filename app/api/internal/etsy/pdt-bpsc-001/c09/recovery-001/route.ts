@@ -5,6 +5,7 @@ import {
   verifyPdtBpsc001C09Recovery001ProtectedState
 } from "../../../../../../../lib/pdt-bpsc-001-c09-recovery-001";
 import { handlePdtBpsc001C09Recovery001Safe } from "../../../../../../../lib/pdt-bpsc-001-c09-recovery-001-safe";
+import { pdtBpsc001C09RecoveryEtsyFetch } from "../../../../../../../lib/pdt-bpsc-001-c09-recovery-etsy-readback";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,7 +79,10 @@ export async function POST(request: Request) {
   if (operationId !== PDT_BPSC_001_C09_RECOVERY_001.operationId || confirmation !== operationId) {
     return NextResponse.json({ error: "PDT_BPSC_C09_RECOVERY_CONFIRMATION_MISMATCH" }, { status: 409 });
   }
-  if (action === "verify_protected_state") return verifyPdtBpsc001C09Recovery001ProtectedState();
+  const recoveryFetch = pdtBpsc001C09RecoveryEtsyFetch();
+  if (action === "verify_protected_state") {
+    return verifyPdtBpsc001C09Recovery001ProtectedState({ fetchImpl: recoveryFetch });
+  }
   if (action !== "execute") return NextResponse.json({ error: "PDT_BPSC_C09_RECOVERY_INVALID_ACTION" }, { status: 409 });
 
   const authorizationId = typeof input.authorizationId === "string" ? input.authorizationId.trim() : "";
@@ -97,6 +101,7 @@ export async function POST(request: Request) {
   return handlePdtBpsc001C09Recovery001Safe(
     exactPdtBpsc001C09Recovery001Body(authorizationId, protectedStateFingerprint),
     authorizationRequestHash,
-    delegated
+    delegated,
+    { fetchImpl: recoveryFetch }
   );
 }
