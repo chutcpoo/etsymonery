@@ -37,12 +37,8 @@ async function snapshot(repository: OperationLedgerRepository) {
   return new Map<string, OperationLedgerRecord | null>(entries);
 }
 
-function isNewlyUnresolved(
-  before: Map<string, OperationLedgerRecord | null>,
-  after: Map<string, OperationLedgerRecord | null>
-) {
+function hasUnresolved(after: Map<string, OperationLedgerRecord | null>) {
   return childOperationIds().some((operationId) => {
-    if (before.get(operationId)) return false;
     const record = after.get(operationId);
     return record?.status === "PENDING" || record?.status === "RECONCILIATION_REQUIRED";
   });
@@ -63,7 +59,7 @@ function totalConfirmedOperations(after: Map<string, OperationLedgerRecord | nul
 }
 
 function responseStatus(payload: Record<string, unknown>, unresolved: boolean) {
-  if (unresolved) return "UNRESOLVED_REQUIRES_RECONCILIATION";
+  if (unresolved || payload.status === "RECONCILIATION_REQUIRED") return "UNRESOLVED_REQUIRES_RECONCILIATION";
   if (payload.status === "PUBLISHED_AND_VERIFIED") return "CONFIRMED";
   return "CONFIRMED_TO_LEDGER_STATE";
 }
@@ -85,7 +81,7 @@ export async function handlePdtBpsc001C09NewListingSafe(
   const payload = await response.clone().json() as Record<string, unknown>;
   const after = await snapshot(repository);
   const confirmedThisRequest = confirmedWritesThisRequest(before, after);
-  const unresolved = isNewlyUnresolved(before, after);
+  const unresolved = hasUnresolved(after) || payload.status === "RECONCILIATION_REQUIRED";
   const totalConfirmed = totalConfirmedOperations(after);
   const { ETSY_WRITE_COUNT: _unsafeCount, ...rest } = payload;
 
