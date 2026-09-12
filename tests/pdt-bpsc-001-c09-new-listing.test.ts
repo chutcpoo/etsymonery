@@ -13,6 +13,12 @@ import {
 const ACTIVE_IDS = [4560696421,4561793463,4561795303,4561819638,4561821192,4566738686,4568730165,4569445414];
 const json = (response: Response) => response.json() as Promise<Record<string, unknown>>;
 
+function configureEtsyReadFixture() {
+  process.env.ETSY_SHOP_ID = "23582741";
+  process.env.ETSY_API_KEY = "test-key";
+  process.env.ETSY_SHARED_SECRET = "test-secret";
+}
+
 function readOnlyProvider(options: { collision?: boolean } = {}) {
   let writes = 0;
   const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
@@ -73,11 +79,11 @@ test("authorization request hash binds authorization and fresh protected state",
 });
 
 test("fresh protected-state verifier is GET-only and returns exact match", async () => {
-  process.env.ETSY_SHOP_ID = "23582741";
+  configureEtsyReadFixture();
   const provider = readOnlyProvider();
   const response = await verifyPdtBpsc001C09ProtectedState({ fetchImpl: provider.fetchImpl, getAccessToken: async () => "token" });
   const payload = await json(response);
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 200, String(payload.error ?? ""));
   assert.equal(payload.status, "PROTECTED_STATE_MATCH");
   assert.equal(payload.candidateFingerprint, PDT_BPSC_001_C09.candidateFingerprint);
   assert.equal(payload.listingFingerprint, PDT_BPSC_001_C09_LISTING_FINGERPRINT);
@@ -87,11 +93,11 @@ test("fresh protected-state verifier is GET-only and returns exact match", async
 });
 
 test("target collision fails closed with zero Etsy writes", async () => {
-  process.env.ETSY_SHOP_ID = "23582741";
+  configureEtsyReadFixture();
   const provider = readOnlyProvider({ collision: true });
   const response = await verifyPdtBpsc001C09ProtectedState({ fetchImpl: provider.fetchImpl, getAccessToken: async () => "token" });
   const payload = await json(response);
-  assert.equal(response.status, 409);
+  assert.equal(response.status, 409, String(payload.error ?? ""));
   assert.equal(payload.status, "PROTECTED_STATE_MISMATCH");
   assert.deepEqual(payload.targetCollisionIds, ["9999999999"]);
   assert.equal(payload.ETSY_WRITE_COUNT, 0);
