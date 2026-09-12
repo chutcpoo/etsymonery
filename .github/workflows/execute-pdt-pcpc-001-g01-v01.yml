@@ -1,0 +1,115 @@
+name: Execute PDT-PCPC-001 G01 V01
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: verify_protected_state or execute
+        required: true
+        default: verify_protected_state
+        type: string
+      authorization_id:
+        description: Exact explicit Production Authorization ID
+        required: false
+        default: ""
+        type: string
+      protected_state_fingerprint:
+        description: Exact protected-state SHA-256
+        required: false
+        default: ""
+        type: string
+      authorization_request_hash:
+        description: Exact authorization request SHA-256
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: pdt-pcpc-001-g01-v01
+  cancel-in-progress: false
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EXECUTION_URL: https://autodigitalpublisher.vercel.app/api/internal/etsy/pdt-pcpc-001
+      OPERATION_ID: PDT-PCPC-001-G01-V01-NEW-LISTING-20260912-01
+      AUTHORIZATION_ID: ${{ inputs.authorization_id }}
+      PROTECTED_STATE_FINGERPRINT: ${{ inputs.protected_state_fingerprint }}
+      AUTHORIZATION_REQUEST_HASH: ${{ inputs.authorization_request_hash }}
+      ACTION: ${{ inputs.action }}
+    steps:
+      - name: Fail closed on exact scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$ACTION" in
+            verify_protected_state) ;;
+            execute)
+              test "$AUTHORIZATION_ID" = "PDT-PCPC-001-G01-V01-PROD-AUTH-20260912-01" || { echo "Authorization ID mismatch"; exit 1; }
+              test "$PROTECTED_STATE_FINGERPRINT" = "6356ee89530373d2946229abd0d00ce63707ed19da464bc1e4d389855cf1c937" || { echo "Protected-state fingerprint mismatch"; exit 1; }
+              test "$AUTHORIZATION_REQUEST_HASH" = "c78beb7ee8cfef3ec4a47f49b4955957651b6c0563d6ca5e934fae8fbc71619f" || { echo "Authorization request hash mismatch"; exit 1; }
+              ;;
+            *) echo "Invalid action"; exit 1 ;;
+          esac
+
+      - name: Acquire GitHub OIDC token
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "GitHub OIDC request URL unavailable"; exit 1; }
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" || { echo "GitHub OIDC request token unavailable"; exit 1; }
+          RESPONSE="$(curl --fail --silent --show-error \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${EXECUTION_URL}")"
+          TOKEN="$(node -e 'const v=JSON.parse(process.argv[1]).value; if(!v) process.exit(1); process.stdout.write(v)' "$RESPONSE")"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Invoke exact protected operation
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.EXECUTION_URL, {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.OPERATION_ID,
+              action: process.env.ACTION,
+              authorizationId: process.env.AUTHORIZATION_ID || undefined,
+              protectedStateFingerprint: process.env.PROTECTED_STATE_FINGERPRINT || undefined,
+              authorizationRequestHash: process.env.AUTHORIZATION_REQUEST_HASH || undefined
+            })
+          });
+          const text = await response.text();
+          let payload;
+          try { payload = text ? JSON.parse(text) : {}; } catch { payload = { raw: text }; }
+          console.log(`HTTP ${response.status}`);
+          console.log(JSON.stringify(payload, null, 2));
+
+          if (process.env.ACTION === "verify_protected_state") {
+            if (!response.ok || payload.status !== "PROTECTED_STATE_MATCH" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error(`PDT_PCPC_001_PROTECTED_STATE_HTTP_${response.status}`);
+            }
+            process.exit(0);
+          }
+
+          if (response.status === 202) throw new Error("RECONCILIATION_REQUIRED_DO_NOT_RETRY");
+          if (!response.ok) throw new Error(`PDT_PCPC_001_AUTHORIZED_HTTP_${response.status}`);
+          if (payload.status !== "PUBLISHED_AND_VERIFIED") {
+            throw new Error(`PDT_PCPC_001_NONTERMINAL_${payload.status ?? "UNKNOWN"}`);
+          }
+          if (payload.operationId !== process.env.OPERATION_ID) throw new Error("PDT_PCPC_001_OPERATION_ID_MISMATCH");
+          NODE
