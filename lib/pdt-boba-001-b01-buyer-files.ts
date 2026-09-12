@@ -250,6 +250,10 @@ function currentTargetMatches(state: State, target: Target) {
   return Boolean(row && row[0] === target.currentListingFileId && row[2] === target.fileName && row[3] === target.currentSizeBytes && row[4] === target.mimeType);
 }
 
+function deletedTargetObserved(state: State, target: Target) {
+  return !state.files.some((file) => Number(file.listing_file_id) === target.currentListingFileId);
+}
+
 function replacedTargetMatches(state: State, target: Target, providerListingFileId?: string) {
   const row = fileRows(state).find((candidate) => candidate[1] === target.slot);
   if (!row || row[2] !== target.fileName || row[3] !== target.targetSizeBytes || row[4] !== target.mimeType) return false;
@@ -369,6 +373,20 @@ export async function handlePdtBoba001B01BuyerFiles(body: Rec, request: Request,
   if (existing?.status === "SUCCEEDED") return NextResponse.json({ status: "REPLAY", mode: "WRITE_ONCE", operationId: existing.operationId, requestHash: existing.requestHash, ledgerStatus: existing.status, receipt: existing.receipt, ETSY_WRITE_COUNT: 0 });
   if (existing?.status === "FAILED") return NextResponse.json({ error: "PDT_BOBA_001_B01_BUYER_FILES_FAILED_DO_NOT_RETRY", ledgerStatus: existing.status, receipt: existing.receipt, ETSY_WRITE_COUNT: 0 }, { status: 409 });
   if (existing?.status === "RECONCILIATION_REQUIRED") return NextResponse.json({ error: "PDT_BOBA_001_B01_BUYER_FILES_RECONCILIATION_REQUIRED_DO_NOT_RETRY", ledgerStatus: existing.status, receipt: existing.receipt, ETSY_WRITE_COUNT: 0 }, { status: 202 });
+  if (existing?.status === "PENDING") {
+    const confirmedWriteCount = Number.isSafeInteger(Number(existing.receipt?.ETSY_WRITE_COUNT)) ? Number(existing.receipt?.ETSY_WRITE_COUNT) : 0;
+    const writeAttemptCount = Number.isSafeInteger(Number(existing.receipt?.ETSY_WRITE_ATTEMPT_COUNT)) ? Number(existing.receipt?.ETSY_WRITE_ATTEMPT_COUNT) : confirmedWriteCount;
+    const receipt = { ...(existing.receipt ?? {}), ETSY_WRITE_COUNT: confirmedWriteCount, ETSY_WRITE_ATTEMPT_COUNT: writeAttemptCount, ETSY_WRITE_COUNT_STATUS: "UNRESOLVED_REQUIRES_RECONCILIATION" };
+    await recordOperationResult(repository, existing.operationId, existing.requestHash, "RECONCILIATION_REQUIRED", runtime.now?.() ?? new Date().toISOString(), { recoveryPoint: "PENDING_REPLAY_BLOCKED_REQUIRES_RECONCILIATION", receipt });
+    return NextResponse.json({
+      error: "PDT_BOBA_001_B01_BUYER_FILES_PENDING_REQUIRES_RECONCILIATION_DO_NOT_RETRY",
+      ledgerStatus: "RECONCILIATION_REQUIRED",
+      receipt,
+      ETSY_WRITE_COUNT: confirmedWriteCount,
+      ETSY_WRITE_ATTEMPT_COUNT: writeAttemptCount,
+      ETSY_WRITE_COUNT_STATUS: "UNRESOLVED_REQUIRES_RECONCILIATION"
+    }, { status: 202 });
+  }
 
   let assets: Awaited<ReturnType<typeof loadAndVerifyAssets>>;
   try { assets = await loadAndVerifyAssets(runtime); }
@@ -404,17 +422,18 @@ export async function handlePdtBoba001B01BuyerFiles(body: Rec, request: Request,
     const begun = await beginOperation(repository, PDT_BOBA_001_B01_BUYER_FILES.operationId, body, runtime.now?.() ?? new Date().toISOString());
     if (begun.status === "REPLAY") return NextResponse.json({ error: "PDT_BOBA_001_B01_BUYER_FILES_ALREADY_CLAIMED", ETSY_WRITE_COUNT: 0 }, { status: 409 });
     record = begun.record;
-    await savePendingProgress(repository, record, { completedTargets: [], protectedVideoSnapshot: beforeVideoSnapshot, ETSY_WRITE_COUNT: 0, evidenceGap: PDT_BOBA_001_B01_BUYER_FILE_SHA_EVIDENCE_GAP }, "READY_BEFORE_FIRST_MUTATION", runtime.now?.() ?? new Date().toISOString());
+    await savePendingProgress(repository, record, { completedTargets: [], protectedVideoSnapshot: beforeVideoSnapshot, ETSY_WRITE_COUNT: 0, ETSY_WRITE_ATTEMPT_COUNT: 0, ETSY_WRITE_COUNT_STATUS: "CONFIRMED", evidenceGap: PDT_BOBA_001_B01_BUYER_FILE_SHA_EVIDENCE_GAP }, "READY_BEFORE_FIRST_MUTATION", runtime.now?.() ?? new Date().toISOString());
     record = (await repository.load(record.operationId)) ?? record;
   }
 
   let providerWriteCount = completed.length * 2 + (inFlight ? 1 : 0);
+  let providerWriteAttemptCount = Number.isSafeInteger(Number(record.receipt?.ETSY_WRITE_ATTEMPT_COUNT)) ? Number(record.receipt?.ETSY_WRITE_ATTEMPT_COUNT) : providerWriteCount;
   let state = before;
   const filesUrl = `https://api.etsy.com/v3/application/shops/${PDT_BOBA_001_B01_BUYER_FILES.shopId}/listings/${PDT_BOBA_001_B01_BUYER_FILES.listingId}/files`;
-  const terminal = async (status: "FAILED" | "RECONCILIATION_REQUIRED", error: string, recoveryPoint: string, targetSlot: number, extra: Rec = {}) => {
-    const receipt = { completedTargets: completed, ...(inFlight ? { inFlightTarget: inFlight } : {}), protectedVideoSnapshot: beforeVideoSnapshot, ETSY_WRITE_COUNT: providerWriteCount, evidenceGap: PDT_BOBA_001_B01_BUYER_FILE_SHA_EVIDENCE_GAP, ...extra };
+  const terminal = async (status: "FAILED" | "RECONCILIATION_REQUIRED", error: string, recoveryPoint: string, targetSlot: number, extra: Rec = {}, writeCountStatus: "CONFIRMED" | "UNRESOLVED_REQUIRES_RECONCILIATION" = "CONFIRMED") => {
+    const receipt = { completedTargets: completed, ...(inFlight ? { inFlightTarget: inFlight } : {}), protectedVideoSnapshot: beforeVideoSnapshot, ETSY_WRITE_COUNT: providerWriteCount, ETSY_WRITE_ATTEMPT_COUNT: providerWriteAttemptCount, ETSY_WRITE_COUNT_STATUS: writeCountStatus, evidenceGap: PDT_BOBA_001_B01_BUYER_FILE_SHA_EVIDENCE_GAP, ...extra };
     await recordOperationResult(repository, record.operationId, record.requestHash, status, runtime.now?.() ?? new Date().toISOString(), { recoveryPoint, receipt });
-    return NextResponse.json({ error, targetSlot, ETSY_WRITE_COUNT: providerWriteCount }, { status: status === "RECONCILIATION_REQUIRED" ? 202 : 502 });
+    return NextResponse.json({ error, targetSlot, ETSY_WRITE_COUNT: providerWriteCount, ETSY_WRITE_ATTEMPT_COUNT: providerWriteAttemptCount, ETSY_WRITE_COUNT_STATUS: writeCountStatus }, { status: status === "RECONCILIATION_REQUIRED" ? 202 : 502 });
   };
 
   for (let index = completed.length; index < assets.length; index += 1) {
@@ -441,12 +460,19 @@ export async function handlePdtBoba001B01BuyerFiles(body: Rec, request: Request,
       if (inFlight) return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_RECONCILIATION_REQUIRED_DO_NOT_RETRY", `TARGET_${target.slot}_DELETE_LEDGER_PROVIDER_MISMATCH`, target.slot);
       const deleteUrl = `${filesUrl}/${target.currentListingFileId}`;
       let deletion: Response;
-      providerWriteCount += 1;
+      providerWriteAttemptCount += 1;
       try {
         deletion = await fetchImpl(deleteUrl, { method: "DELETE", headers: etsyApiHeaders(token), cache: "no-store" });
       } catch {
-        try { state = await readState(token, fetchImpl); } catch { /* ambiguity is terminal regardless of readback */ }
-        return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_DELETE_AMBIGUOUS_DO_NOT_RETRY", `TARGET_${target.slot}_DELETE_RESPONSE_AMBIGUOUS`, target.slot);
+        try {
+          state = await readState(token, fetchImpl);
+          if (progressStateMatches(state, completed, beforeVideoSnapshot, index)) {
+            providerWriteCount += 1;
+            inFlight = { slot: target.slot, phase: "DELETE_VERIFIED", deletedListingFileId: String(target.currentListingFileId), expectedSha256: target.sha256 };
+            return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_DELETE_AMBIGUOUS_DO_NOT_RETRY", `TARGET_${target.slot}_DELETE_RESPONSE_AMBIGUOUS_CONFIRMED_BY_READBACK`, target.slot);
+          }
+        } catch { /* count remains last exactly confirmed value */ }
+        return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_DELETE_AMBIGUOUS_DO_NOT_RETRY", `TARGET_${target.slot}_DELETE_RESPONSE_AMBIGUOUS`, target.slot, {}, "UNRESOLVED_REQUIRES_RECONCILIATION");
       }
       let afterDelete: State;
       try { afterDelete = await readState(token, fetchImpl); }
@@ -454,16 +480,28 @@ export async function handlePdtBoba001B01BuyerFiles(body: Rec, request: Request,
       if (!deletion.ok || deletion.status !== 204) {
         state = afterDelete;
         const unchanged = progressStateMatches(afterDelete, completed, beforeVideoSnapshot);
+        const deleted = progressStateMatches(afterDelete, completed, beforeVideoSnapshot, index);
+        if (deleted) {
+          providerWriteCount += 1;
+          inFlight = { slot: target.slot, phase: "DELETE_VERIFIED", deletedListingFileId: String(target.currentListingFileId), expectedSha256: target.sha256 };
+        }
         const ambiguous = deletion.status >= 500 || !unchanged;
-        return terminal(ambiguous ? "RECONCILIATION_REQUIRED" : "FAILED", ambiguous ? "PDT_BOBA_001_B01_BUYER_FILES_DELETE_AMBIGUOUS_DO_NOT_RETRY" : "PDT_BOBA_001_B01_BUYER_FILES_DELETE_REJECTED_DO_NOT_RETRY", `TARGET_${target.slot}_DELETE_REJECTED`, target.slot, { statusCode: deletion.status });
+        const countStatus = deleted || unchanged ? "CONFIRMED" : "UNRESOLVED_REQUIRES_RECONCILIATION";
+        return terminal(ambiguous ? "RECONCILIATION_REQUIRED" : "FAILED", ambiguous ? "PDT_BOBA_001_B01_BUYER_FILES_DELETE_AMBIGUOUS_DO_NOT_RETRY" : "PDT_BOBA_001_B01_BUYER_FILES_DELETE_REJECTED_DO_NOT_RETRY", `TARGET_${target.slot}_DELETE_REJECTED`, target.slot, { statusCode: deletion.status }, countStatus);
       }
       if (!progressStateMatches(afterDelete, completed, beforeVideoSnapshot, index)) {
         state = afterDelete;
-        return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_POST_DELETE_READBACK_MISMATCH_DO_NOT_RETRY", `TARGET_${target.slot}_DELETE_READBACK_MISMATCH`, target.slot, { statusCode: deletion.status });
+        const deletionObserved = deletedTargetObserved(afterDelete, target);
+        if (deletionObserved) {
+          providerWriteCount += 1;
+          inFlight = { slot: target.slot, phase: "DELETE_VERIFIED", deletedListingFileId: String(target.currentListingFileId), expectedSha256: target.sha256 };
+        }
+        return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_POST_DELETE_READBACK_MISMATCH_DO_NOT_RETRY", `TARGET_${target.slot}_DELETE_READBACK_MISMATCH`, target.slot, { statusCode: deletion.status }, deletionObserved ? "CONFIRMED" : "UNRESOLVED_REQUIRES_RECONCILIATION");
       }
       state = afterDelete;
+      providerWriteCount += 1;
       inFlight = { slot: target.slot, phase: "DELETE_VERIFIED", deletedListingFileId: String(target.currentListingFileId), expectedSha256: target.sha256 };
-      await savePendingProgress(repository, record, { completedTargets: completed, inFlightTarget: inFlight, protectedVideoSnapshot: beforeVideoSnapshot, ETSY_WRITE_COUNT: providerWriteCount, readBackStatus: afterDelete.statuses, evidenceGap: PDT_BOBA_001_B01_BUYER_FILE_SHA_EVIDENCE_GAP }, `TARGET_${target.slot}_DELETE_VERIFIED`, runtime.now?.() ?? new Date().toISOString());
+      await savePendingProgress(repository, record, { completedTargets: completed, inFlightTarget: inFlight, protectedVideoSnapshot: beforeVideoSnapshot, ETSY_WRITE_COUNT: providerWriteCount, ETSY_WRITE_ATTEMPT_COUNT: providerWriteAttemptCount, ETSY_WRITE_COUNT_STATUS: "CONFIRMED", readBackStatus: afterDelete.statuses, evidenceGap: PDT_BOBA_001_B01_BUYER_FILE_SHA_EVIDENCE_GAP }, `TARGET_${target.slot}_DELETE_VERIFIED`, runtime.now?.() ?? new Date().toISOString());
       record = (await repository.load(record.operationId)) ?? record;
     } else {
       return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_PENDING_PROVIDER_STATE_UNSAFE_DO_NOT_RETRY", `TARGET_${target.slot}_PROVIDER_STATE_UNSAFE`, target.slot);
@@ -474,12 +512,21 @@ export async function handlePdtBoba001B01BuyerFiles(body: Rec, request: Request,
     form.append("name", target.fileName);
     form.append("rank", String(target.slot));
     let upload: Response;
-    providerWriteCount += 1;
+    providerWriteAttemptCount += 1;
     try {
       upload = await fetchImpl(filesUrl, { method: "POST", headers: multipartHeaders(token), body: form, cache: "no-store" });
     } catch {
-      try { state = await readState(token, fetchImpl); } catch { /* ambiguity is terminal regardless of readback */ }
-      return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_UPLOAD_AMBIGUOUS_DO_NOT_RETRY", `TARGET_${target.slot}_UPLOAD_RESPONSE_AMBIGUOUS`, target.slot);
+      try {
+        state = await readState(token, fetchImpl);
+        const inferred = uploadedReceiptFromState(state, target);
+        if (inferred && progressStateMatches(state, [...completed, inferred], beforeVideoSnapshot)) {
+          providerWriteCount += 1;
+          completed = [...completed, inferred];
+          inFlight = null;
+          return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_UPLOAD_AMBIGUOUS_DO_NOT_RETRY", `TARGET_${target.slot}_UPLOAD_RESPONSE_AMBIGUOUS_CONFIRMED_BY_READBACK`, target.slot);
+        }
+      } catch { /* count remains last exactly confirmed value */ }
+      return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_UPLOAD_AMBIGUOUS_DO_NOT_RETRY", `TARGET_${target.slot}_UPLOAD_RESPONSE_AMBIGUOUS`, target.slot, {}, "UNRESOLVED_REQUIRES_RECONCILIATION");
     }
     const uploadValue = await json(upload);
     let afterUpload: State;
@@ -487,29 +534,39 @@ export async function handlePdtBoba001B01BuyerFiles(body: Rec, request: Request,
     catch { return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_POST_UPLOAD_READBACK_FAILED_DO_NOT_RETRY", `TARGET_${target.slot}_UPLOAD_READBACK_FAILED`, target.slot, { statusCode: upload.status }); }
     state = afterUpload;
     if (!upload.ok || upload.status !== 201) {
-      return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_UPLOAD_REJECTED_AFTER_DELETE_DO_NOT_RETRY", `TARGET_${target.slot}_UPLOAD_REJECTED_AFTER_DELETE`, target.slot, { statusCode: upload.status });
+      const inferred = uploadedReceiptFromState(afterUpload, target);
+      if (inferred && progressStateMatches(afterUpload, [...completed, inferred], beforeVideoSnapshot)) {
+        providerWriteCount += 1;
+        completed = [...completed, inferred];
+        inFlight = null;
+        return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_UPLOAD_REJECTED_AFTER_DELETE_DO_NOT_RETRY", `TARGET_${target.slot}_UPLOAD_REJECTED_AFTER_DELETE_PROVIDER_CHANGED`, target.slot, { statusCode: upload.status });
+      }
+      const unchangedAfterDelete = progressStateMatches(afterUpload, completed, beforeVideoSnapshot, index);
+      return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_UPLOAD_REJECTED_AFTER_DELETE_DO_NOT_RETRY", `TARGET_${target.slot}_UPLOAD_REJECTED_AFTER_DELETE`, target.slot, { statusCode: upload.status }, unchangedAfterDelete ? "CONFIRMED" : "UNRESOLVED_REQUIRES_RECONCILIATION");
     }
     const receiptItem = uploadedReceiptFromState(afterUpload, target);
     if (!receiptItem || !isRec(uploadValue) || String(uploadValue.listing_file_id) !== receiptItem.providerListingFileId || Number(uploadValue.rank) !== target.slot || uploadValue.filename !== target.fileName || Number(uploadValue.size_bytes) !== target.targetSizeBytes || !progressStateMatches(afterUpload, [...completed, receiptItem], beforeVideoSnapshot)) {
-      return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_UPLOAD_RECEIPT_OR_READBACK_MISMATCH_DO_NOT_RETRY", `TARGET_${target.slot}_UPLOAD_RECEIPT_OR_READBACK_MISMATCH`, target.slot, { providerReceipt: isRec(uploadValue) ? uploadValue : {} });
+      if (receiptItem) providerWriteCount += 1;
+      return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_UPLOAD_RECEIPT_OR_READBACK_MISMATCH_DO_NOT_RETRY", `TARGET_${target.slot}_UPLOAD_RECEIPT_OR_READBACK_MISMATCH`, target.slot, { providerReceipt: isRec(uploadValue) ? uploadValue : {} }, receiptItem ? "CONFIRMED" : "UNRESOLVED_REQUIRES_RECONCILIATION");
     }
 
+    providerWriteCount += 1;
     completed = [...completed, receiptItem];
     inFlight = null;
-    await savePendingProgress(repository, record, { completedTargets: completed, protectedVideoSnapshot: beforeVideoSnapshot, ETSY_WRITE_COUNT: providerWriteCount, readBackStatus: afterUpload.statuses, evidenceGap: PDT_BOBA_001_B01_BUYER_FILE_SHA_EVIDENCE_GAP }, `TARGET_${target.slot}_UPLOAD_VERIFIED`, runtime.now?.() ?? new Date().toISOString());
+    await savePendingProgress(repository, record, { completedTargets: completed, protectedVideoSnapshot: beforeVideoSnapshot, ETSY_WRITE_COUNT: providerWriteCount, ETSY_WRITE_ATTEMPT_COUNT: providerWriteAttemptCount, ETSY_WRITE_COUNT_STATUS: "CONFIRMED", readBackStatus: afterUpload.statuses, evidenceGap: PDT_BOBA_001_B01_BUYER_FILE_SHA_EVIDENCE_GAP }, `TARGET_${target.slot}_UPLOAD_VERIFIED`, runtime.now?.() ?? new Date().toISOString());
     record = (await repository.load(record.operationId)) ?? record;
   }
 
   let finalState: State;
   try { finalState = await readState(token, fetchImpl); }
   catch {
-    const receipt = { completedTargets: completed, protectedVideoSnapshot: beforeVideoSnapshot, ETSY_WRITE_COUNT: providerWriteCount };
+    const receipt = { completedTargets: completed, protectedVideoSnapshot: beforeVideoSnapshot, ETSY_WRITE_COUNT: providerWriteCount, ETSY_WRITE_ATTEMPT_COUNT: providerWriteAttemptCount, ETSY_WRITE_COUNT_STATUS: "CONFIRMED" };
     await recordOperationResult(repository, record.operationId, record.requestHash, "RECONCILIATION_REQUIRED", runtime.now?.() ?? new Date().toISOString(), { recoveryPoint: "FINAL_READBACK_FAILED", receipt });
     return NextResponse.json({ error: "PDT_BOBA_001_B01_BUYER_FILES_FINAL_READBACK_FAILED_DO_NOT_RETRY", ETSY_WRITE_COUNT: providerWriteCount }, { status: 202 });
   }
   const finalOk = progressStateMatches(finalState, completed, beforeVideoSnapshot) && completed.length === PDT_BOBA_001_B01_BUYER_FILES.targets.length && PDT_BOBA_001_B01_BUYER_FILES.targets.every((target, index) => replacedTargetMatches(finalState, target, completed[index]?.providerListingFileId));
   if (!finalOk) {
-    const receipt = { completedTargets: completed, protectedVideoSnapshot: beforeVideoSnapshot, ETSY_WRITE_COUNT: providerWriteCount, readBackStatus: finalState.statuses };
+    const receipt = { completedTargets: completed, protectedVideoSnapshot: beforeVideoSnapshot, ETSY_WRITE_COUNT: providerWriteCount, ETSY_WRITE_ATTEMPT_COUNT: providerWriteAttemptCount, ETSY_WRITE_COUNT_STATUS: "CONFIRMED", readBackStatus: finalState.statuses };
     await recordOperationResult(repository, record.operationId, record.requestHash, "RECONCILIATION_REQUIRED", runtime.now?.() ?? new Date().toISOString(), { recoveryPoint: "FINAL_READBACK_MISMATCH", receipt });
     return NextResponse.json({ error: "PDT_BOBA_001_B01_BUYER_FILES_FINAL_READBACK_MISMATCH_DO_NOT_RETRY", ETSY_WRITE_COUNT: providerWriteCount }, { status: 202 });
   }
@@ -519,6 +576,8 @@ export async function handlePdtBoba001B01BuyerFiles(body: Rec, request: Request,
       completedTargets: completed,
       protectedVideoSnapshot: beforeVideoSnapshot,
       ETSY_WRITE_COUNT: providerWriteCount,
+      ETSY_WRITE_ATTEMPT_COUNT: providerWriteAttemptCount,
+      ETSY_WRITE_COUNT_STATUS: "CONFIRMED",
       authorizationId,
       candidateFingerprint: PDT_BOBA_001_B01_BUYER_FILES.candidateFingerprint,
       buildFingerprint: PDT_BOBA_001_B01_BUYER_FILES.buildFingerprint,
@@ -547,5 +606,5 @@ export async function handlePdtBoba001B01BuyerFiles(body: Rec, request: Request,
   for (const target of PDT_BOBA_001_B01_BUYER_FILES.targets) {
     try { await (runtime.clearAsset ? runtime.clearAsset(target) : clearAuthorizedAsset(PDT_BOBA_001_B01_BUYER_FILES.operationId, target.sha256)); } catch { /* verified operation is complete; cleanup is best effort */ }
   }
-  return NextResponse.json({ status: "UPDATED_AND_VERIFIED", mode: "WRITE_ONCE", operationId: done.operationId, requestHash: done.requestHash, ledgerStatus: done.status, receipt: done.receipt, ETSY_WRITE_COUNT: providerWriteCount });
+  return NextResponse.json({ status: "UPDATED_AND_VERIFIED", mode: "WRITE_ONCE", operationId: done.operationId, requestHash: done.requestHash, ledgerStatus: done.status, receipt: done.receipt, ETSY_WRITE_COUNT: providerWriteCount, ETSY_WRITE_ATTEMPT_COUNT: providerWriteAttemptCount, ETSY_WRITE_COUNT_STATUS: "CONFIRMED" });
 }
