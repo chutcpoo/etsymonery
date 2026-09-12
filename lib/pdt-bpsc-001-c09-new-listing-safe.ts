@@ -54,12 +54,12 @@ function confirmedWritesThisRequest(
 ) {
   return childOperationIds().filter((operationId) => {
     if (before.get(operationId)) return false;
-    return after.get(operationId)?.status === "SUCCESS";
+    return after.get(operationId)?.status === "SUCCEEDED";
   }).length;
 }
 
 function totalConfirmedOperations(after: Map<string, OperationLedgerRecord | null>) {
-  return childOperationIds().filter((operationId) => after.get(operationId)?.status === "SUCCESS").length;
+  return childOperationIds().filter((operationId) => after.get(operationId)?.status === "SUCCEEDED").length;
 }
 
 function responseStatus(payload: Record<string, unknown>, unresolved: boolean) {
