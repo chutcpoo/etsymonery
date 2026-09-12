@@ -129,6 +129,20 @@ export default async function Home() {
 
       <section className="panel compact">
         <div>
+          <p className="eyebrow">REAL-TIME ETSY EVENTS</p>
+          <h2>Verified order signals and read-only receipt correlation</h2>
+          <p>
+            Inspect signature-verified webhook events, duplicate suppression,
+            replay protection and PII-minimized receipt evidence.
+          </p>
+        </div>
+        <a className="connectButton" href="/events">
+          Open Event Ledger
+        </a>
+      </section>
+
+      <section className="panel compact">
+        <div>
           <p className="eyebrow">SHOP STATS</p>
           <h2>Fill evidence the Etsy API does not expose</h2>
           <p>
