@@ -41,7 +41,7 @@ test("material description drift remains blocked after transport normalization",
   const changed = PDT_BPSC_001_C09.description.replace("Manual planning / decision-support tool", "Automatic planning tool");
   const normalized = normalizePdtBpsc001C09EtsyDescriptionTransport(changed);
   const result = verifyEtsyReadBackIdentity(PDT_BPSC_001_C09_LISTING_FINGERPRINT, observation(normalized as string));
-  assert.equal(result.status, "MISMATCH");
+  assert.equal(result.status, "IDENTITY_MISMATCH");
 });
 
 test("fetch wrapper normalizes exact draft core GET only", async () => {
