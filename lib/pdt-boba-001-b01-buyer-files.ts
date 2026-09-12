@@ -307,6 +307,20 @@ function exactBeforeMatches(state: State) {
   return coreProtectedMatches(state) && protectedFilesMatch(state) && PDT_BOBA_001_B01_BUYER_FILES.targets.every((target) => currentTargetMatches(state, target)) && state.files.length === 5;
 }
 
+function slot4DeleteRecoveryMatches(state: State) {
+  const [slot4, slot5] = PDT_BOBA_001_B01_BUYER_FILES.targets;
+  const rows = fileRows(state);
+  const expected = [
+    ...EXPECTED.protectedBuyerFiles.map((row) => [...row]),
+    [slot5.currentListingFileId, 4, slot5.fileName, slot5.currentSizeBytes, slot5.mimeType]
+  ];
+  return coreProtectedMatches(state, true)
+    && protectedFilesMatch(state)
+    && deletedTargetObserved(state, slot4)
+    && rows.length === 4
+    && JSON.stringify(rows) === JSON.stringify(expected);
+}
+
 function protectedAfterMatches(state: State, beforeVideoSnapshot: unknown) {
   return coreProtectedMatches(state) && protectedFilesMatch(state) && JSON.stringify(normalizedVideoSnapshot(state.videos)) === JSON.stringify(beforeVideoSnapshot) && state.files.length === 5;
 }
@@ -335,14 +349,37 @@ export async function verifyPdtBoba001B01BuyerFilesProtectedState(runtime: PdtBo
   try {
     const token = await (runtime.getAccessToken ?? getValidEtsyAccessToken)();
     const state = await readState(token, runtime.fetchImpl ?? fetch);
-    const match = exactBeforeMatches(state);
+    const exactBefore = exactBeforeMatches(state);
+    const slot4DeleteReconciled = slot4DeleteRecoveryMatches(state);
+    let ledgerReconciled = false;
+    if (slot4DeleteReconciled) {
+      const repository = runtime.repository ?? new NeonOperationLedgerRepository();
+      const existing = await repository.load(PDT_BOBA_001_B01_BUYER_FILES.operationId);
+      if (existing?.status === "RECONCILIATION_REQUIRED") {
+        const slot4 = PDT_BOBA_001_B01_BUYER_FILES.targets[0];
+        const receipt = {
+          ...(existing.receipt ?? {}),
+          inFlightTarget: { slot: slot4.slot, phase: "DELETE_VERIFIED", deletedListingFileId: String(slot4.currentListingFileId), expectedSha256: slot4.sha256 },
+          ETSY_WRITE_COUNT: 1,
+          ETSY_WRITE_ATTEMPT_COUNT: Math.max(1, Number(existing.receipt?.ETSY_WRITE_ATTEMPT_COUNT) || 0),
+          ETSY_WRITE_COUNT_STATUS: "CONFIRMED",
+          reconciledFromProviderState: true,
+          reconciliationState: "SLOT_4_DELETE_CONFIRMED",
+          evidenceGap: PDT_BOBA_001_B01_BUYER_FILE_SHA_EVIDENCE_GAP
+        };
+        await recordOperationResult(repository, existing.operationId, existing.requestHash, "RECONCILIATION_REQUIRED", runtime.now?.() ?? new Date().toISOString(), { recoveryPoint: "TARGET_4_DELETE_RECONCILED_READ_ONLY", receipt });
+        ledgerReconciled = true;
+      }
+    }
+    const status = exactBefore ? "PROTECTED_STATE_MATCH" : slot4DeleteReconciled ? "RECONCILIATION_MATCH" : "PROTECTED_STATE_MISMATCH";
     return NextResponse.json({
-      status: match ? "PROTECTED_STATE_MATCH" : "PROTECTED_STATE_MISMATCH",
+      status,
       operationId: PDT_BOBA_001_B01_BUYER_FILES.operationId,
       candidateFingerprint: PDT_BOBA_001_B01_BUYER_FILES.candidateFingerprint,
       buildFingerprint: PDT_BOBA_001_B01_BUYER_FILES.buildFingerprint,
       buildFreezeSha256: PDT_BOBA_001_B01_BUYER_FILES.buildFreezeSha256,
       acceptanceCriteriaSha256: PDT_BOBA_001_B01_BUYER_FILES.acceptanceCriteriaSha256,
+      ...(slot4DeleteReconciled ? { reconciliationState: "SLOT_4_DELETE_CONFIRMED", ACTUAL_CONFIRMED_ETSY_MUTATION_COUNT: 1, ledgerStatus: "RECONCILIATION_REQUIRED", ledgerReconciled } : {}),
       providerReadStatus: state.statuses,
       evidenceGaps: {
         buyerFileSha256: PDT_BOBA_001_B01_BUYER_FILE_SHA_EVIDENCE_GAP,
@@ -350,7 +387,7 @@ export async function verifyPdtBoba001B01BuyerFilesProtectedState(runtime: PdtBo
         deliveryConfiguration: PDT_BOBA_001_B01_DELIVERY_EVIDENCE_GAP
       },
       ETSY_WRITE_COUNT: 0
-    }, { status: match ? 200 : 409 });
+    }, { status: exactBefore || slot4DeleteReconciled ? 200 : 409 });
   } catch {
     return NextResponse.json({ error: "PDT_BOBA_001_B01_BUYER_FILES_VERIFICATION_FAILED", ETSY_WRITE_COUNT: 0 }, { status: 502 });
   }
@@ -372,7 +409,12 @@ export async function handlePdtBoba001B01BuyerFiles(body: Rec, request: Request,
   if (existing && existing.requestHash !== allowedRequestHash) return NextResponse.json({ error: "OPERATION_ID_PAYLOAD_MISMATCH", ETSY_WRITE_COUNT: 0 }, { status: 409 });
   if (existing?.status === "SUCCEEDED") return NextResponse.json({ status: "REPLAY", mode: "WRITE_ONCE", operationId: existing.operationId, requestHash: existing.requestHash, ledgerStatus: existing.status, receipt: existing.receipt, ETSY_WRITE_COUNT: 0 });
   if (existing?.status === "FAILED") return NextResponse.json({ error: "PDT_BOBA_001_B01_BUYER_FILES_FAILED_DO_NOT_RETRY", ledgerStatus: existing.status, receipt: existing.receipt, ETSY_WRITE_COUNT: 0 }, { status: 409 });
-  if (existing?.status === "RECONCILIATION_REQUIRED") return NextResponse.json({ error: "PDT_BOBA_001_B01_BUYER_FILES_RECONCILIATION_REQUIRED_DO_NOT_RETRY", ledgerStatus: existing.status, receipt: existing.receipt, ETSY_WRITE_COUNT: 0 }, { status: 202 });
+  if (existing?.status === "RECONCILIATION_REQUIRED") {
+    const confirmedWriteCount = Number.isSafeInteger(Number(existing.receipt?.ETSY_WRITE_COUNT)) ? Number(existing.receipt?.ETSY_WRITE_COUNT) : 0;
+    const writeAttemptCount = Number.isSafeInteger(Number(existing.receipt?.ETSY_WRITE_ATTEMPT_COUNT)) ? Number(existing.receipt?.ETSY_WRITE_ATTEMPT_COUNT) : confirmedWriteCount;
+    const writeCountStatus = existing.receipt?.ETSY_WRITE_COUNT_STATUS === "CONFIRMED" ? "CONFIRMED" : "UNRESOLVED_REQUIRES_RECONCILIATION";
+    return NextResponse.json({ error: "PDT_BOBA_001_B01_BUYER_FILES_RECONCILIATION_REQUIRED_DO_NOT_RETRY", ledgerStatus: existing.status, receipt: existing.receipt, ETSY_WRITE_COUNT: confirmedWriteCount, ETSY_WRITE_ATTEMPT_COUNT: writeAttemptCount, ETSY_WRITE_COUNT_STATUS: writeCountStatus }, { status: 202 });
+  }
   if (existing?.status === "PENDING") {
     const confirmedWriteCount = Number.isSafeInteger(Number(existing.receipt?.ETSY_WRITE_COUNT)) ? Number(existing.receipt?.ETSY_WRITE_COUNT) : 0;
     const writeAttemptCount = Number.isSafeInteger(Number(existing.receipt?.ETSY_WRITE_ATTEMPT_COUNT)) ? Number(existing.receipt?.ETSY_WRITE_ATTEMPT_COUNT) : confirmedWriteCount;
@@ -476,7 +518,7 @@ export async function handlePdtBoba001B01BuyerFiles(body: Rec, request: Request,
       }
       let afterDelete: State;
       try { afterDelete = await readState(token, fetchImpl); }
-      catch { return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_POST_DELETE_READBACK_FAILED_DO_NOT_RETRY", `TARGET_${target.slot}_DELETE_READBACK_FAILED`, target.slot, { statusCode: deletion.status }); }
+      catch { return terminal("RECONCILIATION_REQUIRED", "PDT_BOBA_001_B01_BUYER_FILES_POST_DELETE_READBACK_FAILED_DO_NOT_RETRY", `TARGET_${target.slot}_DELETE_READBACK_FAILED`, target.slot, { statusCode: deletion.status, providerMutationOutcome: deletion.ok && deletion.status === 204 ? "DELETE_204_READBACK_UNAVAILABLE" : "DELETE_RESPONSE_READBACK_UNAVAILABLE" }, "UNRESOLVED_REQUIRES_RECONCILIATION"); }
       if (!deletion.ok || deletion.status !== 204) {
         state = afterDelete;
         const unchanged = progressStateMatches(afterDelete, completed, beforeVideoSnapshot);
