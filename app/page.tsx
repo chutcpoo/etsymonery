@@ -115,6 +115,20 @@ export default async function Home() {
 
       <section className="panel compact">
         <div>
+          <p className="eyebrow">COMMERCE INTELLIGENCE</p>
+          <h2>Orders, revenue, Etsy fees and review signals</h2>
+          <p>
+            Read-only receipt, payment-account and review evidence for sales
+            decisions, with buyer PII intentionally excluded from the dashboard.
+          </p>
+        </div>
+        <a className="connectButton" href="/commerce">
+          Open Commerce Dashboard
+        </a>
+      </section>
+
+      <section className="panel compact">
+        <div>
           <p className="eyebrow">SHOP STATS</p>
           <h2>Fill evidence the Etsy API does not expose</h2>
           <p>
