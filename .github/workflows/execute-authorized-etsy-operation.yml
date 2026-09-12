@@ -16,8 +16,23 @@ on:
         required: false
         default: execute
         type: string
+      authorization_id:
+        description: Exact explicit authorization ID; required for C09 execute only
+        required: false
+        default: ""
+        type: string
+      protected_state_fingerprint:
+        description: Fresh protected-state SHA-256; required for C09 execute only
+        required: false
+        default: ""
+        type: string
+      authorization_request_hash:
+        description: Exact authorization request SHA-256; required for C09 execute only
+        required: false
+        default: ""
+        type: string
       asset_sha256:
-        description: Exact authorized asset SHA-256; required for Boba C03 stage_asset_chunk
+        description: Exact registered asset SHA-256 for stage_asset_chunk
         required: false
         default: ""
         type: string
@@ -55,6 +70,9 @@ jobs:
       OPERATION_ID: ${{ inputs.operation_id }}
       CONFIRMATION: ${{ inputs.confirmation }}
       ACTION: ${{ inputs.action }}
+      AUTHORIZATION_ID: ${{ inputs.authorization_id }}
+      PROTECTED_STATE_FINGERPRINT: ${{ inputs.protected_state_fingerprint }}
+      AUTHORIZATION_REQUEST_HASH: ${{ inputs.authorization_request_hash }}
       ASSET_SHA256: ${{ inputs.asset_sha256 }}
       CHUNK_INDEX: ${{ inputs.chunk_index }}
       CHUNK_COUNT: ${{ inputs.chunk_count }}
@@ -67,15 +85,23 @@ jobs:
           test -n "$OPERATION_ID" || { echo "Missing operation_id"; exit 1; }
           test "$OPERATION_ID" = "$CONFIRMATION" || { echo "Operation confirmation mismatch"; exit 1; }
           case "$ACTION" in
-            execute) ;;
+            execute)
+              if [ "$OPERATION_ID" = "PDT-BPSC-001-C09-NEW-LISTING-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing C09 authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid C09 protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid C09 authorization_request_hash"; exit 1; }
+              fi
+              ;;
             verify_protected_state) ;;
             stage_asset_chunk)
               test "$CHUNK_COUNT" -ge 1 || { echo "Invalid chunk_count"; exit 1; }
               test "$CHUNK_INDEX" -ge 0 || { echo "Invalid chunk_index"; exit 1; }
               test -n "$ASSET_CHUNK_BASE64" || { echo "Missing asset chunk"; exit 1; }
-              if [ "$OPERATION_ID" = "PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001" ]; then
-                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for Boba C03"; exit 1; }
-              fi
+              case "$OPERATION_ID" in
+                PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001|PDT-BPSC-001-C09-NEW-LISTING-001)
+                  test -n "$ASSET_SHA256" || { echo "Missing asset_sha256"; exit 1; }
+                  ;;
+              esac
               ;;
             *) echo "Invalid action"; exit 1 ;;
           esac
@@ -153,7 +179,10 @@ jobs:
             body: JSON.stringify({
               operationId: process.env.OPERATION_ID,
               confirmation: process.env.CONFIRMATION,
-              action: process.env.ACTION
+              action: process.env.ACTION,
+              authorizationId: process.env.AUTHORIZATION_ID || undefined,
+              protectedStateFingerprint: process.env.PROTECTED_STATE_FINGERPRINT || undefined,
+              authorizationRequestHash: process.env.AUTHORIZATION_REQUEST_HASH || undefined
             })
           });
 
@@ -178,7 +207,7 @@ jobs:
             throw new Error(`AUTHORIZED_ETSY_HTTP_${response.status}`);
           }
 
-          const acceptable = new Set(["UPDATED_AND_VERIFIED", "RECONCILED", "REPLAY"]);
+          const acceptable = new Set(["UPDATED_AND_VERIFIED", "PUBLISHED_AND_VERIFIED", "RECONCILED", "REPLAY"]);
           if (!acceptable.has(payload.status)) {
             throw new Error(`AUTHORIZED_ETSY_NONTERMINAL_${payload.status ?? "UNKNOWN"}`);
           }
