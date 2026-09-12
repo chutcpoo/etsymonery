@@ -1,7 +1,7 @@
 # AUTODIGITALPUBLISHER ACTIVE MANIFEST
 
 STATUS: ACTIVE / PRODUCTION BASELINE / EXECUTABLE
-VERSION: V1.5 QC-PASSED INTAKE GATE
+VERSION: V1.6 COMMERCE INTELLIGENCE P0
 AUTHORITY: THIS FILE ONLY
 
 ## Mission
@@ -11,7 +11,7 @@ Operate as the downstream publisher only after the exact Etsy candidate has reac
 ## Executable workflow
 
 READ-ONLY EVIDENCE PLANE
-→ Shop Identity Test / Listing Detail / Sales Control Center / Shop Stats (NO WRITE)
+→ Shop Identity Test / Listing Detail / Sales Control Center / Commerce Intelligence / Shop Stats (NO WRITE)
 
 PUBLISHING PLANE
 QC_PASSED INPUT ONLY
@@ -38,7 +38,9 @@ QC_PASSED INPUT ONLY
 - The only implemented active-listing update is the exact B01 operation for Etsy Listing `4560696421`; it requires the write token, write flag, canonical request-hash allowlist, active-state fingerprint checks, and an atomic operation-ledger claim.
 - `UPDATE_ACTIVE_LISTING` is available only from its dedicated endpoint and must not be dispatched through Draft-create or Publish routes.
 - Metadata read-back must never be reported as full candidate persistence while buyer files/images are not uploaded and verified.
-- The Etsy Sales Control Center and Shop Stats capture are read-only and must not perform listing writes.
+- The Etsy Sales Control Center, Commerce Intelligence, and Shop Stats capture are read-only and must not perform listing writes.
+- Commerce Intelligence must exclude buyer name, buyer email, and postal-address fields from its dashboard/API projection.
+- Payment-account ledger integer amounts must not be assigned an invented divisor when Etsy does not expose one in that model.
 - Shop Stats values that are not available from the Etsy Open API must remain UNKNOWN and must not be inferred.
 - Secrets must come from runtime environment variables only.
 - No legacy manifest may supersede this file without an explicit version promotion.
@@ -51,6 +53,7 @@ ACTIVE:
 - Shop Identity Test and Read-only Listing Test
 - Etsy Sales Control Center and local Shop Stats evidence capture/export
 - Read-only transaction-count evidence via `transactions_r`
+- Read-only Commerce Intelligence for recent Etsy receipts/orders, per-receipt payment gross/fees/net evidence, payment-account ledger entries, public review evidence, and listing-level commerce aggregation with buyer PII excluded
 - Read-only canonical Catalog identifier projection using exact Drive ID `1XoIRHCVGGG81ddMhLfyP4TBE9mCgbOft`
 - Etsy/Gumroad/Payhip plan adapters
 - Etsy QC_PASSED-only publishing intake, release-state gating, candidate fingerprint and listing fingerprint
@@ -61,6 +64,9 @@ ACTIVE:
 - Health endpoint
 
 PENDING / NOT AUTHORIZED:
+- Signed Etsy order webhooks plus persistent commerce-event ledger
+- Whole-shop listing drift / integrity monitoring across protected listing fields and assets
+- Whole-shop digital buyer-file health reconciliation against canonical Google Drive identity
 - Explicit external Etsy Draft-write persistence exercise against a real non-production Draft
 - Etsy listing image upload automation
 - Etsy buyer-file upload automation from the authorized Google Drive source
