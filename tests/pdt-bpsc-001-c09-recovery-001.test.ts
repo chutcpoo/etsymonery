@@ -60,6 +60,25 @@ function fetchState(images: unknown[] = [], files: unknown[] = []) {
   };
 }
 
+function installTestEtsyConfig() {
+  const prior = {
+    shopId: process.env.ETSY_SHOP_ID,
+    apiKey: process.env.ETSY_API_KEY,
+    sharedSecret: process.env.ETSY_SHARED_SECRET
+  };
+  process.env.ETSY_SHOP_ID = "23582741";
+  process.env.ETSY_API_KEY = "test-api-key";
+  process.env.ETSY_SHARED_SECRET = "test-shared-secret";
+  return () => {
+    if (prior.shopId === undefined) delete process.env.ETSY_SHOP_ID;
+    else process.env.ETSY_SHOP_ID = prior.shopId;
+    if (prior.apiKey === undefined) delete process.env.ETSY_API_KEY;
+    else process.env.ETSY_API_KEY = prior.apiKey;
+    if (prior.sharedSecret === undefined) delete process.env.ETSY_SHARED_SECRET;
+    else process.env.ETSY_SHARED_SECRET = prior.sharedSecret;
+  };
+}
+
 test("C09 recovery is hard-bound to existing exact draft and never to draft creation", () => {
   assert.equal(PDT_BPSC_001_C09_RECOVERY_001.operationId, "PDT-BPSC-001-C09-RECOVERY-001");
   assert.equal(PDT_BPSC_001_C09_RECOVERY_001.parentOperationId, "PDT-BPSC-001-C09-NEW-LISTING-001");
@@ -70,8 +89,7 @@ test("C09 recovery is hard-bound to existing exact draft and never to draft crea
 });
 
 test("fresh recovery protected-state verification matches exact draft with 0 gallery and 0 buyer files", async () => {
-  const priorShopId = process.env.ETSY_SHOP_ID;
-  process.env.ETSY_SHOP_ID = "23582741";
+  const restore = installTestEtsyConfig();
   try {
     const response = await verifyPdtBpsc001C09Recovery001ProtectedState({
       repository: await parentRepository(),
@@ -87,14 +105,12 @@ test("fresh recovery protected-state verification matches exact draft with 0 gal
     assert.equal(payload.ETSY_WRITE_COUNT, 0);
     assert.match(payload.protectedStateFingerprint, /^[a-f0-9]{64}$/);
   } finally {
-    if (priorShopId === undefined) delete process.env.ETSY_SHOP_ID;
-    else process.env.ETSY_SHOP_ID = priorShopId;
+    restore();
   }
 });
 
 test("recovery protected-state verification fails closed if draft already has an asset", async () => {
-  const priorShopId = process.env.ETSY_SHOP_ID;
-  process.env.ETSY_SHOP_ID = "23582741";
+  const restore = installTestEtsyConfig();
   try {
     const response = await verifyPdtBpsc001C09Recovery001ProtectedState({
       repository: await parentRepository(),
@@ -106,8 +122,7 @@ test("recovery protected-state verification fails closed if draft already has an
     assert.equal(payload.status, "PROTECTED_STATE_MISMATCH");
     assert.equal(payload.ETSY_WRITE_COUNT, 0);
   } finally {
-    if (priorShopId === undefined) delete process.env.ETSY_SHOP_ID;
-    else process.env.ETSY_SHOP_ID = priorShopId;
+    restore();
   }
 });
 
