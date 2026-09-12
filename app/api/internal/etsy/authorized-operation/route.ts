@@ -55,6 +55,12 @@ import {
   handlePdtPcso001C03TitleTagsDescription,
   PDT_PCSO_001_C03
 } from "../../../../../lib/pdt-pcso-001-c03-title-tags-description";
+import {
+  exactPdtBpsc001C09Body,
+  PDT_BPSC_001_C09,
+  verifyPdtBpsc001C09ProtectedState
+} from "../../../../../lib/pdt-bpsc-001-c09-new-listing";
+import { handlePdtBpsc001C09NewListingSafe } from "../../../../../lib/pdt-bpsc-001-c09-new-listing-safe";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -129,9 +135,11 @@ export async function POST(request: Request) {
     operationId !== PDT_BOBA_001_B01_DESCRIPTION.operationId &&
     operationId !== PDT_BOBA_001_B01_BUYER_FILES.operationId &&
     operationId !== PDT_BOBA_001_B01_RECOVERY_001.operationId &&
-    operationId !== PDT_PCSO_001_C03.operationId
+    operationId !== PDT_PCSO_001_C03.operationId &&
+    operationId !== PDT_BPSC_001_C09.operationId
   ) return NextResponse.json({ error: "AUTHORIZED_ETSY_OPERATION_NOT_REGISTERED" }, { status: 409 });
 
+  if (operationId === PDT_BPSC_001_C09.operationId && input.action === "verify_protected_state") return verifyPdtBpsc001C09ProtectedState();
   if (operationId === PD_STOCK_005_C01.operationId && input.action === "verify_protected_state") return verifyPdStock005C01ProtectedState();
   if (operationId === PDT_BOBA_001_B01_DESCRIPTION.operationId && input.action === "verify_protected_state") return verifyPdtBoba001B01ProtectedState();
   if (operationId === PDT_BOBA_001_B01_BUYER_FILES.operationId && input.action === "verify_protected_state") return verifyPdtBoba001B01BuyerFilesProtectedState();
@@ -143,6 +151,20 @@ export async function POST(request: Request) {
   const writeToken = process.env.ETSY_B01_WRITE_TOKEN?.trim() ?? "";
   if (!writeToken) return NextResponse.json({ error: "AUTHORIZED_ETSY_WRITE_TOKEN_NOT_CONFIGURED" }, { status: 503 });
 
+  if (operationId === PDT_BPSC_001_C09.operationId) {
+    const authorizationId = typeof input.authorizationId === "string" ? input.authorizationId.trim() : "";
+    const protectedStateFingerprint = typeof input.protectedStateFingerprint === "string" ? input.protectedStateFingerprint.trim().toLowerCase() : "";
+    const authorizationRequestHash = typeof input.authorizationRequestHash === "string" ? input.authorizationRequestHash.trim().toLowerCase() : "";
+    if (!authorizationId || !protectedStateFingerprint || !authorizationRequestHash) {
+      return NextResponse.json({ error: "PDT_BPSC_001_C09_EXACT_AUTHORIZATION_BINDING_REQUIRED" }, { status: 409 });
+    }
+    const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
+    return handlePdtBpsc001C09NewListingSafe(
+      exactPdtBpsc001C09Body(authorizationId, protectedStateFingerprint),
+      authorizationRequestHash,
+      delegated
+    );
+  }
   if (operationId === PDT_POGO_001_B01.operationId) {
     const authorizationId = process.env.ETSY_PDT_POGO_001_B01_AUTHORIZATION_ID?.trim() ?? "";
     if (!authorizationId) return NextResponse.json({ error: "PDT_POGO_001_B01_PRODUCTION_AUTH_NOT_CONFIGURED" }, { status: 503 });
