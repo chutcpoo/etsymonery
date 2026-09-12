@@ -8,12 +8,13 @@ import {
 
 const OLD_AUTH = "PDT-BOBA-001-B01-ZIP-RECOVERY-AUTH-20260912-01";
 const OLD_BAD_SHA = "7220aac4c417276360fcd3d7faab0a929fae3f825bbfa6ab86283c6325c5e816";
-const CURRENT_AUTH = "PDT-BOBA-001-B01-ZIP-RECOVERY-AUTH-20260912-02";
-const CURRENT_SHA = "9cb82685922aa94170e1b21f3b16697d79512eca304d2ff157c2b59c77836df4";
+const CURRENT_AUTH = "PDT-BOBA-001-B01-ZIP-RECOVERY-AUTH-20260912-03";
+const CURRENT_SHA = "2bbe9b6261c6ce1e6b9477e37c256864b1bee2a1052a6f860067d377f4fa6fe6";
 
 test("exact body supersedes only the known stale production authorization ID", () => {
   const body = exactPdtBoba001B01ZipRecovery001Body(OLD_AUTH);
   assert.equal(body.authorizationId, CURRENT_AUTH);
+  assert.equal(body.operationId, "PDT-BOBA-001-B01-BUYER-FILES-ZIP-RECOVERY-002");
   assert.equal(hashOperationRequest(body), CURRENT_SHA);
 });
 
