@@ -51,10 +51,10 @@ import {
 } from "../../../../../lib/pdt-pcso-001-c03-title-tags-description";
 import {
   exactPdtBpsc001C09Body,
-  handlePdtBpsc001C09NewListing,
   PDT_BPSC_001_C09,
   verifyPdtBpsc001C09ProtectedState
 } from "../../../../../lib/pdt-bpsc-001-c09-new-listing";
+import { handlePdtBpsc001C09NewListingSafe } from "../../../../../lib/pdt-bpsc-001-c09-new-listing-safe";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "PDT_BPSC_001_C09_EXACT_AUTHORIZATION_BINDING_REQUIRED" }, { status: 409 });
     }
     const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
-    return handlePdtBpsc001C09NewListing(
+    return handlePdtBpsc001C09NewListingSafe(
       exactPdtBpsc001C09Body(authorizationId, protectedStateFingerprint),
       authorizationRequestHash,
       delegated
