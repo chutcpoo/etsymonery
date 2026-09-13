@@ -51,9 +51,9 @@ jobs:
           case "$ACTION" in
             verify_protected_state) ;;
             execute)
-              test "$AUTHORIZATION_ID" = "PDT-PCPC-001-G01-V01-PROD-AUTH-20260912-01" || { echo "Authorization ID mismatch"; exit 1; }
-              test "$PROTECTED_STATE_FINGERPRINT" = "6356ee89530373d2946229abd0d00ce63707ed19da464bc1e4d389855cf1c937" || { echo "Protected-state fingerprint mismatch"; exit 1; }
-              test "$AUTHORIZATION_REQUEST_HASH" = "c78beb7ee8cfef3ec4a47f49b4955957651b6c0563d6ca5e934fae8fbc71619f" || { echo "Authorization request hash mismatch"; exit 1; }
+              test "$AUTHORIZATION_ID" = "PDT-PCPC-001-G01-V01-PROD-AUTH-20260913-02" || { echo "Authorization ID mismatch"; exit 1; }
+              test "$PROTECTED_STATE_FINGERPRINT" = "a1571b81d5fe40c2ca0b17bd59410c8ec686080fd1159f5f5f6e39601db7227d" || { echo "Protected-state fingerprint mismatch"; exit 1; }
+              test "$AUTHORIZATION_REQUEST_HASH" = "eab66d3a396e120f41fbb12f3c3be321b7a3abcfc480b0e681eab7209ffe9c6e" || { echo "Authorization request hash mismatch"; exit 1; }
               ;;
             *) echo "Invalid action"; exit 1 ;;
           esac
