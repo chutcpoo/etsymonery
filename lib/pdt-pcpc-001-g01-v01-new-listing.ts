@@ -275,7 +275,17 @@ async function protectedState(runtime: Runtime = {}) {
   const collisions = [...active, ...draft]
     .filter((item) => typeof item.title === "string" && item.title.trim() === PDT_PCPC_001_G01_V01.title)
     .map(listingId).filter((id): id is string => Boolean(id)).sort();
-  if (collisions.length > 0) throw new Error("PDT_PCPC_001_TARGET_COLLISION");
+  if (collisions.length > 0) {
+    const error = new Error("PDT_PCPC_001_TARGET_COLLISION") as Error & {
+      activeListingIds?: string[];
+      draftListingIds?: string[];
+      collisionListingIds?: string[];
+    };
+    error.activeListingIds = activeIds;
+    error.draftListingIds = draftIds;
+    error.collisionListingIds = collisions;
+    throw error;
+  }
   return {
     fingerprint: PDT_PCPC_001_G01_V01.protectedStateFingerprint,
     activeIds, draftIds, collisions
@@ -302,10 +312,20 @@ export async function verifyPdtPcpc001ProtectedState(runtime: Runtime = {}) {
       ETSY_WRITE_COUNT: 0
     });
   } catch (error) {
+    const collision = error as Error & {
+      activeListingIds?: string[];
+      draftListingIds?: string[];
+      collisionListingIds?: string[];
+    };
     return NextResponse.json({
       status: "PROTECTED_STATE_BLOCKED",
       error: error instanceof Error ? error.message : "UNKNOWN",
       operationId: PDT_PCPC_001_G01_V01.operationId,
+      ...(collision.message === "PDT_PCPC_001_TARGET_COLLISION" ? {
+        activeListingIds: collision.activeListingIds ?? [],
+        draftListingIds: collision.draftListingIds ?? [],
+        collisionListingIds: collision.collisionListingIds ?? []
+      } : {}),
       ETSY_WRITE_COUNT: 0
     }, { status: 409 });
   }
