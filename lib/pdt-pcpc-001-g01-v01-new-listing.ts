@@ -110,9 +110,9 @@ export const PDT_PCPC_001_G01_V01 = Object.freeze({
   operation: "CREATE_NEW_DIGITAL_LISTING_EXACT_G01_V01_ONLY",
   operationId: "PDT-PCPC-001-G01-V01-NEW-LISTING-20260912-01",
   operationFingerprint: "82c1a37bc01a0453f4bf9a499416dc784025fc8006fa2b8b4836e1ae55a2aea3",
-  authorizationId: "PDT-PCPC-001-G01-V01-PROD-AUTH-20260912-01",
-  authorizationRequestHash: "c78beb7ee8cfef3ec4a47f49b4955957651b6c0563d6ca5e934fae8fbc71619f",
-  protectedStateFingerprint: "6356ee89530373d2946229abd0d00ce63707ed19da464bc1e4d389855cf1c937",
+  authorizationId: "PDT-PCPC-001-G01-V01-PROD-AUTH-20260913-02",
+  authorizationRequestHash: "eab66d3a396e120f41fbb12f3c3be321b7a3abcfc480b0e681eab7209ffe9c6e",
+  protectedStateFingerprint: "a1571b81d5fe40c2ca0b17bd59410c8ec686080fd1159f5f5f6e39601db7227d",
   productId: "PDT-PCPC-001",
   productVersion: "V1",
   shopId: "23582741",
@@ -140,7 +140,7 @@ export const PDT_PCPC_001_G01_V01 = Object.freeze({
   buyerFiles: BUYER_FILES,
   expectedActiveListingIds: Object.freeze([
     "4560696421","4561793463","4561795303","4561819638",
-    "4561821192","4566738686","4568730165","4569445414"
+    "4561821192","4566738686","4568730165","4569445414","4573789186"
   ])
 } as const);
 
