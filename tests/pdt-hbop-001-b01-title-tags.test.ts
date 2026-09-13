@@ -29,6 +29,7 @@ function listing(target = false) {
     taxonomy_id: 12476,
     who_made: "i_did",
     when_made: "2020_2026",
+    is_supply: false,
     listing_type: "download",
     state: "active"
   };
@@ -97,7 +98,7 @@ function json(value: unknown, status = 200) {
 test("immutable HBOP B01 identity, scope, title, and ordered tag contract are exact", () => {
   const body = exactPdtHbop001B01Body();
   assert.equal(body.operation, "UPDATE_ACTIVE_LISTING_TITLE_TAGS_ONLY");
-  assert.equal(body.operationId, "PDT-HBOP-001-B01-TITLE-TAGS-001");
+  assert.equal(body.operationId, "PDT-HBOP-001-B01-TITLE-TAGS-RECOVERY-001");
   assert.equal(body.candidateId, "ETSY-KEYWORD-REPAIR-PDT-HBOP-001-V1-2026-09-13-A");
   assert.equal(body.candidateFingerprint, "4721c625cc41e5da25f800aa988e6516c1006150b10bc81cd2f62ad3f3f18103");
   assert.equal(body.buildId, "ETSY-KEYWORD-REPAIR-PDT-HBOP-001-BUILD-20260913-B01");
@@ -107,7 +108,7 @@ test("immutable HBOP B01 identity, scope, title, and ordered tag contract are ex
   assert.equal(body.acceptanceCriteriaSha256, "d2db7efb24d4de1a9948e31de13559324f016256a63dbf6ff719cb3e80b1b4c1");
   assert.equal(body.shopId, "23582741");
   assert.equal(body.listingId, "4566738686");
-  assert.equal(hashOperationRequest(body), "9b7e741a9846bdceca6c10a8aa8f1bb65d374eb9451fa50584b8912f955adb72");
+  assert.equal(hashOperationRequest(body), "07c770f4e2a57544d6b181575db185cd5f843de6fec0e642f858cef472eab619");
   assert.deepEqual(body.patch.tags, [...PDT_HBOP_001_B01.tags]);
   assert.equal(body.patch.tags.length, 13);
   assert.equal(new Set(body.patch.tags).size, 13);
@@ -239,7 +240,7 @@ test("PATCH body takes every API-required protected value from the fresh preread
   });
   assert.equal(response.status, 200);
   const form = new URLSearchParams(patchBody);
-  assert.deepEqual([...form.keys()], ["title", "description", "price", "quantity", "taxonomy_id", "who_made", "when_made", "type", "tags"]);
+  assert.deepEqual([...form.keys()], ["title", "description", "price", "quantity", "taxonomy_id", "who_made", "when_made", "is_supply", "type", "tags"]);
   assert.equal(form.get("title"), PDT_HBOP_001_B01.title);
   assert.equal(form.get("tags"), PDT_HBOP_001_B01.tags.join(","));
   assert.equal(form.get("description"), DESCRIPTION);
@@ -248,7 +249,26 @@ test("PATCH body takes every API-required protected value from the fresh preread
   assert.equal(form.get("taxonomy_id"), "12476");
   assert.equal(form.get("who_made"), "i_did");
   assert.equal(form.get("when_made"), "2020_2026");
+  assert.equal(form.get("is_supply"), "false");
   assert.equal(form.get("type"), "download");
+});
+
+test("missing fresh is_supply fails closed before ledger claim or PATCH", async () => {
+  const body = configure();
+  const methods: string[] = [];
+  const response = await handlePdtHbop001B01TitleTags(body, request(), {
+    repository: new MemoryOperationLedgerRepository(),
+    getAccessToken: async () => "token",
+    fetchImpl: async (_url, init) => {
+      methods.push(String(init?.method));
+      const value = { ...listing(false) } as Record<string, unknown>;
+      delete value.is_supply;
+      return json(value);
+    }
+  });
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), { error: "PDT_HBOP_001_B01_REQUIRED_PROVIDER_ENVELOPE_UNAVAILABLE", providerPatchCount: 0, ETSY_WRITE_COUNT: 0 });
+  assert.deepEqual(methods, ["GET"]);
 });
 
 test("ambiguous PATCH outcome is ledgered as reconciliation-required and never retried in the request", async () => {

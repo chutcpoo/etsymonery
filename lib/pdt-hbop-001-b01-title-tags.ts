@@ -24,7 +24,7 @@ const EXPECTED_AFTER_ENV = "ETSY_PDT_HBOP_001_B01_EXPECTED_AFTER_LISTING_SHA256"
 
 export const PDT_HBOP_001_B01 = Object.freeze({
   operation: "UPDATE_ACTIVE_LISTING_TITLE_TAGS_ONLY",
-  operationId: "PDT-HBOP-001-B01-TITLE-TAGS-001",
+  operationId: "PDT-HBOP-001-B01-TITLE-TAGS-RECOVERY-001",
   productId: "PDT-HBOP-001",
   shopId: "23582741",
   listingId: "4566738686",
@@ -160,6 +160,16 @@ function listingEnvelopeMatches(listing: RecordValue) {
 
 function isUsdPrice(value: unknown) {
   return isRecord(value) && value.currency_code === "USD";
+}
+
+function freshRequiredProviderEnvelope(listing: RecordValue) {
+  const who_made = listing.who_made;
+  const when_made = listing.when_made;
+  const is_supply = listing.is_supply;
+  if (typeof who_made !== "string" || !who_made.trim()) return null;
+  if (typeof when_made !== "string" || !when_made.trim()) return null;
+  if (typeof is_supply !== "boolean") return null;
+  return { who_made: who_made.trim(), when_made: when_made.trim(), is_supply } as const;
 }
 
 async function parseJson(response: Response) {
@@ -315,6 +325,11 @@ export async function handlePdtHbop001B01TitleTags(
     }, { status: 409 });
   }
 
+  const preservedEnvelope = freshRequiredProviderEnvelope(before.listing);
+  if (!preservedEnvelope) {
+    return NextResponse.json({ error: "PDT_HBOP_001_B01_REQUIRED_PROVIDER_ENVELOPE_UNAVAILABLE", ...counts(0) }, { status: 409 });
+  }
+
   const derivedExpectedAfter = createListingFingerprint({
     ...beforeIdentity.normalized,
     title: PDT_HBOP_001_B01.title,
@@ -343,8 +358,9 @@ export async function handlePdtHbop001B01TitleTags(
     price: normalized.priceUsd.toFixed(2),
     quantity: String(before.listing.quantity),
     taxonomy_id: String(before.listing.taxonomy_id),
-    who_made: String(before.listing.who_made),
-    when_made: String(before.listing.when_made),
+    who_made: preservedEnvelope.who_made,
+    when_made: preservedEnvelope.when_made,
+    is_supply: String(preservedEnvelope.is_supply),
     type: String(before.listing.listing_type ?? before.listing.type),
     tags: PDT_HBOP_001_B01.tags.join(",")
   });
