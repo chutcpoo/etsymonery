@@ -1,6 +1,70 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { generateKeyPairSync, sign } from "node:crypto";
+import test, { after, mock } from "node:test";
 import { readFile } from "node:fs/promises";
+
+const HBOP_OPERATION_ID = "PDT-HBOP-001-B01-TITLE-TAGS-001";
+const hbopExactBody = Object.freeze({ source: "exactPdtHbop001B01Body" });
+const hbopDelegations: Array<{ body: unknown; request: Request }> = [];
+let hbopBodyFactoryCalls = 0;
+
+mock.module("../lib/pdt-hbop-001-b01-title-tags", {
+  namedExports: {
+    PDT_HBOP_001_B01: Object.freeze({ operationId: HBOP_OPERATION_ID }),
+    exactPdtHbop001B01Body: () => {
+      hbopBodyFactoryCalls += 1;
+      return hbopExactBody;
+    },
+    handlePdtHbop001B01TitleTags: async (body: unknown, request: Request) => {
+      hbopDelegations.push({ body, request });
+      return Response.json({ status: "HBOP_DELEGATED" });
+    }
+  }
+});
+
+const originalFetch = globalThis.fetch;
+const originalWriteToken = process.env.ETSY_B01_WRITE_TOKEN;
+
+after(() => {
+  globalThis.fetch = originalFetch;
+  if (originalWriteToken === undefined) delete process.env.ETSY_B01_WRITE_TOKEN;
+  else process.env.ETSY_B01_WRITE_TOKEN = originalWriteToken;
+  mock.restoreAll();
+});
+
+function encodedJson(value: unknown) {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function githubOidcFixture() {
+  const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const jwk = publicKey.export({ format: "jwk" });
+  const header = encodedJson({ alg: "RS256", kid: "test-key", typ: "JWT" });
+  const now = Math.floor(Date.now() / 1000);
+  const claims = encodedJson({
+    iss: "https://token.actions.githubusercontent.com",
+    aud: "https://autodigitalpublisher.vercel.app/api/internal/etsy/authorized-operation",
+    exp: now + 300,
+    nbf: now - 30,
+    repository: "chutcpoo/etsymonery",
+    ref: "refs/heads/main",
+    event_name: "workflow_dispatch",
+    workflow_ref: "chutcpoo/etsymonery/.github/workflows/execute-authorized-etsy-operation.yml@refs/heads/main"
+  });
+  const unsigned = `${header}.${claims}`;
+  return {
+    token: `${unsigned}.${sign("RSA-SHA256", Buffer.from(unsigned), privateKey).toString("base64url")}`,
+    jwk: { ...jwk, kid: "test-key", alg: "RS256", use: "sig" }
+  };
+}
+
+function authorizedRequest(token: string, body: Record<string, unknown>) {
+  return new Request("https://example.test/api/internal/etsy/authorized-operation", {
+    method: "POST",
+    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify(body)
+  });
+}
 
 test("durable authorized Etsy ingress uses GitHub OIDC and keeps Etsy write secret server-side", async () => {
   const route = await readFile(
@@ -83,4 +147,58 @@ test("Boba C03 OIDC ingress remains exact-contract and fail-closed", async () =>
   assert.match(stageRoute, /AUTHORIZED_ETSY_ASSET_NOT_REGISTERED/);
   assert.doesNotMatch(stageRoute, /ETSY_B01_WRITE_TOKEN/);
   assert.doesNotMatch(stageRoute, /x-autodigitalpublisher-write-token/);
+});
+
+test("HBOP OIDC ingress delegates only its server-built exact body and remains fail-closed", async () => {
+  const { token, jwk } = githubOidcFixture();
+  const oidcUrls: string[] = [];
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    oidcUrls.push(url);
+    if (url.endsWith("/.well-known/openid-configuration")) {
+      return Response.json({ jwks_uri: "https://oidc.test/jwks" });
+    }
+    if (url === "https://oidc.test/jwks") return Response.json({ keys: [jwk] });
+    throw new Error(`unexpected network request: ${url}`);
+  };
+  process.env.ETSY_B01_WRITE_TOKEN = "server-only-write-token";
+
+  const { POST } = await import("../app/api/internal/etsy/authorized-operation/route");
+  const delegated = await POST(authorizedRequest(token, {
+    operationId: HBOP_OPERATION_ID,
+    confirmation: HBOP_OPERATION_ID,
+    action: "execute",
+    patch: { title: "caller-controlled", tags: ["caller-controlled"] },
+    candidateId: "caller-controlled"
+  }));
+
+  assert.equal(delegated.status, 200);
+  assert.deepEqual(await delegated.json(), { status: "HBOP_DELEGATED" });
+  assert.equal(hbopBodyFactoryCalls, 1);
+  assert.equal(hbopDelegations.length, 1);
+  assert.equal(hbopDelegations[0].body, hbopExactBody);
+  assert.equal(hbopDelegations[0].request.headers.get("x-autodigitalpublisher-write-token"), "server-only-write-token");
+  assert.deepEqual(oidcUrls, [
+    "https://token.actions.githubusercontent.com/.well-known/openid-configuration",
+    "https://oidc.test/jwks"
+  ]);
+
+  const confirmationMismatch = await POST(authorizedRequest(token, {
+    operationId: HBOP_OPERATION_ID,
+    confirmation: "wrong-operation",
+    action: "execute"
+  }));
+  assert.equal(confirmationMismatch.status, 409);
+  assert.deepEqual(await confirmationMismatch.json(), { error: "AUTHORIZED_ETSY_CONFIRMATION_MISMATCH" });
+
+  const unregistered = await POST(authorizedRequest(token, {
+    operationId: "PDT-HBOP-001-B01-TITLE-TAGS-UNREGISTERED",
+    confirmation: "PDT-HBOP-001-B01-TITLE-TAGS-UNREGISTERED",
+    action: "execute"
+  }));
+  assert.equal(unregistered.status, 409);
+  assert.deepEqual(await unregistered.json(), { error: "AUTHORIZED_ETSY_OPERATION_NOT_REGISTERED" });
+  assert.equal(hbopBodyFactoryCalls, 1);
+  assert.equal(hbopDelegations.length, 1);
+  assert.equal(oidcUrls.length, 6);
 });
