@@ -28,6 +28,11 @@ import {
   verifyPdtPogo001B01ProtectedState
 } from "../../../../../lib/pdt-pogo-001-b01-title-tags";
 import {
+  exactPdtHbop001B01Body,
+  handlePdtHbop001B01TitleTags,
+  PDT_HBOP_001_B01
+} from "../../../../../lib/pdt-hbop-001-b01-title-tags";
+import {
   exactPdtBoba001C03GalleryRepairBody,
   handlePdtBoba001C03GalleryRepair,
   PDT_BOBA_001_C03_GALLERY_REPAIR
@@ -132,6 +137,7 @@ export async function POST(request: Request) {
     operationId !== PD_REST_003_A01.operationId &&
     operationId !== PD_REST_003_B01.operationId &&
     operationId !== PDT_POGO_001_B01.operationId &&
+    operationId !== PDT_HBOP_001_B01.operationId &&
     operationId !== PDT_BOBA_001_C03_GALLERY_REPAIR.operationId &&
     operationId !== PDT_BOBA_001_B01_DESCRIPTION.operationId &&
     operationId !== PDT_BOBA_001_B01_BUYER_FILES.operationId &&
@@ -173,6 +179,10 @@ export async function POST(request: Request) {
     if (!authorizationId) return NextResponse.json({ error: "PDT_POGO_001_B01_PRODUCTION_AUTH_NOT_CONFIGURED" }, { status: 503 });
     const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
     return handlePdtPogo001B01TitleTags(exactPdtPogo001B01Body(authorizationId), delegated);
+  }
+  if (operationId === PDT_HBOP_001_B01.operationId) {
+    const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
+    return handlePdtHbop001B01TitleTags(exactPdtHbop001B01Body(), delegated);
   }
   if (operationId === PD_STOCK_005_C01.operationId) {
     const authorizationId = process.env.ETSY_PD_STOCK_005_C01_AUTHORIZATION_ID?.trim() ?? "";
