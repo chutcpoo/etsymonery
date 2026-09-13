@@ -3,7 +3,7 @@ import { generateKeyPairSync, sign } from "node:crypto";
 import test, { after, mock } from "node:test";
 import { readFile } from "node:fs/promises";
 
-const HBOP_OPERATION_ID = "PDT-HBOP-001-B01-TITLE-TAGS-001";
+const HBOP_OPERATION_ID = "PDT-HBOP-001-B01-TITLE-TAGS-RECOVERY-001";
 const hbopExactBody = Object.freeze({ source: "exactPdtHbop001B01Body" });
 const hbopDelegations: Array<{ body: unknown; request: Request }> = [];
 let hbopBodyFactoryCalls = 0;
