@@ -7,7 +7,7 @@ import { PDT_BOBA_001_B01_DESCRIPTION } from "../lib/pdt-boba-001-b01-descriptio
 import { exactPdtBoba001B01Recovery001Body, PDT_BOBA_001_B01_RECOVERY_001 } from "../lib/pdt-boba-001-b01-buyer-files-recovery-001";
 import { exactPdtBoba001B01ZipRecovery001Body, handlePdtBoba001B01ZipRecovery001, PDT_BOBA_001_B01_ZIP_RECOVERY_001, verifyPdtBoba001B01ZipRecovery001ProtectedState } from "../lib/pdt-boba-001-b01-buyer-files-zip-recovery-001";
 
-const AUTH="PDT-BOBA-001-B01-ZIP-RECOVERY-AUTH-20260912-04";
+const AUTH="PDT-BOBA-001-B01-ZIP-RECOVERY-AUTH-20260914-05";
 const TAGS=["bubble tea business","boba shop toolkit","boba operations","boba shop sop","cafe opening closing","daily prep log","stock waste tracker","shift handoff log","tea cafe template","milktea inventory","cafe cleaning sheet","drink shop checklist","google sheets boba"];
 const GALLERY=[[8547319609,1,2000,1600],[8547319665,2,2000,1600],[8547319731,3,1600,900],[8547319783,4,1600,900],[8547319831,5,1600,900],[8547319873,6,1600,900],[8499440812,7,1600,900],[8499440860,8,1600,900],[8499440896,9,1600,900],[8547320067,10,1600,900],[8547320117,11,1600,900],[8499441032,12,1600,900]];
 const currentFiles=()=>[

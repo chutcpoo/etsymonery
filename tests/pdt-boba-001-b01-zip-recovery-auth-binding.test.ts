@@ -6,10 +6,10 @@ import {
   resolvePdtBoba001B01ZipRecovery001AuthorizationBinding
 } from "../lib/pdt-boba-001-b01-buyer-files-zip-recovery-001";
 
-const OLD_AUTH = "PDT-BOBA-001-B01-ZIP-RECOVERY-AUTH-20260912-03";
-const OLD_BAD_SHA = "2bbe9b6261c6ce1e6b9477e37c256864b1bee2a1052a6f860067d377f4fa6fe6";
-const CURRENT_AUTH = "PDT-BOBA-001-B01-ZIP-RECOVERY-AUTH-20260912-04";
-const CURRENT_SHA = "f266e9fab9fcc5731d61f4b1002a8a72c476f6a2a47dda6b6774a333bfd12446";
+const OLD_AUTH = "PDT-BOBA-001-B01-ZIP-RECOVERY-AUTH-20260912-04";
+const OLD_BAD_SHA = "f266e9fab9fcc5731d61f4b1002a8a72c476f6a2a47dda6b6774a333bfd12446";
+const CURRENT_AUTH = "PDT-BOBA-001-B01-ZIP-RECOVERY-AUTH-20260914-05";
+const CURRENT_SHA = "42db6f28c0f2e130a64830632cdddb4a5dc1cdd40e6cd60ebe23428c9b78d789";
 
 test("exact body supersedes only the known stale production authorization ID", () => {
   const body = exactPdtBoba001B01ZipRecovery001Body(OLD_AUTH);
