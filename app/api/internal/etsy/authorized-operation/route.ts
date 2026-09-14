@@ -56,6 +56,7 @@ import {
   verifyPdtBoba001B01Recovery001ProtectedState
 } from "../../../../../lib/pdt-boba-001-b01-buyer-files-recovery-001";
 import { exactPdtBoba001B01ZipRecovery001Body, handlePdtBoba001B01ZipRecovery001, PDT_BOBA_001_B01_ZIP_RECOVERY_001, verifyPdtBoba001B01ZipRecovery001ProtectedState } from "../../../../../lib/pdt-boba-001-b01-buyer-files-zip-recovery-001";
+import { exactPdtBoba001B01ZipUploadRecovery002Body, handlePdtBoba001B01ZipUploadRecovery002, PDT_BOBA_001_B01_ZIP_UPLOAD_RECOVERY_002, verifyPdtBoba001B01ZipUploadRecovery002ProtectedState } from "../../../../../lib/pdt-boba-001-b01-buyer-files-zip-upload-recovery-002";
 import {
   exactPdtPcso001C03Body,
   handlePdtPcso001C03TitleTagsDescription,
@@ -143,6 +144,7 @@ export async function POST(request: Request) {
     operationId !== PDT_BOBA_001_B01_BUYER_FILES.operationId &&
     operationId !== PDT_BOBA_001_B01_RECOVERY_001.operationId &&
     operationId !== PDT_BOBA_001_B01_ZIP_RECOVERY_001.operationId &&
+    operationId !== PDT_BOBA_001_B01_ZIP_UPLOAD_RECOVERY_002.operationId &&
     operationId !== PDT_PCSO_001_C03.operationId &&
     operationId !== PDT_BPSC_001_C09.operationId
   ) return NextResponse.json({ error: "AUTHORIZED_ETSY_OPERATION_NOT_REGISTERED" }, { status: 409 });
@@ -153,6 +155,7 @@ export async function POST(request: Request) {
   if (operationId === PDT_BOBA_001_B01_BUYER_FILES.operationId && input.action === "verify_protected_state") return verifyPdtBoba001B01BuyerFilesProtectedState();
   if (operationId === PDT_BOBA_001_B01_RECOVERY_001.operationId && input.action === "verify_protected_state") return verifyPdtBoba001B01Recovery001ProtectedState();
   if (operationId === PDT_BOBA_001_B01_ZIP_RECOVERY_001.operationId && input.action === "verify_protected_state") return verifyPdtBoba001B01ZipRecovery001ProtectedState();
+  if (operationId === PDT_BOBA_001_B01_ZIP_UPLOAD_RECOVERY_002.operationId && input.action === "verify_protected_state") return verifyPdtBoba001B01ZipUploadRecovery002ProtectedState();
   if (operationId === PD_REST_003_A01.operationId && input.action === "verify_protected_state") return verifyPdRest003A01ProtectedState();
   if (operationId === PD_REST_003_B01.operationId && input.action === "verify_protected_state") return verifyPdRest003B01ProtectedState();
   if (operationId === PDT_POGO_001_B01.operationId && input.action === "verify_protected_state") return verifyPdtPogo001B01ProtectedState();
@@ -233,6 +236,12 @@ export async function POST(request: Request) {
     if (!authorizationId) return NextResponse.json({ error: "PDT_BOBA_ZIP_RECOVERY_001_PRODUCTION_AUTH_NOT_CONFIGURED" }, { status: 503 });
     const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
     return handlePdtBoba001B01ZipRecovery001(exactPdtBoba001B01ZipRecovery001Body(authorizationId), delegated);
+  }
+  if (operationId === PDT_BOBA_001_B01_ZIP_UPLOAD_RECOVERY_002.operationId) {
+    const authorizationId = process.env.ETSY_BOBA_B01_ZIP_UPLOAD_RECOVERY_002_AUTHORIZATION_ID?.trim() ?? "";
+    if (!authorizationId) return NextResponse.json({ error: "PDT_BOBA_ZIP_UPLOAD_RECOVERY_002_PRODUCTION_AUTH_NOT_CONFIGURED" }, { status: 503 });
+    const delegated = new Request(request.url, { method: "POST", headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken } });
+    return handlePdtBoba001B01ZipUploadRecovery002(exactPdtBoba001B01ZipUploadRecovery002Body(authorizationId), delegated);
   }
   if (operationId === PDT_PCSO_001_C03.operationId) {
     const authorizationId = process.env.ETSY_PCSO_C03_AUTHORIZATION_ID?.trim() ?? "";
