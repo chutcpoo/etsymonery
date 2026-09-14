@@ -19,10 +19,10 @@ const LISTING = {
   state: "draft"
 };
 
-function response(body: unknown, status = 200) {
+function response(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json" }
+    headers: { "content-type": "application/json", ...headers }
   });
 }
 
@@ -84,10 +84,43 @@ test("adapter maps readDraft -> publish -> readPublished to Etsy GET/PATCH/GET",
   assert.equal(calls[2].init?.method, "GET");
 });
 
-test("adapter treats Etsy 5xx publish result as ambiguous", async () => {
+test("readDraft safely retries a short Etsy 429 once", async () => {
+  let calls = 0;
+  const sleeps: number[] = [];
+
   await withEtsyHeaders(async () => {
     const provider = new EtsyAuthorizedPublishProvider(SHOP_ID, {
-      fetchImpl: async () => response({ error: "provider unavailable" }, 503),
+      fetchImpl: async () => {
+        calls += 1;
+        if (calls === 1) {
+          return response({ error: "rate limited" }, 429, { "retry-after": "0.01" });
+        }
+        return response(LISTING);
+      },
+      getAccessToken: async () => "12345.test-token",
+      readRetryOptions: {
+        sleep: async (milliseconds) => {
+          sleeps.push(milliseconds);
+        }
+      }
+    });
+
+    const draft = await provider.readDraft(LISTING_ID);
+    assert.equal(draft.state, "draft");
+  });
+
+  assert.equal(calls, 2);
+  assert.deepEqual(sleeps, [10]);
+});
+
+test("adapter treats Etsy 5xx publish result as ambiguous and never auto-retries the write", async () => {
+  let calls = 0;
+  await withEtsyHeaders(async () => {
+    const provider = new EtsyAuthorizedPublishProvider(SHOP_ID, {
+      fetchImpl: async () => {
+        calls += 1;
+        return response({ error: "provider unavailable" }, 503);
+      },
       getAccessToken: async () => "12345.test-token"
     });
     await assert.rejects(
@@ -95,6 +128,7 @@ test("adapter treats Etsy 5xx publish result as ambiguous", async () => {
       (error: unknown) => error instanceof PublishAmbiguousResultError
     );
   });
+  assert.equal(calls, 1);
 });
 
 test("adapter treats network failure during publish as ambiguous", async () => {

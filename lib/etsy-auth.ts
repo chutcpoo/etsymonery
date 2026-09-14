@@ -1,5 +1,9 @@
 import { getEtsyCredentials } from "./etsy";
-import { loadEtsyTokens, saveEtsyTokens } from "./token-store";
+import {
+  loadEtsyTokens,
+  saveEtsyTokens,
+  type EtsyStoredTokens
+} from "./token-store";
 
 type EtsyTokenResponse = {
   access_token?: string;
@@ -22,7 +26,7 @@ export function getEtsyUserIdFromToken(token: string) {
   return userId;
 }
 
-async function refreshEtsyTokens(refreshToken: string) {
+async function refreshEtsyTokens(stored: EtsyStoredTokens) {
   const { keystring } = getEtsyCredentials();
 
   if (!keystring) {
@@ -35,7 +39,7 @@ async function refreshEtsyTokens(refreshToken: string) {
     body: new URLSearchParams({
       grant_type: "refresh_token",
       client_id: keystring,
-      refresh_token: refreshToken
+      refresh_token: stored.refreshToken
     }),
     cache: "no-store"
   });
@@ -48,15 +52,17 @@ async function refreshEtsyTokens(refreshToken: string) {
     );
   }
 
-  const nextRefreshToken = token.refresh_token ?? refreshToken;
+  const nextRefreshToken = token.refresh_token ?? stored.refreshToken;
   const userId = getEtsyUserIdFromToken(token.access_token);
 
+  // OAuth refresh cannot grant new scopes. Etsy may omit unchanged metadata in a
+  // refresh response, so retain the authorization metadata from the stored grant.
   await saveEtsyTokens({
     accessToken: token.access_token,
     refreshToken: nextRefreshToken,
     expiresIn: token.expires_in ?? 3600,
-    scope: token.scope,
-    tokenType: token.token_type,
+    scope: token.scope ?? stored.scope,
+    tokenType: token.token_type ?? stored.tokenType,
     userId
   });
 
@@ -76,5 +82,5 @@ export async function getValidEtsyAccessToken() {
     return stored.accessToken;
   }
 
-  return refreshEtsyTokens(stored.refreshToken);
+  return refreshEtsyTokens(stored);
 }

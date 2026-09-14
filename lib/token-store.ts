@@ -74,8 +74,8 @@ export async function saveEtsyTokens(input: SaveTokensInput) {
       access_token_enc = EXCLUDED.access_token_enc,
       refresh_token_enc = EXCLUDED.refresh_token_enc,
       expires_at = EXCLUDED.expires_at,
-      scope = EXCLUDED.scope,
-      token_type = EXCLUDED.token_type,
+      scope = COALESCE(EXCLUDED.scope, oauth_tokens.scope),
+      token_type = COALESCE(EXCLUDED.token_type, oauth_tokens.token_type),
       user_id = COALESCE(EXCLUDED.user_id, oauth_tokens.user_id),
       updated_at = now()
   `;
