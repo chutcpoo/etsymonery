@@ -1,4 +1,4 @@
-import { getControlCenterV2Snapshot } from "../lib/control-center-v2";
+import { getControlCenterV3Snapshot } from "../lib/control-center-v3";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ const workflow = [
 ];
 
 export default async function Home() {
-  const control = await getControlCenterV2Snapshot();
+  const control = await getControlCenterV3Snapshot();
   const latest = control.production.latestPublish;
 
   return (
@@ -25,14 +25,13 @@ export default async function Home() {
       <section className="hero">
         <div>
           <p className="eyebrow">GLOBAL AI DIGITAL PRODUCT FACTORY OS</p>
-          <h1>Control Center V2</h1>
+          <h1>Control Center V3</h1>
           <p className="lede">
             Live Etsy channel state, canonical Catalog identity and proven
-            production execution are shown as separate read models. Marketplace
-            mutations remain gated, authorized actions outside this dashboard.
+            production execution are shown as separate read models. Marketplace mutations remain gated. This dashboard now also exposes executor capabilities and operation-ledger attention states without enabling direct UI writes.
           </p>
         </div>
-        <div className="badge">V2 · LIVE READ MODEL</div>
+        <div className="badge">V3 · GATED OPERATOR</div>
       </section>
 
       <section className="metrics">
@@ -60,6 +59,44 @@ export default async function Home() {
             <p className="eyebrow">LIVE CHANNEL READ</p>
             <h2>Current Etsy state is temporarily unavailable.</h2>
             <p>{control.live.error ?? "UNKNOWN"}</p>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="panel">
+        <div>
+          <p className="eyebrow">AUTHORIZED ACTION CAPABILITIES</p>
+          <h2>What this runtime can execute safely.</h2>
+          <p>Product Truth and SEO stay handoff-only. Etsy mutations remain exact-contract, authorization-bound operations.</p>
+        </div>
+        <div className="listingStack">
+          {control.capabilities.map((item) => (
+            <article className="listingCard" key={item.capability}>
+              <div className="listingTop">
+                <div><strong>{item.capability}</strong><p>{item.owner}</p></div>
+                <div className="badge">{item.status}</div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {control.operations.needsAttention.length ? (
+        <section className="panel">
+          <div>
+            <p className="eyebrow">NEEDS ATTENTION</p>
+            <h2>{control.operations.needsAttention.length} ledger operation(s) require review.</h2>
+            <p>Reconciliation and failed operations are never blindly retried.</p>
+          </div>
+          <div className="listingStack">
+            {control.operations.needsAttention.slice(0, 8).map((operation) => (
+              <article className="listingCard" key={operation.operationId}>
+                <div className="listingTop">
+                  <div><strong>{operation.operationId}</strong><p>{operation.recoveryPoint ?? operation.updatedAt}</p></div>
+                  <div className="badge">{operation.attentionState}</div>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
       ) : null}

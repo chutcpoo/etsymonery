@@ -1,4 +1,4 @@
-import { getControlCenterV2Snapshot } from "../../lib/control-center-v2";
+import { getControlCenterV3Snapshot } from "../../lib/control-center-v3";
 import { buildOperatorDashboard } from "../../lib/operator-dashboard";
 import { NeonCanonicalProductRegistryRepository } from "../../lib/product-registry-repository";
 
@@ -9,7 +9,7 @@ export default async function FactoryDashboardPage() {
   let rows: ReturnType<typeof buildOperatorDashboard>[] = [];
   let error: string | null = null;
 
-  const control = await getControlCenterV2Snapshot();
+  const control = await getControlCenterV3Snapshot();
   const latest = control.production.latestPublish;
 
   try {
@@ -25,14 +25,14 @@ export default async function FactoryDashboardPage() {
       <section className="hero">
         <div>
           <p className="eyebrow">GLOBAL AI DIGITAL PRODUCT FACTORY OS</p>
-          <h1>Operator Dashboard V2</h1>
+          <h1>Operator Dashboard V3</h1>
           <p className="lede">
             Read-only factory state synchronized with live Etsy channel state and
             the production operation ledger. Mutations remain separate authorized
             actions.
           </p>
         </div>
-        <div className="badge">V2 · READ ONLY</div>
+        <div className="badge">V3 · GATED READ MODEL</div>
       </section>
 
       <section className="metrics">
@@ -53,6 +53,17 @@ export default async function FactoryDashboardPage() {
           <strong>{latest?.status ?? "NOT OBSERVED"}</strong>
         </article>
       </section>
+
+      {control.operations.needsAttention.length ? (
+        <section className="notice warningNotice">
+          <div>
+            <p className="eyebrow">OPERATION LEDGER</p>
+            <h2>{control.operations.needsAttention.length} operation(s) need attention</h2>
+            <p>{control.operations.needsAttention.slice(0, 5).map((item) => `${item.operationId}: ${item.attentionState}`).join(" · ")}</p>
+          </div>
+          <div className="badge">NO BLIND RETRY</div>
+        </section>
+      ) : null}
 
       <section className="notice">
         <div>
