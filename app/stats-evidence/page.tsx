@@ -285,8 +285,8 @@ export default function ShopStatsEvidencePage() {
           <p className="eyebrow">SOURCE</p>
           <h2>Live Etsy Shop Stats</h2>
           <p>
-            Use one consistent date range for the shop metrics and all six
-            listing rows. Do not estimate missing values. Favorites are
+            Use one consistent date range for the shop metrics and every
+            catalog-tracked listing row shown below. Do not estimate missing values. Favorites are
             auto-filled from the read-only Etsy Open API when available.
           </p>
           <p>API enrichment: <strong>{apiEnrichmentState}</strong></p>
