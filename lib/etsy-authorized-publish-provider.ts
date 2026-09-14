@@ -4,14 +4,19 @@ import {
   type PublishedReceipt
 } from "./authorized-publish-transaction";
 import { getValidEtsyAccessToken } from "./etsy-auth";
+import {
+  fetchEtsyReadWithRetry,
+  type EtsyReadRetryOptions
+} from "./etsy-http";
 import { etsyApiHeaders } from "./etsy";
 import type { EtsyReadBackObservation } from "./etsy-readback-normalizer";
 
-export const ETSY_AUTHORIZED_PUBLISH_PROVIDER_VERSION = "1.0.0" as const;
+export const ETSY_AUTHORIZED_PUBLISH_PROVIDER_VERSION = "1.1.0" as const;
 
 type ProviderDependencies = {
   fetchImpl?: typeof fetch;
   getAccessToken?: () => Promise<string>;
+  readRetryOptions?: EtsyReadRetryOptions;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -65,6 +70,7 @@ export class EtsyAuthorizedPublishProvider implements AuthorizedPublishProvider 
   private readonly shopId: string;
   private readonly fetchImpl: typeof fetch;
   private readonly getAccessToken: () => Promise<string>;
+  private readonly readRetryOptions: EtsyReadRetryOptions;
 
   constructor(shopId: string, dependencies: ProviderDependencies = {}) {
     const normalizedShopId = required(shopId, "INVALID_ETSY_PUBLISH_SHOP_ID");
@@ -72,18 +78,21 @@ export class EtsyAuthorizedPublishProvider implements AuthorizedPublishProvider 
     this.shopId = normalizedShopId;
     this.fetchImpl = dependencies.fetchImpl ?? fetch;
     this.getAccessToken = dependencies.getAccessToken ?? getValidEtsyAccessToken;
+    this.readRetryOptions = dependencies.readRetryOptions ?? {};
   }
 
   private async readListing(draftListingId: string, allowMissing: boolean) {
     const id = required(draftListingId, "INVALID_ETSY_PUBLISH_DRAFT_ID");
     const accessToken = await this.getAccessToken();
-    const response = await this.fetchImpl(
+    const response = await fetchEtsyReadWithRetry(
+      this.fetchImpl,
       `https://api.etsy.com/v3/application/listings/${encodeURIComponent(id)}`,
       {
         method: "GET",
         headers: etsyApiHeaders(accessToken),
         cache: "no-store"
-      }
+      },
+      this.readRetryOptions
     );
 
     if (allowMissing && response.status === 404) return null;
@@ -105,6 +114,8 @@ export class EtsyAuthorizedPublishProvider implements AuthorizedPublishProvider 
     const accessToken = await this.getAccessToken();
     let response: Response;
 
+    // Write requests are intentionally single-attempt. Any ambiguous transport/5xx
+    // result is reconciled through fresh read-back by the transaction layer.
     try {
       response = await this.fetchImpl(
         `https://api.etsy.com/v3/application/shops/${encodeURIComponent(this.shopId)}/listings/${encodeURIComponent(id)}`,
