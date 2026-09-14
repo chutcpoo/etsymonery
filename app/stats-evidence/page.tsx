@@ -340,7 +340,7 @@ export default function ShopStatsEvidencePage() {
       </section>
 
       <section className="captureSection">
-        <p className="eyebrow">EXACT SIX LISTINGS</p>
+        <p className="eyebrow">CATALOG-TRACKED LISTINGS</p>
         <div className="statsTableWrap">
           <table className="statsTable">
             <thead>
@@ -415,7 +415,7 @@ export default function ShopStatsEvidencePage() {
           <h2>{completeness ? "READY FOR ROOT-CAUSE REVIEW" : "PARTIAL"}</h2>
           <p>
             Required: date range, shop visits/orders/conversion rate, views and
-            orders for all six listings, plus search-term evidence or an explicit
+            orders for every catalog-tracked listing shown above, plus search-term evidence or an explicit
             “none visible” statement.
           </p>
         </div>

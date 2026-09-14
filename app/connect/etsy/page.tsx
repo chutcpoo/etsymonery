@@ -46,8 +46,7 @@ export default async function EtsyConnectPage() {
           </h2>
           <p>
             Requested scopes: {ETSY_SCOPES.join(", ")}. OAuth tokens are stored
-            server-side with application-layer encryption. Marketplace writes remain
-            disabled until the production publish adapter passes verification.
+            server-side with application-layer encryption. Marketplace writes are production-capable but remain secure-gated: exact candidate/QC/protected-state/authorization evidence is required before execution.
           </p>
         </div>
 
