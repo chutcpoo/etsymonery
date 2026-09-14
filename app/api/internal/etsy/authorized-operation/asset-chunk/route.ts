@@ -5,6 +5,7 @@ import { PDT_BOBA_001_B01_BUYER_FILES } from "../../../../../../lib/pdt-boba-001
 import { PDT_BOBA_001_B01_RECOVERY_001 } from "../../../../../../lib/pdt-boba-001-b01-buyer-files-recovery-001";
 import { PDT_BOBA_001_B01_ZIP_RECOVERY_001 } from "../../../../../../lib/pdt-boba-001-b01-buyer-files-zip-recovery-001";
 import { PDT_BOBA_001_B01_ZIP_UPLOAD_RECOVERY_002 } from "../../../../../../lib/pdt-boba-001-b01-buyer-files-zip-upload-recovery-002";
+import { PDT_BOBA_001_R02_VIDEO_REPAIR } from "../../../../../../lib/pdt-boba-001-r02-video-repair";
 import { PDT_BPSC_001_C09, PDT_BPSC_001_C09_ASSETS } from "../../../../../../lib/pdt-bpsc-001-c09-new-listing";
 import { stageAuthorizedAssetChunk } from "../../../../../../lib/authorized-operation-asset-store";
 
@@ -70,6 +71,9 @@ export async function POST(request:Request){
   }else if(operationId===PDT_BOBA_001_B01_ZIP_UPLOAD_RECOVERY_002.operationId){
     if(requestedAssetSha256!==PDT_BOBA_001_B01_ZIP_UPLOAD_RECOVERY_002.target.sha256)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
     registeredAssetSha256=PDT_BOBA_001_B01_ZIP_UPLOAD_RECOVERY_002.target.sha256;
+  }else if(operationId===PDT_BOBA_001_R02_VIDEO_REPAIR.operationId){
+    if(requestedAssetSha256!==PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sha256)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
+    registeredAssetSha256=PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sha256;
   }else if(operationId===PDT_BPSC_001_C09.operationId){
     const asset=PDT_BPSC_001_C09_ASSETS.find(candidate=>candidate.sha256===requestedAssetSha256);
     if(!asset)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
