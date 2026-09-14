@@ -91,6 +91,11 @@ jobs:
                 echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid C09 protected_state_fingerprint"; exit 1; }
                 echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid C09 authorization_request_hash"; exit 1; }
               fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-REPAIR-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing R02 video authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video authorization_request_hash"; exit 1; }
+              fi
               ;;
             verify_protected_state) ;;
             stage_asset_chunk)
@@ -102,6 +107,9 @@ jobs:
               fi
               if [ "$OPERATION_ID" = "PDT-BPSC-001-C09-NEW-LISTING-001" ]; then
                 test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for C09"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-REPAIR-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for R02 video"; exit 1; }
               fi
               ;;
             *) echo "Invalid action"; exit 1 ;;
