@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { hashOperationRequest } from "../../../../../../../../lib/operation-ledger";
+import { hashOperationRequest } from "../../../../../../../lib/operation-ledger";
 import {
   exactPdtBoba001B01ZipUploadRecovery002Body,
   handlePdtBoba001B01ZipUploadRecovery002,
   PDT_BOBA_001_B01_ZIP_UPLOAD_RECOVERY_002,
   verifyPdtBoba001B01ZipUploadRecovery002ProtectedState
-} from "../../../../../../../../lib/pdt-boba-001-b01-buyer-files-zip-upload-recovery-002";
+} from "../../../../../../../lib/pdt-boba-001-b01-buyer-files-zip-upload-recovery-002";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
