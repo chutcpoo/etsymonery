@@ -1,0 +1,132 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+import { getEtsyDraftListingSummaries } from "../lib/etsy-draft-reconciliation";
+
+const routePath = new URL(
+  "../app/api/etsy/test/drafts/route.ts",
+  import.meta.url
+);
+
+test("draft reconciliation route is GET-only and contains no Etsy write method", async () => {
+  const source = await readFile(routePath, "utf8");
+  assert.match(source, /export async function GET\(/);
+  assert.doesNotMatch(source, /export async function (POST|PUT|PATCH|DELETE)\(/);
+  assert.doesNotMatch(source, /method:\s*["'](POST|PUT|PATCH|DELETE)["']/);
+});
+
+test("draft reconciliation fetches Etsy draft listings read-only and preserves exact provider fields", async () => {
+  const calls: Array<{ url: string; method: string | undefined }> = [];
+  const fetchImpl: typeof fetch = async (input, init) => {
+    calls.push({ url: String(input), method: init?.method });
+    return new Response(
+      JSON.stringify({
+        count: 1,
+        results: [
+          {
+            listing_id: 9876543210,
+            shop_id: 23582741,
+            title: "Pricing Calculator for Private Chefs | Excel Food Cost, Labor, Profit Margin & Scenario Tool",
+            state: "draft",
+            price: { amount: 1290, divisor: 100, currency_code: "USD" },
+            taxonomy_id: 12476,
+            quantity: 999,
+            who_made: "i_did",
+            when_made: "2020_2026",
+            listing_type: "download",
+            tags: ["pricing calculator", "food cost calculator"],
+            updated_timestamp: 1789350000
+          }
+        ]
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  };
+
+  const result = await getEtsyDraftListingSummaries({
+    shopId: 23582741,
+    accessToken: "12345.test-token",
+    dependencies: { fetchImpl }
+  });
+
+  assert.equal(result.status, "PASS");
+  assert.equal(result.mode, "READ_ONLY");
+  assert.equal(result.ETSY_WRITE_COUNT, 0);
+  assert.equal(result.returnedCount, 1);
+  assert.equal(result.drafts[0].listingId, 9876543210);
+  assert.equal(result.drafts[0].taxonomyId, 12476);
+  assert.equal(result.drafts[0].quantity, 999);
+  assert.deepEqual(result.drafts[0].tags, [
+    "pricing calculator",
+    "food cost calculator"
+  ]);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, "GET");
+  assert.match(calls[0].url, /state=draft/);
+});
+
+test("draft reconciliation fails closed on cross-shop listing evidence", async () => {
+  const fetchImpl: typeof fetch = async () =>
+    new Response(
+      JSON.stringify({
+        count: 1,
+        results: [
+          {
+            listing_id: 123,
+            shop_id: 999999,
+            title: "wrong shop",
+            state: "draft"
+          }
+        ]
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+
+  await assert.rejects(
+    () =>
+      getEtsyDraftListingSummaries({
+        shopId: 23582741,
+        accessToken: "12345.test-token",
+        dependencies: { fetchImpl }
+      }),
+    /ETSY_DRAFT_RECONCILIATION_SHOP_ID_MISMATCH/
+  );
+});
+
+test("draft reconciliation inherits bounded retry only for GET reads", async () => {
+  let calls = 0;
+  const sleeps: number[] = [];
+  const fetchImpl: typeof fetch = async () => {
+    calls += 1;
+    if (calls === 1) {
+      return new Response(JSON.stringify({ error: "rate limited" }), {
+        status: 429,
+        headers: {
+          "content-type": "application/json",
+          "retry-after": "0.01"
+        }
+      });
+    }
+    return new Response(JSON.stringify({ count: 0, results: [] }), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+
+  const result = await getEtsyDraftListingSummaries({
+    shopId: 23582741,
+    accessToken: "12345.test-token",
+    dependencies: {
+      fetchImpl,
+      retryOptions: {
+        sleep: async (milliseconds) => {
+          sleeps.push(milliseconds);
+        }
+      }
+    }
+  });
+
+  assert.equal(result.returnedCount, 0);
+  assert.equal(calls, 2);
+  assert.deepEqual(sleeps, [10]);
+});
