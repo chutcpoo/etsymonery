@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { getControlCenterV2Snapshot } from "./control-center-v2";
 
-export const CONTROL_CENTER_V3_VERSION = "3.0.0" as const;
+export const CONTROL_CENTER_V3_VERSION = "3.1.0" as const;
 
 export type OperationAttentionState = "COMPLETE" | "NEEDS_RECONCILIATION" | "FAILED" | "PENDING";
 export type OperationSummary = {
@@ -70,8 +70,8 @@ export async function getControlCenterV3Snapshot() {
       { capability: "Title / Tags / Description / Price / Quantity / Taxonomy", status: "AVAILABLE_WHEN_EXACT_OPERATION_AUTHORIZED", owner: "Channel Execution", uiWrite: false },
       { capability: "Gallery / Buyer Files / Video", status: "SCOPED_EXECUTORS_AVAILABLE", owner: "Channel Execution", uiWrite: false },
       { capability: "Publish", status: "READY_SECURE_GATED", owner: "Channel Execution", uiWrite: false },
-      { capability: "Unpublish", status: "NOT_IMPLEMENTED_FAIL_CLOSED", owner: "Channel Execution", uiWrite: false },
-      { capability: "Delete Listing", status: "NOT_IMPLEMENTED_FAIL_CLOSED", owner: "Channel Execution", uiWrite: false }
+      { capability: "Unpublish", status: "IMPLEMENTED_SECURE_GATED_DISABLED_BY_DEFAULT", owner: "Channel Execution", uiWrite: false },
+      { capability: "Delete Listing", status: "IMPLEMENTED_SECURE_GATED_DISABLED_BY_DEFAULT", owner: "Channel Execution", uiWrite: false }
     ]
   };
 }
