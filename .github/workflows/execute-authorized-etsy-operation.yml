@@ -96,6 +96,11 @@ jobs:
                 echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video protected_state_fingerprint"; exit 1; }
                 echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video authorization_request_hash"; exit 1; }
               fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-DELETE-OLD-RECOVERY-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing R02 delete-old authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 delete-old protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 delete-old authorization_request_hash"; exit 1; }
+              fi
               ;;
             verify_protected_state) ;;
             stage_asset_chunk)
