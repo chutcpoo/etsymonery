@@ -294,7 +294,36 @@ export async function verifyPdtBoba001R02VideoReconciliation(runtime: R02VideoRu
       }
     }
 
-    if (newVideo && oldVideo && videos.length === 2) {
+    if (newVideo && oldVideo && videos.length === 2 && oldVideo.videoState === "inactive") {
+      return NextResponse.json({
+        status: "REPLACEMENT_CONFIRMED_COMPLETE_PROVIDER_RETAINS_INACTIVE_BASELINE",
+        mode: "READ_ONLY_RECONCILIATION",
+        operationId: PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,
+        requestHash: R02_RECONCILIATION_REQUEST_HASH,
+        oldVideoId: PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.videoId,
+        oldVideoProviderState: oldVideo.videoState,
+        newVideoId: R02_RECONCILIATION_NEW_VIDEO_ID,
+        newVideoProviderState: newVideo.videoState,
+        oldVideoSha256Verified: oldBinaryVerified,
+        newVideoProviderIdentityVerified: newBinaryVerified,
+        sourceAssetSha256: PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sha256,
+        sourceAssetSizeBytes: PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sizeBytes,
+        providerCdnSourceShaComparison: "NOT_APPLICABLE_PROVIDER_TRANSCODE",
+        identityBasis: "EXACT_201_VIDEO_ID_PLUS_ACTIVE_PROVIDER_READBACK_PLUS_READABLE_CDN",
+        currentVideoIds: videos.map((video) => video.videoId),
+        liveVideoIds: videos.filter((video) => video.videoState === "active").map((video) => video.videoId),
+        inactiveProviderVideoIds: videos.filter((video) => video.videoState === "inactive").map((video) => video.videoId),
+        ledgerConfirmedWriteCount: 1,
+        ledgerStatus: ledger!.status,
+        recoveryPoint: ledger!.recoveryPoint,
+        canonicalPostReleaseQcDriveId: "1uJFcYX_B1Wl5w93uJF5XrhWUg-hgy0pLra4tZkgB2Dc",
+        exactNextGate: "BASELINE_LOCK_MEASUREMENT_NO_ADDITIONAL_ETSY_MUTATION_AUTHORIZED",
+        providerReadStatus: state.statuses,
+        ETSY_WRITE_COUNT: 0
+      });
+    }
+
+    if (newVideo && oldVideo && videos.length === 2 && oldVideo.videoState === "active") {
       return NextResponse.json({
         status: "UPLOAD_CONFIRMED_DELETE_PENDING",
         mode: "READ_ONLY_RECONCILIATION",
@@ -361,4 +390,162 @@ export async function verifyPdtBoba001R02VideoReconciliation(runtime: R02VideoRu
       ETSY_WRITE_COUNT: 0
     }, { status: 502 });
   }
+}
+
+const R02_DELETE_OLD_AUTHORIZATION_ID = /^PDT-BOBA-001-R02-VIDEO-DELETE-OLD-AUTH-20260915-[0-9]{2}$/;
+export const PDT_BOBA_001_R02_DELETE_OLD_RECOVERY = Object.freeze({
+  operation: "DELETE_OLD_LISTING_VIDEO_ONLY",
+  operationId: "PDT-BOBA-001-R02-VIDEO-DELETE-OLD-RECOVERY-001",
+  parentOperationId: PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,
+  parentRequestHash: R02_RECONCILIATION_REQUEST_HASH,
+  productId: PDT_BOBA_001_R02_VIDEO_REPAIR.productId,
+  productVersion: PDT_BOBA_001_R02_VIDEO_REPAIR.productVersion,
+  shopId: PDT_BOBA_001_R02_VIDEO_REPAIR.shopId,
+  listingId: PDT_BOBA_001_R02_VIDEO_REPAIR.listingId,
+  candidateId: PDT_BOBA_001_R02_VIDEO_REPAIR.candidateId,
+  candidateFingerprint: PDT_BOBA_001_R02_VIDEO_REPAIR.candidateFingerprint,
+  buildId: PDT_BOBA_001_R02_VIDEO_REPAIR.buildId,
+  buildFingerprint: PDT_BOBA_001_R02_VIDEO_REPAIR.buildFingerprint,
+  buildFreezeSha256: PDT_BOBA_001_R02_VIDEO_REPAIR.buildFreezeSha256,
+  acceptanceCriteriaId: PDT_BOBA_001_R02_VIDEO_REPAIR.acceptanceCriteriaId,
+  acceptanceCriteriaSha256: PDT_BOBA_001_R02_VIDEO_REPAIR.acceptanceCriteriaSha256,
+  oldVideoId: PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.videoId,
+  newVideoId: R02_RECONCILIATION_NEW_VIDEO_ID,
+  scope: "DELETE_OLD_BASELINE_VIDEO_ONLY",
+  forbiddenMutation: "UPLOAD_VIDEO"
+} as const);
+
+function r02DeleteOldRecoverySnapshot(state: State) {
+  return {
+    parentOperationId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.parentOperationId,
+    parentRequestHash: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.parentRequestHash,
+    listingProtectedState: protectedSnapshot(state, PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.sha256),
+    expectedVideoIds: [PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.oldVideoId, PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.newVideoId],
+    scope: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.scope,
+    forbiddenMutation: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.forbiddenMutation
+  } as Record<string, unknown>;
+}
+
+async function exactR02DeleteOldRecoveryState(state: State, fetchImpl: typeof fetch, runtime: R02VideoRuntime = {}) {
+  if (!coreMatches(state)) return false;
+  const videos = videoRows(state.videos);
+  if (videos.length !== 2 || videos[0]?.videoId !== PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.oldVideoId || videos[1]?.videoId !== PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.newVideoId) return false;
+  const oldVideo = videos[0], newVideo = videos[1];
+  if (oldVideo.videoState !== "active" || newVideo.videoState !== "active" || !oldVideo.videoUrl || !newVideo.videoUrl) return false;
+  const verifyOld = runtime.verifyVideoUrl ?? ((url: string, sha: string, size: number) => defaultVerifyVideoUrl(fetchImpl, url, sha, size));
+  const oldOk = await verifyOld(oldVideo.videoUrl, PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.sha256, PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.sizeBytes).catch(() => false);
+  const newOk = await providerVideoReadable(fetchImpl, newVideo.videoUrl);
+  return oldOk && newOk;
+}
+
+export async function verifyPdtBoba001R02DeleteOldRecoveryProtectedState(runtime: R02VideoRuntime = {}) {
+  try {
+    const repo = runtime.repository ?? new NeonOperationLedgerRepository();
+    const parent = await repo.load(PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.parentOperationId);
+    if (!exactR02ReconciliationLedger(parent)) return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_PARENT_LEDGER_MISMATCH", ETSY_WRITE_COUNT: 0 }, { status: 409 });
+    const fetchImpl = runtime.fetchImpl ?? fetch;
+    const token = await (runtime.getAccessToken ?? getValidEtsyAccessToken)();
+    const state = await readState(token, fetchImpl);
+    if (!(await exactR02DeleteOldRecoveryState(state, fetchImpl, runtime))) return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_PROTECTED_STATE_MISMATCH", currentVideoIds: videoRows(state.videos).map(v => v.videoId), ETSY_WRITE_COUNT: 0 }, { status: 409 });
+    const protectedStateFingerprint = hashOperationRequest(r02DeleteOldRecoverySnapshot(state));
+    return NextResponse.json({
+      status: "PROTECTED_STATE_MATCH",
+      operationId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.operationId,
+      parentOperationId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.parentOperationId,
+      parentRequestHash: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.parentRequestHash,
+      listingId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.listingId,
+      oldVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.oldVideoId,
+      newVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.newVideoId,
+      protectedStateFingerprint,
+      scope: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.scope,
+      forbiddenMutation: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.forbiddenMutation,
+      ETSY_WRITE_COUNT: 0
+    });
+  } catch {
+    return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_VERIFICATION_FAILED", ETSY_WRITE_COUNT: 0 }, { status: 502 });
+  }
+}
+
+export function exactPdtBoba001R02DeleteOldRecoveryBody(authorizationId: string, protectedStateFingerprint: string) {
+  return {
+    operation: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.operation,
+    operationId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.operationId,
+    authorizationId: authorizationId.trim(),
+    protectedStateFingerprint: protectedStateFingerprint.trim().toLowerCase(),
+    productId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.productId,
+    productVersion: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.productVersion,
+    shopId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.shopId,
+    listingId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.listingId,
+    candidateId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.candidateId,
+    candidateFingerprint: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.candidateFingerprint,
+    buildId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.buildId,
+    buildFingerprint: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.buildFingerprint,
+    buildFreezeSha256: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.buildFreezeSha256,
+    acceptanceCriteriaId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.acceptanceCriteriaId,
+    acceptanceCriteriaSha256: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.acceptanceCriteriaSha256,
+    parentOperationId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.parentOperationId,
+    parentRequestHash: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.parentRequestHash,
+    oldVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.oldVideoId,
+    newVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.newVideoId,
+    scope: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.scope,
+    forbiddenMutation: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.forbiddenMutation
+  };
+}
+
+export async function handlePdtBoba001R02DeleteOldRecovery(body: Rec, authorizationRequestHash: string, request: Request, runtime: R02VideoRuntime = {}) {
+  if (process.env.PUBLISH_WRITES_ENABLED !== "true") return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_WRITES_DISABLED", ETSY_WRITE_COUNT: 0 }, { status: 403 });
+  const auth = authError(request); if (auth) return auth;
+  if (process.env.ETSY_SHOP_ID?.trim() !== PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.shopId) return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_SHOP_MISMATCH", ETSY_WRITE_COUNT: 0 }, { status: 409 });
+  const authorizationId = typeof body.authorizationId === "string" ? body.authorizationId.trim() : "";
+  const protectedStateFingerprint = typeof body.protectedStateFingerprint === "string" ? body.protectedStateFingerprint.trim().toLowerCase() : "";
+  const requestHash = authorizationRequestHash.trim().toLowerCase();
+  if (!R02_DELETE_OLD_AUTHORIZATION_ID.test(authorizationId) || !SHA256.test(protectedStateFingerprint) || !SHA256.test(requestHash)) return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_EXACT_AUTHORIZATION_BINDING_REQUIRED", ETSY_WRITE_COUNT: 0 }, { status: 409 });
+  const exact = exactPdtBoba001R02DeleteOldRecoveryBody(authorizationId, protectedStateFingerprint);
+  const actualHash = hashOperationRequest(body);
+  if (actualHash !== hashOperationRequest(exact) || !secureEqual(actualHash, requestHash)) return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_AUTHORIZATION_CONTRACT_MISMATCH", ETSY_WRITE_COUNT: 0 }, { status: 409 });
+  const repo = runtime.repository ?? new NeonOperationLedgerRepository();
+  const parent = await repo.load(PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.parentOperationId);
+  if (!exactR02ReconciliationLedger(parent)) return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_PARENT_LEDGER_MISMATCH", ETSY_WRITE_COUNT: 0 }, { status: 409 });
+  const existing = await repo.load(PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.operationId);
+  if (existing && existing.requestHash !== requestHash) return NextResponse.json({ error: "OPERATION_ID_PAYLOAD_MISMATCH", ETSY_WRITE_COUNT: 0 }, { status: 409 });
+  if (existing?.status === "SUCCEEDED") return NextResponse.json({ status: "REPLAY", receipt: existing.receipt, ETSY_WRITE_COUNT: 0 });
+  if (existing) return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_ALREADY_CLAIMED_DO_NOT_RETRY", ledgerStatus: existing.status, receipt: existing.receipt, ETSY_WRITE_COUNT: Number(existing.receipt?.ETSY_WRITE_COUNT) || 0 }, { status: existing.status === "RECONCILIATION_REQUIRED" ? 202 : 409 });
+  const fetchImpl = runtime.fetchImpl ?? fetch;
+  const token = await (runtime.getAccessToken ?? getValidEtsyAccessToken)();
+  let before: State; try { before = await readState(token, fetchImpl); } catch { return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_PREREAD_FAILED", ETSY_WRITE_COUNT: 0 }, { status: 502 }); }
+  if (!(await exactR02DeleteOldRecoveryState(before, fetchImpl, runtime))) return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_PROTECTED_STATE_MISMATCH", ETSY_WRITE_COUNT: 0 }, { status: 409 });
+  const freshFingerprint = hashOperationRequest(r02DeleteOldRecoverySnapshot(before));
+  if (!secureEqual(freshFingerprint, protectedStateFingerprint)) return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_FRESH_PSV_FINGERPRINT_MISMATCH", ETSY_WRITE_COUNT: 0 }, { status: 409 });
+  const begun = await beginOperation(repo, PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.operationId, body, runtime.now?.() ?? new Date().toISOString());
+  if (begun.status === "REPLAY") return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_ALREADY_CLAIMED_DO_NOT_RETRY", ETSY_WRITE_COUNT: 0 }, { status: 409 });
+  const deleteUrl = `https://api.etsy.com/v3/application/shops/${PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.shopId}/listings/${PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.listingId}/videos/${PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.oldVideoId}`;
+  let response: Response;
+  try { response = await fetchImpl(deleteUrl, { method: "DELETE", headers: etsyApiHeaders(token), cache: "no-store" }); }
+  catch {
+    const receipt = { oldVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.oldVideoId, protectedNewVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.newVideoId, ETSY_WRITE_COUNT: 0, ETSY_WRITE_ATTEMPT_COUNT: 1, ETSY_WRITE_COUNT_STATUS: "UNRESOLVED_REQUIRES_RECONCILIATION" };
+    await recordOperationResult(repo, begun.record.operationId, begun.record.requestHash, "RECONCILIATION_REQUIRED", runtime.now?.() ?? new Date().toISOString(), { recoveryPoint: "OLD_VIDEO_DELETE_RESPONSE_AMBIGUOUS", receipt });
+    return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_AMBIGUOUS_DO_NOT_RETRY", receipt, ETSY_WRITE_COUNT: 0 }, { status: 202 });
+  }
+  if (response.status !== 204) {
+    const ambiguous = response.status >= 500;
+    const receipt = { providerDeleteStatus: response.status, oldVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.oldVideoId, protectedNewVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.newVideoId, ETSY_WRITE_COUNT: 0, ETSY_WRITE_ATTEMPT_COUNT: 1, ETSY_WRITE_COUNT_STATUS: ambiguous ? "UNRESOLVED_REQUIRES_RECONCILIATION" : "CONFIRMED_ZERO" };
+    await recordOperationResult(repo, begun.record.operationId, begun.record.requestHash, ambiguous ? "RECONCILIATION_REQUIRED" : "FAILED", runtime.now?.() ?? new Date().toISOString(), { recoveryPoint: "OLD_VIDEO_DELETE_NOT_CONFIRMED", receipt });
+    return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_NOT_CONFIRMED_DO_NOT_RETRY", receipt, ETSY_WRITE_COUNT: 0 }, { status: ambiguous ? 202 : 502 });
+  }
+  let after: State; try { after = await readState(token, fetchImpl); } catch {
+    const receipt = { providerDeleteStatus: 204, oldVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.oldVideoId, protectedNewVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.newVideoId, ETSY_WRITE_COUNT: 1, ETSY_WRITE_ATTEMPT_COUNT: 1, ETSY_WRITE_COUNT_STATUS: "CONFIRMED" };
+    await recordOperationResult(repo, begun.record.operationId, begun.record.requestHash, "RECONCILIATION_REQUIRED", runtime.now?.() ?? new Date().toISOString(), { recoveryPoint: "POST_DELETE_READBACK_FAILED", receipt });
+    return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_POST_READBACK_FAILED_DO_NOT_RETRY", receipt, ETSY_WRITE_COUNT: 1 }, { status: 202 });
+  }
+  const videos = videoRows(after.videos);
+  const newVideo = videos.length === 1 && videos[0]?.videoId === PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.newVideoId ? videos[0] : null;
+  const finalOk = coreMatches(after) && Boolean(newVideo?.videoUrl) && newVideo?.videoState === "active" && await providerVideoReadable(fetchImpl, newVideo!.videoUrl);
+  if (!finalOk) {
+    const receipt = { providerDeleteStatus: 204, oldVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.oldVideoId, protectedNewVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.newVideoId, currentVideoIds: videos.map(v => v.videoId), ETSY_WRITE_COUNT: 1, ETSY_WRITE_ATTEMPT_COUNT: 1, ETSY_WRITE_COUNT_STATUS: "CONFIRMED" };
+    await recordOperationResult(repo, begun.record.operationId, begun.record.requestHash, "RECONCILIATION_REQUIRED", runtime.now?.() ?? new Date().toISOString(), { recoveryPoint: "POST_DELETE_STATE_UNVERIFIED", receipt });
+    return NextResponse.json({ error: "PDT_BOBA_R02_DELETE_OLD_FINAL_STATE_UNVERIFIED_DO_NOT_RETRY", receipt, ETSY_WRITE_COUNT: 1 }, { status: 202 });
+  }
+  const receipt = { scope: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.scope, providerDeleteStatus: 204, deletedVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.oldVideoId, protectedNewVideoId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.newVideoId, finalVideoIds: [PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.newVideoId], protectedStateFingerprint, ETSY_WRITE_COUNT: 1, ETSY_WRITE_ATTEMPT_COUNT: 1, ETSY_WRITE_COUNT_STATUS: "CONFIRMED" };
+  await recordOperationResult(repo, begun.record.operationId, begun.record.requestHash, "SUCCEEDED", runtime.now?.() ?? new Date().toISOString(), { recoveryPoint: "OLD_VIDEO_DELETE_VERIFIED", receipt });
+  return NextResponse.json({ status: "UPDATED_AND_VERIFIED", operationId: PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.operationId, receipt, ETSY_WRITE_COUNT: 1 });
 }
