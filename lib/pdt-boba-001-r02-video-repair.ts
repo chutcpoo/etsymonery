@@ -318,6 +318,7 @@ export async function verifyPdtBoba001R02VideoReconciliation(runtime: R02VideoRu
         recoveryPoint: ledger!.recoveryPoint,
         canonicalPostReleaseQcDriveId: "1uJFcYX_B1Wl5w93uJF5XrhWUg-hgy0pLra4tZkgB2Dc",
         exactNextGate: "BASELINE_LOCK_MEASUREMENT_NO_ADDITIONAL_ETSY_MUTATION_AUTHORIZED",
+        ledgerMayCloseReadOnly: true,
         providerReadStatus: state.statuses,
         ETSY_WRITE_COUNT: 0
       });

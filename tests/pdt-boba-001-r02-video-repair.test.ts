@@ -106,7 +106,7 @@ test("R02 reconciliation classifies exact uploaded-new plus old baseline as dele
 test("R02 reconciliation treats retained inactive old provider record as complete and authorizes no delete",async()=>{
   const p=reconciliationProvider([841193954,R02_RECON_NEW_VIDEO_ID],"inactive"),repo=await reconciliationRepo();
   const r=await verifyPdtBoba001R02VideoReconciliation({repository:repo,getAccessToken:async()=>"t",fetchImpl:p.fetchImpl,verifyVideoUrl:reconciliationVerifyVideoUrl}),x=await js(r);
-  assert.equal(r.status,200);assert.equal(x.status,"REPLACEMENT_CONFIRMED_COMPLETE_PROVIDER_RETAINS_INACTIVE_BASELINE");
+  assert.equal(r.status,200);assert.equal(x.status,"REPLACEMENT_CONFIRMED_COMPLETE_PROVIDER_RETAINS_INACTIVE_BASELINE");assert.equal(x.ledgerMayCloseReadOnly,true);
   assert.deepEqual(x.liveVideoIds,[R02_RECON_NEW_VIDEO_ID]);assert.deepEqual(x.inactiveProviderVideoIds,[841193954]);
   assert.equal(x.exactNextGate,"BASELINE_LOCK_MEASUREMENT_NO_ADDITIONAL_ETSY_MUTATION_AUTHORIZED");assert.equal(x.ETSY_WRITE_COUNT,0);
   assert.ok(p.methods.every(method=>method==="GET"));
