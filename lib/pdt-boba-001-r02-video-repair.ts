@@ -200,6 +200,18 @@ function exactR02ReconciliationLedger(record: Awaited<ReturnType<OperationLedger
     record.receipt.ETSY_WRITE_COUNT_STATUS === "CONFIRMED";
 }
 
+async function providerVideoReadable(fetchImpl: typeof fetch, videoUrl: string) {
+  if (!videoUrl.startsWith("https://")) return false;
+  try {
+    const response = await fetchImpl(videoUrl, { method: "GET", cache: "no-store" });
+    if (!response.ok) return false;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    return bytes.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function verifyPdtBoba001R02VideoReconciliation(runtime: R02VideoRuntime = {}) {
   const repo = runtime.repository ?? new NeonOperationLedgerRepository();
   const ledger = await repo.load(PDT_BOBA_001_R02_VIDEO_REPAIR.operationId);
@@ -262,18 +274,20 @@ export async function verifyPdtBoba001R02VideoReconciliation(runtime: R02VideoRu
       }
     }
     if (newVideo) {
-      newBinaryVerified = Boolean(newVideo.videoUrl) && await verify(
-        newVideo.videoUrl,
-        PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sha256,
-        PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sizeBytes
-      ).catch(() => false);
+      const providerIdentityValid = newVideo.videoId === R02_RECONCILIATION_NEW_VIDEO_ID &&
+        newVideo.videoState === "active" && Boolean(newVideo.videoUrl);
+      newBinaryVerified = providerIdentityValid && await providerVideoReadable(fetchImpl, newVideo.videoUrl);
       if (!newBinaryVerified) {
         return NextResponse.json({
-          status: "NEW_VIDEO_IDENTITY_MISMATCH",
+          status: "NEW_VIDEO_PROVIDER_IDENTITY_MISMATCH",
           operationId: PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,
           newVideoId: R02_RECONCILIATION_NEW_VIDEO_ID,
           currentVideoIds: videos.map((video) => video.videoId),
-          newVideoSha256Verified: false,
+          providerVideoState: newVideo.videoState,
+          providerVideoReadable: false,
+          sourceAssetSha256: PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sha256,
+          sourceAssetSizeBytes: PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sizeBytes,
+          providerCdnSourceShaComparison: "NOT_APPLICABLE_PROVIDER_TRANSCODE",
           providerReadStatus: state.statuses,
           ETSY_WRITE_COUNT: 0
         }, { status: 409 });
@@ -289,7 +303,11 @@ export async function verifyPdtBoba001R02VideoReconciliation(runtime: R02VideoRu
         oldVideoId: PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.videoId,
         newVideoId: R02_RECONCILIATION_NEW_VIDEO_ID,
         oldVideoSha256Verified: oldBinaryVerified,
-        newVideoSha256Verified: newBinaryVerified,
+        newVideoProviderIdentityVerified: newBinaryVerified,
+        sourceAssetSha256: PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sha256,
+        sourceAssetSizeBytes: PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sizeBytes,
+        providerCdnSourceShaComparison: "NOT_APPLICABLE_PROVIDER_TRANSCODE",
+        identityBasis: "EXACT_201_VIDEO_ID_PLUS_ACTIVE_PROVIDER_READBACK_PLUS_READABLE_CDN",
         currentVideoIds: videos.map((video) => video.videoId),
         ledgerConfirmedWriteCount: 1,
         ledgerStatus: ledger!.status,
@@ -308,7 +326,11 @@ export async function verifyPdtBoba001R02VideoReconciliation(runtime: R02VideoRu
         requestHash: R02_RECONCILIATION_REQUEST_HASH,
         oldVideoId: PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.videoId,
         newVideoId: R02_RECONCILIATION_NEW_VIDEO_ID,
-        newVideoSha256Verified: newBinaryVerified,
+        newVideoProviderIdentityVerified: newBinaryVerified,
+        sourceAssetSha256: PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sha256,
+        sourceAssetSizeBytes: PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sizeBytes,
+        providerCdnSourceShaComparison: "NOT_APPLICABLE_PROVIDER_TRANSCODE",
+        identityBasis: "EXACT_201_VIDEO_ID_PLUS_ACTIVE_PROVIDER_READBACK_PLUS_READABLE_CDN",
         currentVideoIds: videos.map((video) => video.videoId),
         ledgerConfirmedWriteCount: 1,
         ledgerStatus: ledger!.status,

@@ -99,20 +99,34 @@ const reconciliationVerifyVideoUrl=async(url:string,sha:string,size:number)=>{
 test("R02 reconciliation classifies exact uploaded-new plus old baseline as delete pending with zero writes",async()=>{
   const p=reconciliationProvider([841193954,R02_RECON_NEW_VIDEO_ID]),repo=await reconciliationRepo();
   const r=await verifyPdtBoba001R02VideoReconciliation({repository:repo,getAccessToken:async()=>"t",fetchImpl:p.fetchImpl,verifyVideoUrl:reconciliationVerifyVideoUrl}),x=await js(r);
-  assert.equal(r.status,200);assert.equal(x.status,"UPLOAD_CONFIRMED_DELETE_PENDING");assert.equal(x.ETSY_WRITE_COUNT,0);assert.equal(x.ledgerConfirmedWriteCount,1);assert.equal(x.exactNextGate,"FRESH_EXPLICIT_AUTHORIZATION_REQUIRED_BEFORE_OLD_VIDEO_DELETE");
+  assert.equal(r.status,200);assert.equal(x.status,"UPLOAD_CONFIRMED_DELETE_PENDING");assert.equal(x.ETSY_WRITE_COUNT,0);assert.equal(x.ledgerConfirmedWriteCount,1);assert.equal(x.newVideoProviderIdentityVerified,true);assert.equal(x.providerCdnSourceShaComparison,"NOT_APPLICABLE_PROVIDER_TRANSCODE");assert.equal(x.exactNextGate,"FRESH_EXPLICIT_AUTHORIZATION_REQUIRED_BEFORE_OLD_VIDEO_DELETE");
   assert.ok(p.methods.every(method=>method==="GET"));
 });
 
 test("R02 reconciliation confirms complete provider state when only exact new video remains",async()=>{
   const p=reconciliationProvider([R02_RECON_NEW_VIDEO_ID]),repo=await reconciliationRepo();
   const r=await verifyPdtBoba001R02VideoReconciliation({repository:repo,getAccessToken:async()=>"t",fetchImpl:p.fetchImpl,verifyVideoUrl:reconciliationVerifyVideoUrl}),x=await js(r);
-  assert.equal(r.status,200);assert.equal(x.status,"REPLACEMENT_CONFIRMED_COMPLETE");assert.equal(x.ledgerMayCloseReadOnly,true);assert.equal(x.ETSY_WRITE_COUNT,0);assert.ok(p.methods.every(method=>method==="GET"));
+  assert.equal(r.status,200);assert.equal(x.status,"REPLACEMENT_CONFIRMED_COMPLETE");assert.equal(x.ledgerMayCloseReadOnly,true);assert.equal(x.newVideoProviderIdentityVerified,true);assert.equal(x.providerCdnSourceShaComparison,"NOT_APPLICABLE_PROVIDER_TRANSCODE");assert.equal(x.ETSY_WRITE_COUNT,0);assert.ok(p.methods.every(method=>method==="GET"));
 });
 
 test("R02 reconciliation fails closed if exact new video is not visible",async()=>{
   const p=reconciliationProvider([841193954]),repo=await reconciliationRepo();
   const r=await verifyPdtBoba001R02VideoReconciliation({repository:repo,getAccessToken:async()=>"t",fetchImpl:p.fetchImpl,verifyVideoUrl:reconciliationVerifyVideoUrl}),x=await js(r);
   assert.equal(r.status,409);assert.equal(x.status,"UPLOAD_NOT_VISIBLE_UNRESOLVED");assert.equal(x.ETSY_WRITE_COUNT,0);assert.ok(p.methods.every(method=>method==="GET"));
+});
+
+test("R02 reconciliation rejects exact new video id when provider state is not active",async()=>{
+  const p=reconciliationProvider([841193954,R02_RECON_NEW_VIDEO_ID]),repo=await reconciliationRepo();
+  const original=p.fetchImpl;
+  p.fetchImpl=(async(input:string|URL|Request,init?:RequestInit)=>{
+    const url=String(input);
+    if(url.endsWith("/videos")){
+      return Response.json({results:[oldVideo(),{video_id:R02_RECON_NEW_VIDEO_ID,width:1600,height:1280,video_state:"processing",video_url:"https://video.test/new-processing.mp4"}]});
+    }
+    return original(input,init);
+  }) as typeof fetch;
+  const r=await verifyPdtBoba001R02VideoReconciliation({repository:repo,getAccessToken:async()=>"t",fetchImpl:p.fetchImpl,verifyVideoUrl:reconciliationVerifyVideoUrl}),x=await js(r);
+  assert.equal(r.status,409);assert.equal(x.status,"NEW_VIDEO_PROVIDER_IDENTITY_MISMATCH");assert.equal(x.providerVideoState,"processing");assert.equal(x.ETSY_WRITE_COUNT,0);
 });
 
 test("R02 reconciliation rejects ledger drift before Etsy access",async()=>{
