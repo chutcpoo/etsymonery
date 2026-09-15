@@ -191,13 +191,25 @@ const R02_RECONCILIATION_NEW_VIDEO_ID = 842407035;
 
 function exactR02ReconciliationLedger(record: Awaited<ReturnType<OperationLedgerRepository["load"]>>) {
   if (!record || record.operationId !== PDT_BOBA_001_R02_VIDEO_REPAIR.operationId) return false;
-  if (record.requestHash !== R02_RECONCILIATION_REQUEST_HASH || record.status !== "RECONCILIATION_REQUIRED") return false;
+  if (record.requestHash !== R02_RECONCILIATION_REQUEST_HASH) return false;
   if (record.recoveryPoint !== "VIDEO_UPLOAD_READBACK_UNVERIFIED" || !isRec(record.receipt)) return false;
-  return Number(record.receipt.newVideoId) === R02_RECONCILIATION_NEW_VIDEO_ID &&
+  const uploadReceiptMatches = Number(record.receipt.newVideoId) === R02_RECONCILIATION_NEW_VIDEO_ID &&
     Number(record.receipt.providerUploadStatus) === 201 &&
     Number(record.receipt.ETSY_WRITE_COUNT) === 1 &&
     Number(record.receipt.ETSY_WRITE_ATTEMPT_COUNT) === 1 &&
     record.receipt.ETSY_WRITE_COUNT_STATUS === "CONFIRMED";
+  if (!uploadReceiptMatches) return false;
+  if (record.status === "RECONCILIATION_REQUIRED") return true;
+  if (record.status !== "SUCCEEDED") return false;
+  return record.receipt.reconciledReadOnly === true &&
+    record.receipt.reconciliationStatus === "REPLACEMENT_CONFIRMED_COMPLETE_PROVIDER_RETAINS_INACTIVE_BASELINE" &&
+    Number(record.receipt.oldVideoId) === PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.videoId &&
+    record.receipt.oldVideoProviderState === "inactive" &&
+    record.receipt.newVideoProviderState === "active" &&
+    JSON.stringify(record.receipt.liveVideoIds) === JSON.stringify([R02_RECONCILIATION_NEW_VIDEO_ID]) &&
+    JSON.stringify(record.receipt.inactiveProviderVideoIds) === JSON.stringify([PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.videoId]) &&
+    record.receipt.canonicalPostReleaseQcDriveId === "1uJFcYX_B1Wl5w93uJF5XrhWUg-hgy0pLra4tZkgB2Dc" &&
+    Number(record.receipt.reconciliationEtsyWriteCount) === 0;
 }
 
 async function providerVideoReadable(fetchImpl: typeof fetch, videoUrl: string) {
@@ -319,6 +331,7 @@ export async function verifyPdtBoba001R02VideoReconciliation(runtime: R02VideoRu
         canonicalPostReleaseQcDriveId: "1uJFcYX_B1Wl5w93uJF5XrhWUg-hgy0pLra4tZkgB2Dc",
         exactNextGate: "BASELINE_LOCK_MEASUREMENT_NO_ADDITIONAL_ETSY_MUTATION_AUTHORIZED",
         ledgerMayCloseReadOnly: true,
+        ledgerClosedReadOnly: ledger!.status === "SUCCEEDED",
         providerReadStatus: state.statuses,
         ETSY_WRITE_COUNT: 0
       });
