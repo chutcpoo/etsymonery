@@ -184,3 +184,159 @@ export async function handlePdtBoba001R02VideoRepair(body: Rec, authorizationReq
   try{await(runtime.clearAsset?runtime.clearAsset():clearAuthorizedAsset(PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sha256));}catch{}
   return NextResponse.json({status:"UPDATED_AND_VERIFIED",operationId:PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,receipt,ETSY_WRITE_COUNT:2,ETSY_WRITE_ATTEMPT_COUNT:2,ETSY_WRITE_COUNT_STATUS:"CONFIRMED"});
 }
+
+
+const R02_RECONCILIATION_REQUEST_HASH = "e5bdbf451c907914ed7c20934c49b628c9bd83fbb8c4855b910f0419b865601a";
+const R02_RECONCILIATION_NEW_VIDEO_ID = 842407035;
+
+function exactR02ReconciliationLedger(record: Awaited<ReturnType<OperationLedgerRepository["load"]>>) {
+  if (!record || record.operationId !== PDT_BOBA_001_R02_VIDEO_REPAIR.operationId) return false;
+  if (record.requestHash !== R02_RECONCILIATION_REQUEST_HASH || record.status !== "RECONCILIATION_REQUIRED") return false;
+  if (record.recoveryPoint !== "VIDEO_UPLOAD_READBACK_UNVERIFIED" || !isRec(record.receipt)) return false;
+  return Number(record.receipt.newVideoId) === R02_RECONCILIATION_NEW_VIDEO_ID &&
+    Number(record.receipt.providerUploadStatus) === 201 &&
+    Number(record.receipt.ETSY_WRITE_COUNT) === 1 &&
+    Number(record.receipt.ETSY_WRITE_ATTEMPT_COUNT) === 1 &&
+    record.receipt.ETSY_WRITE_COUNT_STATUS === "CONFIRMED";
+}
+
+export async function verifyPdtBoba001R02VideoReconciliation(runtime: R02VideoRuntime = {}) {
+  const repo = runtime.repository ?? new NeonOperationLedgerRepository();
+  const ledger = await repo.load(PDT_BOBA_001_R02_VIDEO_REPAIR.operationId);
+  if (!exactR02ReconciliationLedger(ledger)) {
+    return NextResponse.json({
+      error: "PDT_BOBA_R02_RECONCILIATION_LEDGER_MISMATCH",
+      operationId: PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,
+      ETSY_WRITE_COUNT: 0
+    }, { status: 409 });
+  }
+
+  try {
+    const fetchImpl = runtime.fetchImpl ?? fetch;
+    const token = await (runtime.getAccessToken ?? getValidEtsyAccessToken)();
+    const state = await readState(token, fetchImpl);
+    if (!coreMatches(state)) {
+      return NextResponse.json({
+        error: "PDT_BOBA_R02_RECONCILIATION_PROTECTED_STATE_MISMATCH",
+        operationId: PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,
+        providerReadStatus: state.statuses,
+        ETSY_WRITE_COUNT: 0
+      }, { status: 409 });
+    }
+
+    const videos = videoRows(state.videos);
+    const oldVideo = videos.find((video) => video.videoId === PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.videoId);
+    const newVideo = videos.find((video) => video.videoId === R02_RECONCILIATION_NEW_VIDEO_ID);
+    const unexpected = videos.filter((video) =>
+      video.videoId !== PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.videoId &&
+      video.videoId !== R02_RECONCILIATION_NEW_VIDEO_ID
+    );
+    if (unexpected.length > 0 || videos.length > 2) {
+      return NextResponse.json({
+        status: "UNEXPECTED_VIDEO_STATE",
+        operationId: PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,
+        currentVideoIds: videos.map((video) => video.videoId),
+        providerReadStatus: state.statuses,
+        ETSY_WRITE_COUNT: 0
+      }, { status: 409 });
+    }
+
+    const verify = runtime.verifyVideoUrl ?? ((url, sha, size) => defaultVerifyVideoUrl(fetchImpl, url, sha, size));
+    let oldBinaryVerified: boolean | null = null;
+    let newBinaryVerified: boolean | null = null;
+    if (oldVideo) {
+      oldBinaryVerified = Boolean(oldVideo.videoUrl) && await verify(
+        oldVideo.videoUrl,
+        PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.sha256,
+        PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.sizeBytes
+      ).catch(() => false);
+      if (!oldBinaryVerified) {
+        return NextResponse.json({
+          status: "BASELINE_VIDEO_IDENTITY_MISMATCH",
+          operationId: PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,
+          currentVideoIds: videos.map((video) => video.videoId),
+          baselineVideoSha256Verified: false,
+          providerReadStatus: state.statuses,
+          ETSY_WRITE_COUNT: 0
+        }, { status: 409 });
+      }
+    }
+    if (newVideo) {
+      newBinaryVerified = Boolean(newVideo.videoUrl) && await verify(
+        newVideo.videoUrl,
+        PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sha256,
+        PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sizeBytes
+      ).catch(() => false);
+      if (!newBinaryVerified) {
+        return NextResponse.json({
+          status: "NEW_VIDEO_IDENTITY_MISMATCH",
+          operationId: PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,
+          newVideoId: R02_RECONCILIATION_NEW_VIDEO_ID,
+          currentVideoIds: videos.map((video) => video.videoId),
+          newVideoSha256Verified: false,
+          providerReadStatus: state.statuses,
+          ETSY_WRITE_COUNT: 0
+        }, { status: 409 });
+      }
+    }
+
+    if (newVideo && oldVideo && videos.length === 2) {
+      return NextResponse.json({
+        status: "UPLOAD_CONFIRMED_DELETE_PENDING",
+        mode: "READ_ONLY_RECONCILIATION",
+        operationId: PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,
+        requestHash: R02_RECONCILIATION_REQUEST_HASH,
+        oldVideoId: PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.videoId,
+        newVideoId: R02_RECONCILIATION_NEW_VIDEO_ID,
+        oldVideoSha256Verified: oldBinaryVerified,
+        newVideoSha256Verified: newBinaryVerified,
+        currentVideoIds: videos.map((video) => video.videoId),
+        ledgerConfirmedWriteCount: 1,
+        ledgerStatus: ledger!.status,
+        recoveryPoint: ledger!.recoveryPoint,
+        exactNextGate: "FRESH_EXPLICIT_AUTHORIZATION_REQUIRED_BEFORE_OLD_VIDEO_DELETE",
+        providerReadStatus: state.statuses,
+        ETSY_WRITE_COUNT: 0
+      });
+    }
+
+    if (newVideo && !oldVideo && videos.length === 1) {
+      return NextResponse.json({
+        status: "REPLACEMENT_CONFIRMED_COMPLETE",
+        mode: "READ_ONLY_RECONCILIATION",
+        operationId: PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,
+        requestHash: R02_RECONCILIATION_REQUEST_HASH,
+        oldVideoId: PDT_BOBA_001_R02_VIDEO_REPAIR.baselineVideo.videoId,
+        newVideoId: R02_RECONCILIATION_NEW_VIDEO_ID,
+        newVideoSha256Verified: newBinaryVerified,
+        currentVideoIds: videos.map((video) => video.videoId),
+        ledgerConfirmedWriteCount: 1,
+        ledgerStatus: ledger!.status,
+        recoveryPoint: ledger!.recoveryPoint,
+        ledgerMayCloseReadOnly: true,
+        providerReadStatus: state.statuses,
+        ETSY_WRITE_COUNT: 0
+      });
+    }
+
+    return NextResponse.json({
+      status: "UPLOAD_NOT_VISIBLE_UNRESOLVED",
+      mode: "READ_ONLY_RECONCILIATION",
+      operationId: PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,
+      requestHash: R02_RECONCILIATION_REQUEST_HASH,
+      expectedNewVideoId: R02_RECONCILIATION_NEW_VIDEO_ID,
+      currentVideoIds: videos.map((video) => video.videoId),
+      ledgerConfirmedWriteCount: 1,
+      ledgerStatus: ledger!.status,
+      recoveryPoint: ledger!.recoveryPoint,
+      providerReadStatus: state.statuses,
+      ETSY_WRITE_COUNT: 0
+    }, { status: 409 });
+  } catch {
+    return NextResponse.json({
+      error: "PDT_BOBA_R02_RECONCILIATION_READBACK_FAILED",
+      operationId: PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,
+      ETSY_WRITE_COUNT: 0
+    }, { status: 502 });
+  }
+}
