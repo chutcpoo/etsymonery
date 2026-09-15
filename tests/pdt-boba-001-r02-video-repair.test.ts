@@ -76,6 +76,21 @@ async function reconciliationRepo(over:Record<string,unknown>={}){
   });
   return repo;
 }
+async function closedReconciliationRepo(over:Record<string,unknown>={}){
+  const repo=new MemoryOperationLedgerRepository();
+  await repo.save({
+    schemaVersion:OPERATION_LEDGER_SCHEMA_VERSION,
+    operationId:PDT_BOBA_001_R02_VIDEO_REPAIR.operationId,
+    requestHash:R02_RECON_REQUEST_HASH,
+    attempts:3,
+    status:"SUCCEEDED",
+    recoveryPoint:"VIDEO_UPLOAD_READBACK_UNVERIFIED",
+    receipt:{newVideoId:R02_RECON_NEW_VIDEO_ID,providerUploadStatus:201,ETSY_WRITE_COUNT:1,ETSY_WRITE_ATTEMPT_COUNT:1,ETSY_WRITE_COUNT_STATUS:"CONFIRMED",reconciledReadOnly:true,reconciliationStatus:"REPLACEMENT_CONFIRMED_COMPLETE_PROVIDER_RETAINS_INACTIVE_BASELINE",oldVideoId:841193954,oldVideoProviderState:"inactive",newVideoProviderState:"active",liveVideoIds:[R02_RECON_NEW_VIDEO_ID],inactiveProviderVideoIds:[841193954],canonicalPostReleaseQcDriveId:"1uJFcYX_B1Wl5w93uJF5XrhWUg-hgy0pLra4tZkgB2Dc",reconciliationEtsyWriteCount:0,...over},
+    createdAt:"2026-09-14T03:28:38.733Z",
+    updatedAt:"2026-09-15T00:41:03.548Z"
+  });
+  return repo;
+}
 function reconciliationProvider(ids:number[],oldState:"active"|"inactive"="active"){
   const methods:string[]=[];
   const videos=ids.map(id=>id===841193954?({...oldVideo(),video_state:oldState}):({video_id:id,width:1600,height:1280,video_state:"active",video_url:`https://video.test/${id}.mp4`,thumbnail_url:"new.jpg"}));
@@ -110,6 +125,20 @@ test("R02 reconciliation treats retained inactive old provider record as complet
   assert.deepEqual(x.liveVideoIds,[R02_RECON_NEW_VIDEO_ID]);assert.deepEqual(x.inactiveProviderVideoIds,[841193954]);
   assert.equal(x.exactNextGate,"BASELINE_LOCK_MEASUREMENT_NO_ADDITIONAL_ETSY_MUTATION_AUTHORIZED");assert.equal(x.ETSY_WRITE_COUNT,0);
   assert.ok(p.methods.every(method=>method==="GET"));
+});
+
+test("R02 reconciliation accepts exact read-only-closed SUCCEEDED ledger and remains GET-only",async()=>{
+  const p=reconciliationProvider([841193954,R02_RECON_NEW_VIDEO_ID],"inactive"),repo=await closedReconciliationRepo();
+  const r=await verifyPdtBoba001R02VideoReconciliation({repository:repo,getAccessToken:async()=>"t",fetchImpl:p.fetchImpl,verifyVideoUrl:reconciliationVerifyVideoUrl}),x=await js(r);
+  assert.equal(r.status,200);assert.equal(x.status,"REPLACEMENT_CONFIRMED_COMPLETE_PROVIDER_RETAINS_INACTIVE_BASELINE");
+  assert.equal(x.ledgerStatus,"SUCCEEDED");assert.equal(x.ledgerClosedReadOnly,true);assert.equal(x.ETSY_WRITE_COUNT,0);
+  assert.ok(p.methods.every(method=>method==="GET"));
+});
+
+test("R02 reconciliation rejects SUCCEEDED ledger without exact read-only closure evidence",async()=>{
+  const p=reconciliationProvider([841193954,R02_RECON_NEW_VIDEO_ID],"inactive"),repo=await closedReconciliationRepo({reconciliationStatus:"WRONG"});
+  const r=await verifyPdtBoba001R02VideoReconciliation({repository:repo,getAccessToken:async()=>"t",fetchImpl:p.fetchImpl,verifyVideoUrl:reconciliationVerifyVideoUrl});
+  assert.equal(r.status,409);assert.equal(p.methods.length,0);
 });
 
 test("R02 reconciliation confirms complete provider state when only exact new video remains",async()=>{
