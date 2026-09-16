@@ -7,7 +7,7 @@ import { verifyPdClean004CloudRunnerOidc } from "../../../../../../../../lib/pd-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const TOKEN_SHA256 = "74b6f8034c53f520b1f4ee27574436a5250e187b5c8258fcb9c83c4839863423";
+const TOKEN_SHA256 = "a77973744122e333ccc1c7bcfc9752784b7ba56eb6a2f5417d0dab91ff09fc35";
 const TOKEN_HEADER = "x-pd-clean-r02-stage-once-token";
 const OIDC_AUDIENCE = "https://autodigitalpublisher.vercel.app/api/internal/etsy/pd-clean-004/r02/visual-release/stage-once";
 
