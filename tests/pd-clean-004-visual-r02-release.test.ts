@@ -15,8 +15,13 @@ test("PD-CLEAN-004 R02 release identity is exact and complete", () => {
   assert.equal(PD_CLEAN_004_VISUAL_R02_RELEASE.operationId, "PD-CLEAN-004-VISUAL-R02-RELEASE-001");
   assert.equal(PD_CLEAN_004_VISUAL_R02_RELEASE.listingId, "4561795303");
   assert.equal(PD_CLEAN_004_VISUAL_R02_RELEASE.productId, "PD-CLEAN-004");
+  assert.equal(PD_CLEAN_004_VISUAL_R02_RELEASE.operationFingerprint, "7f3354ba9687d0867f5ee4329d99c6eb1a28a4c2422bc00845da3ce3288a68a6");
+  assert.equal(PD_CLEAN_004_VISUAL_R02_RELEASE.authorizationId, "PD-CLEAN-004-VISUAL-R02-AUTH-20260916-02-REBIND");
+  assert.equal(PD_CLEAN_004_VISUAL_R02_RELEASE.authorizationEvidenceDriveId, "17qtGktPmlulw_B1ymTHstLd_r3Am_7l1FllT3BvKPgA");
+  assert.equal(PD_CLEAN_004_VISUAL_R02_RELEASE.candidateFingerprint, "4448973e5abee4bd344414307c12066248af5f9ab7de26062333deee7f77f069");
   assert.equal(PD_CLEAN_004_VISUAL_R02_RELEASE.gallery.length, 8);
   assert.equal(PD_CLEAN_004_VISUAL_R02_RELEASE.gallery.filter((asset) => asset.altText.length > 0).length, 8);
+  assert.deepEqual(PD_CLEAN_004_VISUAL_R02_RELEASE.gallery.map((asset) => asset.altText.length), [187, 210, 172, 182, 176, 188, 186, 203]);
   assert.equal(PD_CLEAN_004_VISUAL_R02_RELEASE.video.mimeType, "video/mp4");
   assert.equal(PD_CLEAN_004_VISUAL_R02_RELEASE.video.byteSize, 412385);
   assert.match(PD_CLEAN_004_VISUAL_R02_RELEASE.video.sha256, /^[a-f0-9]{64}$/);
