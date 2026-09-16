@@ -2,17 +2,19 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { PD_CLEAN_004_VISUAL_R02_RELEASE } from "../../../../../../../../lib/pd-clean-004-visual-r02-release";
 import { stageAuthorizedAssetChunk } from "../../../../../../../../lib/authorized-operation-asset-store";
+import { verifyPdClean004CloudRunnerOidc } from "../../../../../../../../lib/pd-clean-004-r02-cloud-runner-oidc";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const TOKEN_SHA256 = "74b6f8034c53f520b1f4ee27574436a5250e187b5c8258fcb9c83c4839863423";
 const TOKEN_HEADER = "x-pd-clean-r02-stage-once-token";
+const OIDC_AUDIENCE = "https://autodigitalpublisher.vercel.app/api/internal/etsy/pd-clean-004/r02/visual-release/stage-once";
 
 type Rec = Record<string, unknown>;
 const isRec = (value: unknown): value is Rec => typeof value === "object" && value !== null && !Array.isArray(value);
 
-function authorized(request: Request) {
+function tokenAuthorized(request: Request) {
   const supplied = request.headers.get(TOKEN_HEADER)?.trim() ?? "";
   if (!supplied) return false;
   const actual = createHash("sha256").update(supplied, "utf8").digest("hex");
@@ -21,8 +23,20 @@ function authorized(request: Request) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+async function authorized(request: Request) {
+  if (tokenAuthorized(request)) return true;
+  const authorization = request.headers.get("authorization")?.trim() ?? "";
+  if (!authorization.startsWith("Bearer ")) return false;
+  try {
+    await verifyPdClean004CloudRunnerOidc(authorization.slice("Bearer ".length).trim(), OIDC_AUDIENCE);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
-  if (!authorized(request)) return NextResponse.json({ error: "PD_CLEAN_R02_STAGE_ONCE_UNAUTHORIZED", ETSY_WRITE_COUNT: 0 }, { status: 401 });
+  if (!(await authorized(request))) return NextResponse.json({ error: "PD_CLEAN_R02_STAGE_ONCE_UNAUTHORIZED", ETSY_WRITE_COUNT: 0 }, { status: 401 });
 
   let body: unknown;
   try { body = await request.json(); }
