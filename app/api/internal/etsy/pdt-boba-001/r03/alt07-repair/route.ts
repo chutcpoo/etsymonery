@@ -3,7 +3,7 @@ import {
   PDT_BOBA_001_R03_ALT07_REPAIR,
   handlePdtBoba001R03Alt07Repair,
   verifyPdtBoba001R03Alt07ProtectedState
-} from "../../../../../../../../lib/pdt-boba-001-r03-alt07-repair";
+} from "../../../../../../../lib/pdt-boba-001-r03-alt07-repair";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
