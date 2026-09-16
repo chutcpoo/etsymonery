@@ -31,7 +31,7 @@ function listing() {
   };
 }
 
-function images(alt07 = WRONG) {
+function images(alt07: string = WRONG) {
   const ids = [8529888810, 8529888820, 8529888830, 8529888840, 8529888850, 8529888860, 8529888870, 8529888880, 8529888890];
   return ids.map((id, index) => ({
     listing_id: 4560696421,
