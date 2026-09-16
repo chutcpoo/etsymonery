@@ -21,8 +21,8 @@ const SHA256 = /^[a-f0-9]{64}$/;
 export const PD_CLEAN_004_VISUAL_R02_RELEASE = Object.freeze({
   operation: "REPLACE_GALLERY_8_ALT_TEXT_8_ADD_VIDEO_1_ONLY",
   operationId: "PD-CLEAN-004-VISUAL-R02-RELEASE-001",
-  operationFingerprint: "210eb075b04a604154f2e00b71c2bbc89c3aa9cb24c75281c8971c0a4b5f69ca",
-  authorizationId: "PD-CLEAN-004-VISUAL-R02-AUTH-20260916-01",
+  operationFingerprint: "7f3354ba9687d0867f5ee4329d99c6eb1a28a4c2422bc00845da3ce3288a68a6",
+  authorizationId: "PD-CLEAN-004-VISUAL-R02-AUTH-20260916-02-REBIND",
   productId: "PD-CLEAN-004",
   productVersion: "V1",
   shopId: "23582741",
@@ -31,7 +31,7 @@ export const PD_CLEAN_004_VISUAL_R02_RELEASE = Object.freeze({
   candidateFingerprint: "4448973e5abee4bd344414307c12066248af5f9ab7de26062333deee7f77f069",
   buildId: "ETSY-VISUAL-PD-CLEAN-004-BUILD-20260916-R02",
   acceptanceCriteriaId: "PD-CLEAN-004-VISUAL-AC-20260916-R02",
-  authorizationEvidenceDriveId: "12ILqx5Rd6FnX2Br7DwxO9wEC3p1oITLVGkNhYBLBGQ4",
+  authorizationEvidenceDriveId: "17qtGktPmlulw_B1ymTHstLd_r3Am_7l1FllT3BvKPgA",
   freezeEvidenceDriveId: "1ieI7K21t6NJCJoYtZlj6GAnKG9PaR330",
   operationFreezeDriveId: "1sbweK0SatUsB8qeEFqi0SEgifLnhPkN9",
   finalQcDriveId: "1m7d_vxTdmp6zXVI5NqOUXkKHWEJadPP6",
@@ -46,7 +46,7 @@ export const PD_CLEAN_004_VISUAL_R02_RELEASE = Object.freeze({
       width: 2500,
       height: 2000,
       mimeType: "image/jpeg",
-      altText: "Cafe cleaning checklist and schedule template hero preview for Excel, Google Sheets and PDF, showing the opening clean worksheet beside a real coffee shop workspace."
+      altText: "Cafe cleaning checklist and schedule hero showing a real Opening Clean Excel workbook worksheet, with opening, service reset, closing, weekly, monthly and verification workflow messaging."
     },
     {
       order: 2,
@@ -57,7 +57,7 @@ export const PD_CLEAN_004_VISUAL_R02_RELEASE = Object.freeze({
       width: 2500,
       height: 2000,
       mimeType: "image/jpeg",
-      altText: "What is included in the cafe cleaning checklist workbook, showing eight tabs for Setup, Opening Clean, Service Reset, Closing Clean, Weekly, Monthly, Equipment and Verification."
+      altText: "Cafe cleaning toolkit overview showing a real Start Here workbook preview beside the exact eight tabs: Start Here, Opening Clean, Service Reset, Closing Clean, Weekly, Monthly, Verification and Blank Checklist."
     },
     {
       order: 3,
@@ -68,7 +68,7 @@ export const PD_CLEAN_004_VISUAL_R02_RELEASE = Object.freeze({
       width: 2500,
       height: 2000,
       mimeType: "image/jpeg",
-      altText: "Opening clean worksheet preview from the cafe cleaning checklist spreadsheet, with unchecked sample tasks, area, owner, status, initials and notes fields."
+      altText: "Opening Clean worksheet for a cafe cleaning checklist showing real workbook fields for area, cleaning task, frequency, assigned to, due time, status, verified by and notes."
     },
     {
       order: 4,
@@ -79,7 +79,7 @@ export const PD_CLEAN_004_VISUAL_R02_RELEASE = Object.freeze({
       width: 2500,
       height: 2000,
       mimeType: "image/jpeg",
-      altText: "Cafe cleaning workflow preview showing Service Reset and Closing Clean spreadsheet tabs with area, task, owner, status, initials and notes columns."
+      altText: "Cafe cleaning workflow showing real Service Reset and Closing Clean workbook worksheets side by side, with assignment, status and verified by fields used through service and closing."
     },
     {
       order: 5,
@@ -90,7 +90,7 @@ export const PD_CLEAN_004_VISUAL_R02_RELEASE = Object.freeze({
       width: 2500,
       height: 2000,
       mimeType: "image/jpeg",
-      altText: "Weekly and monthly cafe cleaning schedule worksheets with unchecked sample tasks, showing area, task, owner, status, initials and notes for repeating routines."
+      altText: "Cafe cleaning schedule showing real Weekly and Monthly workbook worksheets with assigned to, due day or date, status, verified by and notes fields for recurring cleaning tasks."
     },
     {
       order: 6,
@@ -101,7 +101,7 @@ export const PD_CLEAN_004_VISUAL_R02_RELEASE = Object.freeze({
       width: 2500,
       height: 2000,
       mimeType: "image/jpeg",
-      altText: "Cafe cleaning verification log worksheet with date, shift, area, verified by, result and notes, designed for manager review after cleaning tasks are completed."
+      altText: "Cafe cleaning verification worksheet showing a real workbook preview with date, shift, area, issue or missed task, immediate action, assigned to, due, status, verified by and notes fields."
     },
     {
       order: 7,
@@ -112,7 +112,7 @@ export const PD_CLEAN_004_VISUAL_R02_RELEASE = Object.freeze({
       width: 2500,
       height: 2000,
       mimeType: "image/jpeg",
-      altText: "Editable cafe cleaning checklist workflow showing custom task setup in the spreadsheet before use, with owner initials, status and notes fields ready for team assignments."
+      altText: "Editable cafe cleaning workbook showing real Opening Clean task rows with cleaning task, assigned to, status, verified by and notes fields that can be customized for a business workflow."
     },
     {
       order: 8,
@@ -123,7 +123,7 @@ export const PD_CLEAN_004_VISUAL_R02_RELEASE = Object.freeze({
       width: 2500,
       height: 2000,
       mimeType: "image/jpeg",
-      altText: "Cafe cleaning checklist digital download contents showing Excel workbook, Google Sheets setup, A4 and US Letter PDFs, Quick Start guide, Read Me license and ZIP bundle."
+      altText: "What you get with the cafe cleaning toolkit: real Start Here workbook preview beside the buyer ZIP, A4 eight-page PDF, US Letter eight-page PDF, two-page Quick Start and two-page Read Me and License PDF."
     }
   ] as const,
   video: {
@@ -202,7 +202,8 @@ const secureEqual = (left: string, right: string) => {
   const b = Buffer.from(right);
   return a.length === b.length && timingSafeEqual(a, b);
 };
-const hashText = (value: unknown) => createHash("sha256").update(typeof value === "string" ? value.normalize("NFC") : "", "utf8").digest("hex");
+const normalizeProtectedDescription = (value: unknown) => typeof value === "string" ? value.normalize("NFC").replaceAll("&gt;", ">") : "";
+const hashText = (value: unknown) => createHash("sha256").update(normalizeProtectedDescription(value), "utf8").digest("hex");
 async function json(response: Response) { const text = await response.text(); try { return text ? JSON.parse(text) as unknown : {}; } catch { return {}; } }
 function multipartHeaders(token: string) { const headers = etsyApiHeaders(token); delete headers["content-type"]; return headers; }
 function imageRows(state: State) { return [...state.images].sort((a, b) => Number(a.rank) - Number(b.rank)).map((image) => [Number(image.listing_image_id), Number(image.rank), Number(image.full_width), Number(image.full_height)]); }
@@ -237,7 +238,7 @@ function protectedCoreMatches(state: State) {
   const price = isRec(listing.price) ? listing.price : {};
   if (String(listing.listing_id) !== PD_CLEAN_004_VISUAL_R02_RELEASE.listingId || String(listing.shop_id) !== PD_CLEAN_004_VISUAL_R02_RELEASE.shopId) return false;
   if (String(listing.state).toLowerCase() !== EXPECTED_BEFORE.state || listing.title !== EXPECTED_BEFORE.title) return false;
-  if (hashText(listing.description) !== EXPECTED_BEFORE.descriptionSha256 || String(listing.description ?? "").length !== EXPECTED_BEFORE.descriptionLength) return false;
+  if (hashText(listing.description) !== EXPECTED_BEFORE.descriptionSha256 || normalizeProtectedDescription(listing.description).length !== EXPECTED_BEFORE.descriptionLength) return false;
   if (JSON.stringify(listing.tags) !== JSON.stringify(EXPECTED_BEFORE.tags)) return false;
   if (Number(price.amount) !== EXPECTED_BEFORE.price.amount || Number(price.divisor) !== EXPECTED_BEFORE.price.divisor || price.currency_code !== EXPECTED_BEFORE.price.currencyCode) return false;
   if (Number(listing.taxonomy_id) !== EXPECTED_BEFORE.taxonomyId || Number(listing.quantity) !== EXPECTED_BEFORE.quantity) return false;
@@ -258,7 +259,7 @@ function protectedSnapshot(state: State) {
   const price = isRec(listing.price) ? listing.price : {};
   return {
     listingId: Number(listing.listing_id), shopId: Number(listing.shop_id), state: listing.state,
-    title: listing.title, descriptionSha256: hashText(listing.description), descriptionLength: String(listing.description ?? "").length,
+    title: listing.title, descriptionSha256: hashText(listing.description), descriptionLength: normalizeProtectedDescription(listing.description).length,
     tags: listing.tags, price: { amount: Number(price.amount), divisor: Number(price.divisor), currencyCode: price.currency_code },
     taxonomyId: Number(listing.taxonomy_id), quantity: Number(listing.quantity), whoMade: listing.who_made,
     whenMade: listing.when_made, listingType: listing.listing_type ?? listing.type, returnPolicyId: Number(listing.return_policy_id),
