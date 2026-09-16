@@ -1,0 +1,55 @@
+name: PD-STOCK-005 R02 Release Runner
+on:
+  push:
+    branches: [pd-stock-005-release-runner]
+    paths:
+      - runner-request.json
+      - .github/workflows/pd-stock-005-r02-release-runner.yml
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run exact governed request
+        shell: bash
+        run: |
+          set -euo pipefail
+          OP="PD-STOCK-005-VISUAL-R02-RELEASE-001"
+          ACTION="$(jq -r '.action' runner-request.json)"
+          token_for() {
+            local aud="$1"
+            curl -sSf -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${aud}" | jq -r '.value'
+          }
+          if [ "$ACTION" = "stage_and_verify" ]; then
+            STAGE_URL="https://autodigitalpublisher.vercel.app/api/internal/etsy/pd-stock-005/r02/visual-release/stage-from-url"
+            STAGE_TOKEN="$(token_for "$STAGE_URL")"
+            while IFS= read -r ASSET; do
+              SHA="$(printf '%s' "$ASSET" | jq -r '.sha256')"
+              SRC="$(printf '%s' "$ASSET" | jq -r '.sourceUrl')"
+              BODY="$(jq -cn --arg op "$OP" --arg sha "$SHA" --arg src "$SRC" '{operationId:$op,confirmation:$op,assetSha256:$sha,sourceUrl:$src}')"
+              RESP="$(curl -sSf -H "Authorization: Bearer $STAGE_TOKEN" -H 'content-type: application/json' --data "$BODY" "$STAGE_URL")"
+              echo "$RESP" | jq -e '.status=="ASSET_STAGED_AND_VERIFIED" and .ETSY_WRITE_COUNT==0' >/dev/null
+              echo "STAGED $SHA"
+            done < <(jq -c '.assets[]' runner-request.json)
+            RELEASE_URL="https://autodigitalpublisher.vercel.app/api/internal/etsy/pd-stock-005/r02/visual-release"
+            RELEASE_TOKEN="$(token_for "$RELEASE_URL")"
+            BODY="$(jq -cn --arg op "$OP" '{operationId:$op,confirmation:$op,action:"verify_protected_state"}')"
+            RESP="$(curl -sSf -H "Authorization: Bearer $RELEASE_TOKEN" -H 'content-type: application/json' --data "$BODY" "$RELEASE_URL")"
+            echo "FRESH_PSV_RESPONSE=$RESP"
+            echo "$RESP" | jq -e '.status=="PROTECTED_STATE_MATCH" and .ETSY_WRITE_COUNT==0 and .galleryCount==8 and .videoCount==0' >/dev/null
+          elif [ "$ACTION" = "execute" ]; then
+            RELEASE_URL="https://autodigitalpublisher.vercel.app/api/internal/etsy/pd-stock-005/r02/visual-release"
+            RELEASE_TOKEN="$(token_for "$RELEASE_URL")"
+            PSV="$(jq -r '.protectedStateFingerprint' runner-request.json)"
+            HASH="$(jq -r '.authorizationRequestHash' runner-request.json)"
+            BODY="$(jq -cn --arg op "$OP" --arg psv "$PSV" --arg hash "$HASH" '{operationId:$op,confirmation:$op,action:"execute",protectedStateFingerprint:$psv,authorizationRequestHash:$hash}')"
+            RESP="$(curl -sSf -H "Authorization: Bearer $RELEASE_TOKEN" -H 'content-type: application/json' --data "$BODY" "$RELEASE_URL")"
+            echo "EXECUTE_RESPONSE=$RESP"
+            echo "$RESP" | jq -e '(.status=="UPDATED_AND_VERIFIED" or .status=="REPLAY")' >/dev/null
+          else
+            echo "Unsupported action: $ACTION" >&2
+            exit 1
+          fi
