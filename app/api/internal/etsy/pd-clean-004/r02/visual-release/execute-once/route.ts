@@ -6,20 +6,34 @@ import {
   handlePdClean004R02Release,
   verifyPdClean004R02ProtectedState
 } from "../../../../../../../../lib/pd-clean-004-visual-r02-release";
+import { verifyPdClean004CloudRunnerOidc } from "../../../../../../../../lib/pd-clean-004-r02-cloud-runner-oidc";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const TOKEN_SHA256 = "b264f880419c95138c61157580e6682b168976951f9273c96927c1eee53af99c";
 const TOKEN_HEADER = "x-pd-clean-r02-execute-once-token";
+const OIDC_AUDIENCE = "https://autodigitalpublisher.vercel.app/api/internal/etsy/pd-clean-004/r02/visual-release/execute-once";
 
-function authorized(request: Request) {
+function tokenAuthorized(request: Request) {
   const supplied = request.headers.get(TOKEN_HEADER)?.trim() ?? "";
   if (!supplied) return false;
   const actual = createHash("sha256").update(supplied, "utf8").digest("hex");
   const a = Buffer.from(actual);
   const b = Buffer.from(TOKEN_SHA256);
   return a.length === b.length && timingSafeEqual(a, b);
+}
+
+async function authorized(request: Request) {
+  if (tokenAuthorized(request)) return true;
+  const authorization = request.headers.get("authorization")?.trim() ?? "";
+  if (!authorization.startsWith("Bearer ")) return false;
+  try {
+    await verifyPdClean004CloudRunnerOidc(authorization.slice("Bearer ".length).trim(), OIDC_AUDIENCE);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function delegatedRequest(request: Request) {
@@ -32,7 +46,7 @@ function delegatedRequest(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!authorized(request)) return NextResponse.json({ error: "PD_CLEAN_R02_EXECUTE_ONCE_UNAUTHORIZED", ETSY_WRITE_COUNT: 0 }, { status: 401 });
+  if (!(await authorized(request))) return NextResponse.json({ error: "PD_CLEAN_R02_EXECUTE_ONCE_UNAUTHORIZED", ETSY_WRITE_COUNT: 0 }, { status: 401 });
 
   let payload: unknown;
   try { payload = await request.json(); }
