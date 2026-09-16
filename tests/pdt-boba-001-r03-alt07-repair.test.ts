@@ -8,6 +8,9 @@ import {
 } from "../lib/pdt-boba-001-r03-alt07-repair";
 import { MemoryOperationLedgerRepository } from "../lib/operation-ledger";
 
+process.env.ETSY_API_KEY = "test-key";
+process.env.ETSY_SHARED_SECRET = "test-secret";
+
 const WRONG = PDT_BOBA_001_R03_ALT07_REPAIR.expectedWrongAltText;
 const TARGET = PDT_BOBA_001_R03_ALT07_REPAIR.targetAltText;
 
