@@ -1,0 +1,97 @@
+name: PD-COFFEE-002 R02 Release Runner
+
+on:
+  push:
+    branches:
+      - pd-coffee-002-release-runner
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: pd-coffee-002-r02-release-runner
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    env:
+      ENDPOINT: https://autodigitalpublisher.vercel.app/api/internal/etsy/pd-coffee-002/r02/visual-release
+      REQUEST_FILE: .github/pd-coffee-002-r02-runner-request.json
+      OPERATION_ID: PD-COFFEE-002-VISUAL-R02-RELEASE-001
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate exact request file
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const p = JSON.parse(fs.readFileSync(process.env.REQUEST_FILE, 'utf8'));
+          if (p.operationId !== process.env.OPERATION_ID) throw new Error('OPERATION_ID_MISMATCH');
+          if (!['verify_protected_state','execute'].includes(p.action)) throw new Error('INVALID_ACTION');
+          if (p.action === 'execute') {
+            if (!/^[a-f0-9]{64}$/.test(p.protectedStateFingerprint || '')) throw new Error('INVALID_PSV');
+            if (!/^[a-f0-9]{64}$/.test(p.authorizationRequestHash || '')) throw new Error('INVALID_AUTH_HASH');
+          }
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `action=${p.action}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `protected_state_fingerprint=${p.protectedStateFingerprint || ''}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `authorization_request_hash=${p.authorizationRequestHash || ''}\n`);
+          NODE
+
+      - name: Acquire GitHub OIDC token
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          RESPONSE="$(curl --fail --silent --show-error \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${ENDPOINT}")"
+          TOKEN="$(node -e 'const v=JSON.parse(process.argv[1]).value; if(!v) process.exit(1); process.stdout.write(v)' "$RESPONSE")"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Verify or execute exact release
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+          ACTION: ${{ steps.request.outputs.action }}
+          PROTECTED_STATE_FINGERPRINT: ${{ steps.request.outputs.protected_state_fingerprint }}
+          AUTHORIZATION_REQUEST_HASH: ${{ steps.request.outputs.authorization_request_hash }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.ENDPOINT, {
+            method: 'POST',
+            headers: {
+              authorization: `Bearer ${process.env.OIDC_TOKEN}`,
+              'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.OPERATION_ID,
+              action: process.env.ACTION,
+              protectedStateFingerprint: process.env.PROTECTED_STATE_FINGERPRINT || undefined,
+              authorizationRequestHash: process.env.AUTHORIZATION_REQUEST_HASH || undefined
+            })
+          });
+          const text = await response.text();
+          let payload;
+          try { payload = text ? JSON.parse(text) : {}; }
+          catch { payload = { raw: text }; }
+          console.log(`HTTP ${response.status}`);
+          console.log(JSON.stringify(payload, null, 2));
+          if (process.env.ACTION === 'verify_protected_state') {
+            if (!response.ok || payload.status !== 'PROTECTED_STATE_MATCH' || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error(`PROTECTED_STATE_FAILED_${response.status}`);
+            }
+          } else {
+            if (response.status === 202) throw new Error('RECONCILIATION_REQUIRED_DO_NOT_RETRY');
+            if (!response.ok || !['UPDATED_AND_VERIFIED','REPLAY'].includes(payload.status)) {
+              throw new Error(`EXECUTE_FAILED_${response.status}_${payload.status || 'UNKNOWN'}`);
+            }
+          }
+          NODE
