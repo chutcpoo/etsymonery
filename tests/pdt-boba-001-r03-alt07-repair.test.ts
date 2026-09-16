@@ -68,8 +68,9 @@ function mockFetch() {
     if (method === "GET" && url.endsWith("/shops/23582741/listings/4560696421/files")) return json({ count: 5, results: files() });
     if (method === "POST" && url.endsWith("/shops/23582741/listings/4560696421/images")) {
       postCount += 1;
-      assert.ok(init?.body instanceof FormData);
-      const form = init.body as FormData;
+      const requestBody = init?.body;
+      assert.ok(requestBody instanceof FormData);
+      const form = requestBody;
       assert.equal(form.get("listing_image_id"), "8529888870");
       assert.equal(form.get("rank"), "7");
       assert.equal(form.get("overwrite"), "true");
