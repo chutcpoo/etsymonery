@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import {
   PD_CLEAN_004_VISUAL_R02_RELEASE,
+  exactPdClean004AuthorizationHash,
   handlePdClean004R02Release,
   verifyPdClean004R02ProtectedState
 } from "../../../../../../../../lib/pd-clean-004-visual-r02-release";
@@ -21,6 +22,15 @@ function authorized(request: Request) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+function delegatedRequest(request: Request) {
+  const writeToken = process.env.ETSY_B01_WRITE_TOKEN?.trim() ?? "";
+  if (!writeToken) return null;
+  return new Request(request.url, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken }
+  });
+}
+
 export async function POST(request: Request) {
   if (!authorized(request)) return NextResponse.json({ error: "PD_CLEAN_R02_EXECUTE_ONCE_UNAUTHORIZED", ETSY_WRITE_COUNT: 0 }, { status: 401 });
 
@@ -38,6 +48,20 @@ export async function POST(request: Request) {
   }
 
   if (action === "verify_protected_state") return verifyPdClean004R02ProtectedState();
+
+  if (action === "execute_authorized_fresh") {
+    const verification = await verifyPdClean004R02ProtectedState();
+    if (!verification.ok) return verification;
+    const verified = await verification.json() as Record<string, unknown>;
+    const protectedStateFingerprint = typeof verified.protectedStateFingerprint === "string" ? verified.protectedStateFingerprint.trim().toLowerCase() : "";
+    if (verified.status !== "PROTECTED_STATE_MATCH" || verified.ETSY_WRITE_COUNT !== 0 || !/^[a-f0-9]{64}$/.test(protectedStateFingerprint)) {
+      return NextResponse.json({ error: "PD_CLEAN_R02_EXECUTE_ONCE_FRESH_PSV_NOT_MATCHED", ETSY_WRITE_COUNT: 0 }, { status: 409 });
+    }
+    const delegated = delegatedRequest(request);
+    if (!delegated) return NextResponse.json({ error: "PD_CLEAN_R02_EXECUTE_ONCE_WRITE_TOKEN_NOT_CONFIGURED", ETSY_WRITE_COUNT: 0 }, { status: 503 });
+    return handlePdClean004R02Release(protectedStateFingerprint, exactPdClean004AuthorizationHash(protectedStateFingerprint), delegated);
+  }
+
   if (action !== "execute") return NextResponse.json({ error: "PD_CLEAN_R02_EXECUTE_ONCE_INVALID_ACTION", ETSY_WRITE_COUNT: 0 }, { status: 409 });
 
   const protectedStateFingerprint = typeof input.protectedStateFingerprint === "string" ? input.protectedStateFingerprint.trim().toLowerCase() : "";
@@ -46,11 +70,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "PD_CLEAN_R02_EXECUTE_ONCE_EXACT_BINDING_REQUIRED", ETSY_WRITE_COUNT: 0 }, { status: 409 });
   }
 
-  const writeToken = process.env.ETSY_B01_WRITE_TOKEN?.trim() ?? "";
-  if (!writeToken) return NextResponse.json({ error: "PD_CLEAN_R02_EXECUTE_ONCE_WRITE_TOKEN_NOT_CONFIGURED", ETSY_WRITE_COUNT: 0 }, { status: 503 });
-  const delegated = new Request(request.url, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-autodigitalpublisher-write-token": writeToken }
-  });
+  const delegated = delegatedRequest(request);
+  if (!delegated) return NextResponse.json({ error: "PD_CLEAN_R02_EXECUTE_ONCE_WRITE_TOKEN_NOT_CONFIGURED", ETSY_WRITE_COUNT: 0 }, { status: 503 });
   return handlePdClean004R02Release(protectedStateFingerprint, authorizationRequestHash, delegated);
 }
