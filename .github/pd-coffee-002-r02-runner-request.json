@@ -1,6 +1,6 @@
 {
   "operationId": "PD-COFFEE-002-VISUAL-R02-RELEASE-001",
-  "action": "verify_protected_state",
-  "protectedStateFingerprint": "",
-  "authorizationRequestHash": ""
+  "action": "execute",
+  "protectedStateFingerprint": "8c0d62d5240fd04aa1d08939f98dcd907005c3f8846dece6490bc4707bf2f15f",
+  "authorizationRequestHash": "a0801d4eecb9665fb8732775342ffbf5e16d5d874f75d04e4ca74eeed579358e"
 }
