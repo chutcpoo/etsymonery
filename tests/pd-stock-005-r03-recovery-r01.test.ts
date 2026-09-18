@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import {
   exactPdStock005R03RecoveryR01Body,
   handlePdStock005R03RecoveryR01,
   PD_STOCK_005_R03_RECOVERY_R01,
+  verifyPdStock005R03RecoveryR01PostRelease,
   verifyPdStock005R03RecoveryR01ProtectedState
 } from "../lib/pd-stock-005-r03-recovery-r01";
 import { hashOperationRequest, MemoryOperationLedgerRepository } from "../lib/operation-ledger";
@@ -54,7 +56,16 @@ AI-assisted tools were used during parts of the production workflow. The workboo
 
 Need help after purchase? Message PoonthaiDigital through Etsy with the filename, device or app used, and a screenshot so I can assist quickly.`;
 
-const GALLERY=[[8580511217,1,2500,2000],[8532646756,2,2500,2000],[8580511355,3,2500,2000],[8580511435,4,2500,2000],[8532646976,5,2500,2000],[8532647054,6,2500,2000],[8580511641,7,2500,2000],[8532647190,8,2500,2000]];
+const GALLERY=[
+ [8580511217,1,2500,2000,"Restaurant and cafe inventory and waste tracker hero showing a real Excel workbook Start Here preview with count, waste and reorder workflow and eight workbook tabs."],
+ [8532646756,2,2500,2000,"Inventory tracker gallery image listing the eight workbook tabs—Start Here, Item Master, Daily Count, Waste Log, Reorder Plan, Suppliers, Weekly Summary and Blank Tracker—beside a real workbook preview."],
+ [8580511355,3,2500,2000,"Real Daily Count worksheet preview showing opening, received, used, waste, calculated closing, physical closing and variance fields for inventory review."],
+ [8580511435,4,2500,2000,"Real Waste Log worksheet preview showing quantity wasted, reason, unit cost, waste cost and recorded-by fields for restaurant and cafe inventory tracking."],
+ [8532646976,5,2500,2000,"Real Reorder Plan worksheet preview showing current stock, reorder level, suggested order quantity, unit cost, estimated cost and order status fields."],
+ [8532647054,6,2500,2000,"Real Item Master and Suppliers worksheet previews showing par and reorder settings, primary supplier details, lead time and supplier status fields."],
+ [8580511641,7,2500,2000,"Real Weekly Summary worksheet preview showing stock value, purchases, usage value, waste cost, waste percentage and items reordered for manager review."],
+ [8532647190,8,2500,2000,"Digital download overview showing a real Excel workbook preview and A4 printable PDF cover, with A4 and US Letter PDFs, Quick Start, and Read Me plus License files included."]
+];
 const INITIAL=[
  {listing_file_id:1509497762118,rank:1,filename:"Inventory_Waste_A4.pdf",size_bytes:24247,filetype:"application/pdf"},
  {listing_file_id:1509497762234,rank:2,filename:"Inventory_Waste_US_Letter.pdf",size_bytes:23237,filetype:"application/pdf"},
@@ -99,7 +110,7 @@ function provider(options:{rejectDelete?:boolean}={}){
     return Response.json(listing);
   }
   if(url.endsWith("/listings/4561821192"))return Response.json(listing);
-  if(url.endsWith("/images"))return Response.json({results:GALLERY.map(([listing_image_id,rank,full_width,full_height])=>({listing_image_id,rank,full_width,full_height}))});
+  if(url.endsWith("/images"))return Response.json({results:GALLERY.map(([listing_image_id,rank,full_width,full_height,alt_text])=>({listing_image_id,rank,full_width,full_height,alt_text}))});
   if(url.endsWith("/properties"))return Response.json({results:[]});
   if(url.endsWith("/files"))return Response.json({results:structuredClone(files)});
   if(url.endsWith("/videos"))return Response.json({results:[{video_id:842820647,width:1920,height:1080,video_state:"active"}]});
@@ -182,4 +193,61 @@ test("unexpected Quick Start drift blocks recovery before any write",async()=>{
   loadAsset:async()=>Buffer.alloc(62008),verifyAsset:()=>true
  });
  assert.equal(r.status,409);assert.equal(p.writes(),0);
+});
+
+
+test("Recovery post-release QC is fresh read-only and verifies exact final package including Alt Text",async()=>{
+ process.env.PUBLISH_WRITES_ENABLED="true";process.env.ETSY_B01_WRITE_TOKEN="w";process.env.ETSY_SHOP_ID="23582741";
+ const auth="RECOVERY-AUTH-POST-QC";
+ const body=exactPdStock005R03RecoveryR01Body(auth,PD_STOCK_005_R03_RECOVERY_R01.protectedStateFingerprint);
+ const p=provider(),repo=new MemoryOperationLedgerRepository();
+ const req=new Request("https://example.test",{method:"POST",headers:{"x-autodigitalpublisher-write-token":"w"}});
+ const release=await handlePdStock005R03RecoveryR01(body,hashOperationRequest(body),req,{
+  repository:repo,fetchImpl:p.fetchImpl,getAccessToken:async()=>"token",
+  loadAsset:async()=>Buffer.alloc(62008),verifyAsset:()=>true,now:()=>"2026-09-18T15:10:00.000Z"
+ });
+ assert.equal(release.status,200);
+ const writesBefore=p.writes();
+ const qc=await verifyPdStock005R03RecoveryR01PostRelease({getAccessToken:async()=>"token",fetchImpl:p.fetchImpl});
+ const x=await qc.json();
+ assert.equal(qc.status,200);
+ assert.equal(x.status,"POST_RELEASE_QC_PASS");
+ assert.equal(x.ETSY_WRITE_COUNT,0);
+ assert.equal(x.verified.gallery8OrderAltTextExact,"PASS");
+ assert.equal(x.verified.videoExact,"PASS");
+ assert.equal(x.verified.oldZipAbsent,"PASS");
+ assert.equal(p.writes(),writesBefore);
+});
+
+test("Recovery protected-state verifier fails closed on Alt Text drift with zero writes",async()=>{
+ const p=provider(),base=p.fetchImpl;
+ const fetchImpl=(async(input:string|URL|Request,init?:RequestInit)=>{
+  const url=String(input);
+  if((init?.method??"GET")==="GET"&&url.endsWith("/images")){
+   const rows=GALLERY.map(([listing_image_id,rank,full_width,full_height,alt_text],index)=>({listing_image_id,rank,full_width,full_height,alt_text:index===0?"DRIFT":alt_text}));
+   return Response.json({results:rows});
+  }
+  return base(input,init);
+ }) as typeof fetch;
+ const r=await verifyPdStock005R03RecoveryR01ProtectedState({getAccessToken:async()=>"token",fetchImpl});
+ const x=await r.json();
+ assert.equal(r.status,409);
+ assert.equal(x.status,"PROTECTED_STATE_MISMATCH");
+ assert.equal(x.ETSY_WRITE_COUNT,0);
+ assert.equal(p.writes(),0);
+});
+
+test("Recovery workflow has exact private ZIP staging marker and post-release QC gate",()=>{
+ const workflow=readFileSync(".github/workflows/execute-authorized-etsy-operation.yml","utf8");
+ assert.match(workflow,/stage_stock_r03_recovery_zip/);
+ assert.match(workflow,/RECOVERY_ASSET_STAGED/);
+ assert.match(workflow,/PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001/);
+ assert.match(workflow,/const carrierOperationId = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001"/);
+ assert.match(workflow,/sha256: "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed"/);
+ assert.match(workflow,/size: 62008/);
+ assert.match(workflow,/payload\.status !== "ASSET_CHUNK_STAGED"/);
+ assert.match(workflow,/payload\.ETSY_WRITE_COUNT !== 0/);
+ assert.match(workflow,/post_release_qc/);
+ assert.match(workflow,/POST_RELEASE_QC_PASS/);
+ assert.doesNotMatch(workflow,/PD_STOCK_005_R03_RECOVERY_ZIP_URL/);
 });
