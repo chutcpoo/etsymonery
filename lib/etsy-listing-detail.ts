@@ -1,3 +1,5 @@
+import { fetchEtsyReadWithRetry } from "./etsy-http";
+
 export const NOT_AVAILABLE = "NOT_AVAILABLE" as const;
 export const BYTE_HASH_NOT_AVAILABLE_FROM_PROVIDER =
   "BYTE_HASH_NOT_AVAILABLE_FROM_PROVIDER" as const;
@@ -65,11 +67,20 @@ async function providerGet(
   fetchImpl: FetchLike
 ): Promise<ProviderResult> {
   try {
-    const response = await fetchImpl(endpoint, {
-      method: "GET",
-      headers,
-      cache: "no-store"
-    });
+    const response = await fetchEtsyReadWithRetry(
+      fetchImpl,
+      endpoint,
+      {
+        method: "GET",
+        headers,
+        cache: "no-store"
+      },
+      {
+        maxAttempts: 3,
+        baseDelayMs: 500,
+        maxRetryDelayMs: 2_000
+      }
+    );
     const text = await response.text();
     let payload: unknown = {};
     if (text) {
