@@ -52,6 +52,25 @@ test("listing-detail provider client makes GET requests only and preserves provi
         results: [{ listing_file_id: 90, listing_id: 4561819638, rank: 1, filename: "buyer.zip", size_bytes: 123 }]
       });
     }
+    if (url.includes("/listings/batch/inventory?")) {
+      return json({
+        count: 1,
+        results: [
+          {
+            listing_id: 4561819638,
+            inventory: {
+              products: [{ product_id: 501, sku: "PD-REST-003", is_deleted: false }],
+              sku_on_property: [],
+              quantity_on_property: [],
+              price_on_property: []
+            }
+          }
+        ]
+      });
+    }
+    if (url.endsWith("/personalization")) {
+      return json({ personalization_questions: [] });
+    }
     if (url.endsWith("/seller-taxonomy/nodes")) {
       return json({
         count: 1,
@@ -70,7 +89,11 @@ test("listing-detail provider client makes GET requests only and preserves provi
       when_made: "2020_2026",
       listing_type: "download",
       quantity: 999,
-      tags: ["restaurant checklist"]
+      tags: ["restaurant checklist"],
+      shop_section_id: 12345,
+      should_auto_renew: true,
+      is_personalizable: false,
+      is_customizable: false
     });
   };
 
@@ -85,8 +108,10 @@ test("listing-detail provider client makes GET requests only and preserves provi
   assert.equal(evidence.ETSY_WRITE_COUNT, 0);
   assert.ok(evidence.gallery);
   assert.ok(evidence.digitalBuyerFiles);
+  assert.ok(evidence.inventory);
+  assert.ok(evidence.personalization);
   assert.ok(evidence.offerDiscount);
-  assert.ok(calls.length >= 5);
+  assert.ok(calls.length >= 7);
   assert.ok(calls.every((call) => call.method === "GET"));
   assert.deepEqual(
     evidence.gallery.images.map((image) => image.listing_image_id),
@@ -99,5 +124,14 @@ test("listing-detail provider client makes GET requests only and preserves provi
   );
   assert.equal(evidence.gallery.byteHashEvidence, BYTE_HASH_NOT_AVAILABLE_FROM_PROVIDER);
   assert.equal(evidence.digitalBuyerFiles.sha256Evidence, SHA256_NOT_AVAILABLE_FROM_PROVIDER);
+  assert.equal(evidence.listing.shop_section_id, 12345);
+  assert.equal(evidence.listing.should_auto_renew, true);
+  assert.equal(evidence.listing.is_personalizable, false);
+  assert.equal(evidence.inventory.status, "PASS");
+  assert.equal(evidence.inventory.products[0]?.sku, "PD-REST-003");
+  assert.equal(evidence.personalization.status, "PASS");
+  assert.equal(evidence.personalization.count, 0);
+  assert.equal(evidence.fieldAvailability.inventorySkuMetadata, "PASS");
+  assert.equal(evidence.fieldAvailability.personalization, "PASS");
   assert.equal(evidence.offerDiscount.status, NOT_AVAILABLE_FROM_CURRENT_ETSY_API_PATH);
 });
