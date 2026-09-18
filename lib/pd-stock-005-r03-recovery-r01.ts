@@ -1,5 +1,3 @@
-[Reading 434 lines from start (total: 434 lines, 0 remaining)]
-
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "./etsy";
@@ -434,5 +432,3 @@ export async function handlePdStock005R03RecoveryR01(body: Rec, authorizationReq
   try { await(runtime.clearAsset?runtime.clearAsset():clearAuthorizedAsset(PD_STOCK_005_R03_RECOVERY_R01.parentOperationId,z.sha256)); } catch {}
   return NextResponse.json({status:"UPDATED_AND_VERIFIED",operationId:PD_STOCK_005_R03_RECOVERY_R01.operationId,receipt,ETSY_WRITE_COUNT:3,ETSY_WRITE_ATTEMPT_COUNT:3,ETSY_WRITE_COUNT_STATUS:"CONFIRMED"});
 }
-
-[executed on device: nm72601186.metrosystems.co.th (9427ac97-a96d-4de8-84bf-50636a01c666)]
