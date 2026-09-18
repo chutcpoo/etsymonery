@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "./etsy";
+import { fetchEtsyReadWithRetry } from "./etsy-http";
 import { getValidEtsyAccessToken } from "./etsy-auth";
 import {
   beginOperation,
@@ -170,10 +171,16 @@ async function readState(token: string, fetchImpl: typeof fetch): Promise<State>
     inventory: `${base}/listings/batch/inventory?listing_ids=${listingId}`,
     personalization: `${base}/listings/${listingId}/personalization`
   };
-  const entries = await Promise.all(Object.entries(urls).map(async ([name,url]) => {
-    const response = await fetchImpl(url,{method:"GET",headers:etsyApiHeaders(token),cache:"no-store"});
-    return {name,response,value:await json(response)};
-  }));
+  const entries: Array<{name:string;response:Response;value:unknown}> = [];
+  for (const [name,url] of Object.entries(urls)) {
+    const response = await fetchEtsyReadWithRetry(
+      fetchImpl,
+      url,
+      { method:"GET", headers:etsyApiHeaders(token), cache:"no-store" },
+      { maxAttempts:3, baseDelayMs:500, maxRetryDelayMs:2000 }
+    );
+    entries.push({name,response,value:await json(response)});
+  }
   const by = Object.fromEntries(entries.map(x=>[x.name,x])) as Record<string,{response:Response;value:unknown}>;
   const images=results(by.images.value), attributes=results(by.attributes.value), files=results(by.files.value), videos=results(by.videos.value);
   if(!by.listing.response.ok||!isRec(by.listing.value)||!by.images.response.ok||!by.attributes.response.ok||!by.files.response.ok||!by.videos.response.ok||!by.inventory.response.ok||!by.personalization.response.ok||!images||!attributes||!files||!videos||!isRec(by.inventory.value)||!isRec(by.personalization.value)) throw new Error("PD_STOCK_005_R03_READBACK_FAILED");
