@@ -75,9 +75,15 @@ const EXPECTED = Object.freeze({
   attributesCount: 0,
   sku: "PD-STOCK-005",
   gallery: [
-    [8580511217,1,2500,2000],[8532646756,2,2500,2000],[8580511355,3,2500,2000],[8580511435,4,2500,2000],
-    [8532646976,5,2500,2000],[8532647054,6,2500,2000],[8580511641,7,2500,2000],[8532647190,8,2500,2000]
-  ] as readonly (readonly number[])[],
+    [8580511217,1,2500,2000,"Restaurant and cafe inventory and waste tracker hero showing a real Excel workbook Start Here preview with count, waste and reorder workflow and eight workbook tabs."],
+    [8532646756,2,2500,2000,"Inventory tracker gallery image listing the eight workbook tabs—Start Here, Item Master, Daily Count, Waste Log, Reorder Plan, Suppliers, Weekly Summary and Blank Tracker—beside a real workbook preview."],
+    [8580511355,3,2500,2000,"Real Daily Count worksheet preview showing opening, received, used, waste, calculated closing, physical closing and variance fields for inventory review."],
+    [8580511435,4,2500,2000,"Real Waste Log worksheet preview showing quantity wasted, reason, unit cost, waste cost and recorded-by fields for restaurant and cafe inventory tracking."],
+    [8532646976,5,2500,2000,"Real Reorder Plan worksheet preview showing current stock, reorder level, suggested order quantity, unit cost, estimated cost and order status fields."],
+    [8532647054,6,2500,2000,"Real Item Master and Suppliers worksheet previews showing par and reorder settings, primary supplier details, lead time and supplier status fields."],
+    [8580511641,7,2500,2000,"Real Weekly Summary worksheet preview showing stock value, purchases, usage value, waste cost, waste percentage and items reordered for manager review."],
+    [8532647190,8,2500,2000,"Digital download overview showing a real Excel workbook preview and A4 printable PDF cover, with A4 and US Letter PDFs, Quick Start, and Read Me plus License files included."]
+  ] as readonly (readonly (number|string)[])[],
   video: [842820647,1920,1080,"active"] as const,
   protectedFiles: [
     [1509497762118,1,"Inventory_Waste_A4.pdf",24247,"application/pdf"],
@@ -137,7 +143,7 @@ function personalizationCount(state: State) {
 }
 function galleryRows(state: State) {
   return [...state.images].sort((a,b)=>Number(a.rank)-Number(b.rank))
-    .map(x=>[Number(x.listing_image_id),Number(x.rank),Number(x.full_width),Number(x.full_height)]);
+    .map(x=>[Number(x.listing_image_id),Number(x.rank),Number(x.full_width),Number(x.full_height),String(x.alt_text??"")]);
 }
 function videoRow(state: State) {
   const v = [...state.videos].sort((a,b)=>Number(a.video_id)-Number(b.video_id))[0];
@@ -292,6 +298,54 @@ export async function verifyPdStock005R03RecoveryR01ProtectedState(runtime: Runt
     },{status:match?200:409});
   } catch {
     return NextResponse.json({error:"PD_STOCK_005_R03_RECOVERY_R01_VERIFICATION_FAILED",ETSY_WRITE_COUNT:0},{status:502});
+  }
+}
+
+export async function verifyPdStock005R03RecoveryR01PostRelease(runtime: Runtime={}) {
+  try {
+    const token=await(runtime.getAccessToken??getValidEtsyAccessToken)();
+    const state=await readState(token,runtime.fetchImpl??fetch);
+    const files=fileRows(state);
+    const gallery=galleryRows(state);
+    const video=videoRow(state);
+    const match=protectedCoreMatches(state)&&targetMetadataMatches(state)&&afterUploadFilesMatch(state);
+    const zipId=Number(files[4]?.[0])||0;
+    return NextResponse.json({
+      status:match?"POST_RELEASE_QC_PASS":"POST_RELEASE_QC_FAIL",
+      operationId:PD_STOCK_005_R03_RECOVERY_R01.operationId,
+      parentOperationId:PD_STOCK_005_R03_RECOVERY_R01.parentOperationId,
+      candidateFingerprint:PD_STOCK_005_R03_RECOVERY_R01.candidateFingerprint,
+      buildFingerprint:PD_STOCK_005_R03_RECOVERY_R01.buildFingerprint,
+      acceptanceCriteriaSha256:PD_STOCK_005_R03_RECOVERY_R01.acceptanceCriteriaSha256,
+      freezeSha256:PD_STOCK_005_R03_RECOVERY_R01.freezeSha256,
+      protectedStateFingerprint:PD_STOCK_005_R03_RECOVERY_R01.protectedStateFingerprint,
+      providerReadStatus:state.statuses,
+      buyerFiles:files,
+      gallery,
+      video,
+      title:state.listing.title,
+      tags:state.listing.tags,
+      providerFileIds:{quickStart:1515946927296,zip:zipId||null},
+      verified:{
+        listingActive:String(state.listing.state).toLowerCase()==="active"?"PASS":"FAIL",
+        quickStartExact:files.some(x=>x[0]===1515946927296&&x[1]===3&&x[2]==="PD-STOCK-005_V1_Inventory_Waste_Quick_Start_B01.pdf"&&x[3]===6448)?"PASS":"FAIL",
+        oldZipAbsent:files.every(x=>x[0]!==1509980203922)?"PASS":"FAIL",
+        newZipExact:afterUploadFilesMatch(state)?"PASS":"FAIL",
+        titleAndTagsExact:targetMetadataMatches(state)?"PASS":"FAIL",
+        protectedCoreExact:protectedCoreMatches(state)?"PASS":"FAIL",
+        gallery8OrderAltTextExact:JSON.stringify(gallery)===JSON.stringify(EXPECTED.gallery)?"PASS":"FAIL",
+        videoExact:JSON.stringify(video)===JSON.stringify(EXPECTED.video)?"PASS":"FAIL"
+      },
+      evidenceGaps:{
+        buyerFileSha256:"SHA256_NOT_AVAILABLE_FROM_PROVIDER_READBACK",
+        offerDiscount:"NOT_AVAILABLE_FROM_CURRENT_ETSY_API_PATH",
+        whatContent:"SELLER_UI_EVIDENCE_BOUND_SEPARATELY",
+        productTruth:"CANONICAL_GOOGLE_DRIVE_EVIDENCE_BOUND_SEPARATELY"
+      },
+      ETSY_WRITE_COUNT:0
+    },{status:match?200:409});
+  } catch {
+    return NextResponse.json({error:"PD_STOCK_005_R03_RECOVERY_R01_POST_RELEASE_QC_READ_FAILED",ETSY_WRITE_COUNT:0},{status:502});
   }
 }
 
