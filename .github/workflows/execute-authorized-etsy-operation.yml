@@ -12,7 +12,7 @@ on:
         required: true
         type: string
       action:
-        description: execute, verify_protected_state, or stage_asset_chunk
+        description: execute, verify_protected_state, stage_asset_chunk, or stage_stock_r03_assets
         required: false
         default: execute
         type: string
@@ -77,6 +77,8 @@ jobs:
       CHUNK_INDEX: ${{ inputs.chunk_index }}
       CHUNK_COUNT: ${{ inputs.chunk_count }}
       ASSET_CHUNK_BASE64: ${{ inputs.asset_chunk_base64 }}
+      STOCK_R03_QUICK_URL: ${{ secrets.PD_STOCK_005_R03_QUICK_URL }}
+      STOCK_R03_ZIP_URL: ${{ secrets.PD_STOCK_005_R03_ZIP_URL }}
     steps:
       - name: Fail closed on request mismatch
         shell: bash
@@ -125,6 +127,11 @@ jobs:
                 test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for R02 video"; exit 1; }
               fi
               ;;
+            stage_stock_r03_assets)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001" || { echo "Private staging is STOCK R03 only"; exit 1; }
+              test -n "$STOCK_R03_QUICK_URL" || { echo "Missing private Quick Start transport"; exit 1; }
+              test -n "$STOCK_R03_ZIP_URL" || { echo "Missing private ZIP transport"; exit 1; }
+              ;;
             *) echo "Invalid action"; exit 1 ;;
           esac
 
@@ -135,7 +142,7 @@ jobs:
           set -euo pipefail
           test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "GitHub OIDC request URL unavailable"; exit 1; }
           test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" || { echo "GitHub OIDC request token unavailable"; exit 1; }
-          if [ "$ACTION" = "stage_asset_chunk" ]; then
+          if [ "$ACTION" = "stage_asset_chunk" ] || [ "$ACTION" = "stage_stock_r03_assets" ]; then
             AUDIENCE="$STAGE_URL"
           else
             AUDIENCE="$EXECUTION_URL"
@@ -184,8 +191,74 @@ jobs:
           }
           NODE
 
+      - name: Stage exact STOCK R03 assets from private Drive transport
+        if: ${{ inputs.action == 'stage_stock_r03_assets' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { createHash } = require("node:crypto");
+          const sources = [
+            {
+              url: process.env.STOCK_R03_QUICK_URL,
+              sha256: "2d3d1da280bbaa0b51071a20cab9d737075e59d6e424daf3caea224c4c2f89a7",
+              size: 6448
+            },
+            {
+              url: process.env.STOCK_R03_ZIP_URL,
+              sha256: "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed",
+              size: 62008
+            }
+          ];
+          for (const source of sources) {
+            if (!source.url) throw new Error("STOCK_R03_PRIVATE_TRANSPORT_MISSING");
+            const download = await fetch(source.url, { cache: "no-store" });
+            if (!download.ok) throw new Error(`STOCK_R03_PRIVATE_DOWNLOAD_HTTP_${download.status}`);
+            const bytes = Buffer.from(await download.arrayBuffer());
+            const actualSha = createHash("sha256").update(bytes).digest("hex");
+            if (bytes.length !== source.size || actualSha !== source.sha256) {
+              throw new Error("STOCK_R03_PRIVATE_ASSET_IDENTITY_MISMATCH");
+            }
+            const chunkSize = 40000;
+            const chunkCount = Math.ceil(bytes.length / chunkSize);
+            for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
+              const chunk = bytes.subarray(chunkIndex * chunkSize, Math.min(bytes.length, (chunkIndex + 1) * chunkSize));
+              const response = await fetch(process.env.STAGE_URL, {
+                method: "POST",
+                headers: {
+                  "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+                  "content-type": "application/json"
+                },
+                body: JSON.stringify({
+                  operationId: process.env.OPERATION_ID,
+                  confirmation: process.env.CONFIRMATION,
+                  assetSha256: source.sha256,
+                  chunkIndex,
+                  chunkCount,
+                  dataBase64: chunk.toString("base64")
+                })
+              });
+              const text = await response.text();
+              const payload = text ? JSON.parse(text) : {};
+              console.log(JSON.stringify({
+                status: payload.status,
+                assetSha256: payload.assetSha256,
+                chunkIndex: payload.chunkIndex,
+                chunkCount: payload.chunkCount,
+                ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+              }));
+              if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+                throw new Error(`STOCK_R03_PRIVATE_STAGE_HTTP_${response.status}`);
+              }
+            }
+          }
+          console.log(JSON.stringify({ status: "STOCK_R03_PRIVATE_ASSETS_STAGED", ETSY_WRITE_COUNT: 0 }));
+          NODE
+
       - name: Execute exact authorized operation once
-        if: ${{ inputs.action != 'stage_asset_chunk' }}
+        if: ${{ inputs.action != 'stage_asset_chunk' && inputs.action != 'stage_stock_r03_assets' }}
         shell: bash
         env:
           OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
