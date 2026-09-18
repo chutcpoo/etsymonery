@@ -37,7 +37,7 @@ Download and unzip the ZIP file first. Open the included XLSX workbook in Micros
 For Google Sheets, upload the XLSX file to Google Drive and open it with Google Sheets. Check formulas and formatting after import before using it in daily operations.
 
 IMPORTANT DOWNLOAD NOTE
-Etsy’s app does not currently download digital purchases. After checkout, sign in to Etsy.com using a mobile browser or computer, then go to Your account > Purchases and reviews > Download Files. A desktop or laptop is recommended for first-time spreadsheet setup.
+Etsy’s app does not currently download digital purchases. After checkout, sign in to Etsy.com using a mobile browser or computer, then go to Your account &gt; Purchases and reviews &gt; Download Files. A desktop or laptop is recommended for first-time spreadsheet setup.
 
 PLEASE NOTE
 • PDF files are print-ready and are not text-editable.

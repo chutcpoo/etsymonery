@@ -22,14 +22,14 @@ export const PD_STOCK_005_R03 = Object.freeze({
   productVersion: "V1",
   shopId: "23582741",
   listingId: "4561821192",
-  candidateId: "ETSY-LIVE-CATALOG-V3-PD-STOCK-005-V1-2026-09-18-R03",
-  candidateFingerprint: "a747b0fa4c995fe5208367338a7e5e7d6c8144c4993cc39cefacbd3775bc5d93",
-  buildId: "ETSY-LIVE-CATALOG-V3-PD-STOCK-005-BUILD-20260918-R03",
-  buildFingerprint: "956d348b959d7e882d375be8dee4459783d93bacffd0c832e1678c1d2a9a5f4e",
+  candidateId: "ETSY-LIVE-CATALOG-V3-PD-STOCK-005-V1-2026-09-18-R03-C02",
+  candidateFingerprint: "bf89bf8802894013648cc5b2e40743731c6a06a5d2482e8e3070bf1345e52219",
+  buildId: "ETSY-LIVE-CATALOG-V3-PD-STOCK-005-BUILD-20260918-R03-C02",
+  buildFingerprint: "1b454e9a7f567b7c1934c415bc084e97e6e64675461e754b8e959a3c6a69ba16",
   acceptanceCriteriaId: "ETSY-AC-PD-STOCK-005-LIVE-CATALOG-V3-R03-V1",
-  acceptanceCriteriaSha256: "cee608bee73756b44a735f5d71859dba7fcc422dc3cb8feaa7be13f4585f4ddb",
-  freezeSha256: "01936ca7dfa5a6088324b624ed7c0953ca18912863c64a873f789e6da839466e",
-  protectedStateFingerprint: "394428368a3c09c1d5c22557919175baffa197ab43b6fc709042fcd462ca9201",
+  acceptanceCriteriaSha256: "fea96708efbe0123b75b122a95574695e5f2af4a90ab2be0b68c87628c5e32f1",
+  freezeSha256: "8db72acf1a2a59eabeb4e6d5d1ded5bf4bc6cf25cf147c7fbd7f88570f5accca",
+  protectedStateFingerprint: "c0cc4e3db68bf935ec87ec28e3a3ff0f57b0f6493aa23aaf443bbe5514b354c8",
   current: {
     title: "Restaurant & Cafe Inventory Tracker | Stock, Waste, Reorder and Supplier Spreadsheet",
     tags: [
@@ -37,7 +37,7 @@ export const PD_STOCK_005_R03 = Object.freeze({
       "reorder spreadsheet","supplier tracker","par level sheet","stock count sheet",
       "stock control","inventory excel","google sheets stock","waste cost log","food stocktake"
     ],
-    descriptionSha256: "c9b2bc0bf3756a554617f4cfbae9434f3cc9261213f9492512eb789c9997581d"
+    descriptionSha256: "61e01e830c577c9a52dd799cab2aaee502d3b972ebf39aff4ae50c3e2c0abcd3"
   },
   target: {
     title: "Restaurant Inventory Spreadsheet | Cafe Stock, Waste, Reorder & Supplier Tracker",
