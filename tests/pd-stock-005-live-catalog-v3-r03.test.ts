@@ -74,7 +74,7 @@ function core(over:Record<string,unknown>={}){
  };
 }
 function provider(){
- let listing=core(), files=structuredClone(INITIAL), writes=0;
+ let listing: Record<string, unknown> = core(), files=structuredClone(INITIAL), writes=0;
  const fetchImpl=(async(input:string|URL|Request,init?:RequestInit)=>{
   const url=String(input), method=init?.method??"GET";
   if(method==="DELETE"){
