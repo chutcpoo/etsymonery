@@ -79,6 +79,10 @@ jobs:
       ASSET_CHUNK_BASE64: ${{ inputs.asset_chunk_base64 }}
       STOCK_R03_QUICK_URL: ${{ secrets.PD_STOCK_005_R03_QUICK_URL }}
       STOCK_R03_ZIP_URL: ${{ secrets.PD_STOCK_005_R03_ZIP_URL }}
+      STOCK_R03_RECOVERY_CHUNK_0: ${{ secrets.PD_STOCK_005_R03_RECOVERY_CHUNK_0 }}
+      STOCK_R03_RECOVERY_CHUNK_1: ${{ secrets.PD_STOCK_005_R03_RECOVERY_CHUNK_1 }}
+      STOCK_R03_RECOVERY_CHUNK_2: ${{ secrets.PD_STOCK_005_R03_RECOVERY_CHUNK_2 }}
+      STOCK_R03_RECOVERY_CHUNK_3: ${{ secrets.PD_STOCK_005_R03_RECOVERY_CHUNK_3 }}
     steps:
       - name: Fail closed on request mismatch
         shell: bash
@@ -142,7 +146,10 @@ jobs:
               ;;
             stage_stock_r03_recovery_zip)
               test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001" || { echo "Recovery staging is STOCK R03 Recovery R01 only"; exit 1; }
-              test -n "$STOCK_R03_ZIP_URL" || { echo "Missing private recovery ZIP transport"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_0" || { echo "Missing encrypted recovery chunk 0"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_1" || { echo "Missing encrypted recovery chunk 1"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_2" || { echo "Missing encrypted recovery chunk 2"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_3" || { echo "Missing encrypted recovery chunk 3"; exit 1; }
               ;;
             *) echo "Invalid action"; exit 1 ;;
           esac
@@ -269,7 +276,7 @@ jobs:
           console.log(JSON.stringify({ status: "STOCK_R03_PRIVATE_ASSETS_STAGED", ETSY_WRITE_COUNT: 0 }));
           NODE
 
-      - name: Stage exact STOCK R03 Recovery ZIP from existing private transport
+      - name: Stage exact STOCK R03 Recovery ZIP from encrypted secret chunks
         if: ${{ inputs.action == 'stage_stock_r03_recovery_zip' }}
         shell: bash
         env:
@@ -278,24 +285,32 @@ jobs:
           set -euo pipefail
           node <<'NODE'
           const { createHash } = await import("node:crypto");
-          const source = {
-            url: process.env.STOCK_R03_ZIP_URL,
-            sha256: "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed",
-            size: 62008
-          };
-          if (!source.url) throw new Error("STOCK_R03_RECOVERY_PRIVATE_TRANSPORT_MISSING");
-          const download = await fetch(source.url, { cache: "no-store" });
-          if (!download.ok) throw new Error("STOCK_R03_RECOVERY_PRIVATE_DOWNLOAD_HTTP_" + download.status);
-          const bytes = Buffer.from(await download.arrayBuffer());
+          const encodedChunks = [
+            process.env.STOCK_R03_RECOVERY_CHUNK_0,
+            process.env.STOCK_R03_RECOVERY_CHUNK_1,
+            process.env.STOCK_R03_RECOVERY_CHUNK_2,
+            process.env.STOCK_R03_RECOVERY_CHUNK_3
+          ];
+          if (encodedChunks.some((value) => !value)) {
+            throw new Error("STOCK_R03_RECOVERY_PRIVATE_CHUNK_MISSING");
+          }
+          const chunks = encodedChunks.map((value) => Buffer.from(value, "base64"));
+          for (let index = 0; index < chunks.length; index++) {
+            const canonical = chunks[index].toString("base64").replace(/=+$/u, "");
+            if (canonical !== encodedChunks[index].replace(/=+$/u, "")) {
+              throw new Error("STOCK_R03_RECOVERY_PRIVATE_CHUNK_INVALID_BASE64");
+            }
+          }
+          const bytes = Buffer.concat(chunks);
+          const expectedSha = "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed";
+          const expectedSize = 62008;
           const actualSha = createHash("sha256").update(bytes).digest("hex");
-          if (bytes.length !== source.size || actualSha !== source.sha256) {
+          if (bytes.length !== expectedSize || actualSha !== expectedSha) {
             throw new Error("STOCK_R03_RECOVERY_PRIVATE_ASSET_IDENTITY_MISMATCH");
           }
           const carrierOperationId = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001";
-          const chunkSize = 40000;
-          const chunkCount = Math.ceil(bytes.length / chunkSize);
+          const chunkCount = chunks.length;
           for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
-            const chunk = bytes.subarray(chunkIndex * chunkSize, Math.min(bytes.length, (chunkIndex + 1) * chunkSize));
             const response = await fetch(process.env.STAGE_URL, {
               method: "POST",
               headers: {
@@ -305,10 +320,10 @@ jobs:
               body: JSON.stringify({
                 operationId: carrierOperationId,
                 confirmation: carrierOperationId,
-                assetSha256: source.sha256,
+                assetSha256: expectedSha,
                 chunkIndex,
                 chunkCount,
-                dataBase64: chunk.toString("base64")
+                dataBase64: encodedChunks[chunkIndex]
               })
             });
             const text = await response.text();
@@ -330,8 +345,8 @@ jobs:
             status: "RECOVERY_ASSET_STAGED",
             operationId: process.env.OPERATION_ID,
             carrierOperationId,
-            assetSha256: source.sha256,
-            bytes: source.size,
+            assetSha256: expectedSha,
+            bytes: expectedSize,
             ETSY_WRITE_COUNT: 0
           }));
           NODE
