@@ -138,7 +138,11 @@ function listingCore(listing: JsonRecord, category: unknown) {
     is_digital: available(listing, "is_digital"),
     type: available(listing, "type"),
     quantity: available(listing, "quantity"),
-    tags: available(listing, "tags")
+    tags: available(listing, "tags"),
+    shop_section_id: available(listing, "shop_section_id"),
+    should_auto_renew: available(listing, "should_auto_renew"),
+    is_personalizable: available(listing, "is_personalizable"),
+    is_customizable: available(listing, "is_customizable")
   };
 }
 
@@ -177,6 +181,66 @@ function properties(payload: unknown) {
       scale_name: available(property, "scale_name"),
       value_ids: available(property, "value_ids"),
       values: available(property, "values")
+    }))
+  };
+}
+
+function listingInventory(payload: unknown, listingId: number) {
+  let inventory: JsonRecord | null = null;
+
+  if (isRecord(payload) && Array.isArray(payload.results)) {
+    const match = payload.results
+      .filter(isRecord)
+      .find((item) => Number(item.listing_id) === listingId);
+    if (match && isRecord(match.inventory)) inventory = match.inventory;
+  } else if (isRecord(payload) && Array.isArray(payload.products)) {
+    inventory = payload;
+  }
+
+  const products =
+    inventory && Array.isArray(inventory.products)
+      ? inventory.products.filter(isRecord)
+      : [];
+
+  return {
+    status: inventory ? ("PASS" as const) : NOT_AVAILABLE,
+    product_count: products.length,
+    products: products.map((product, index) => ({
+      provider_position: index + 1,
+      product_id: available(product, "product_id"),
+      sku: available(product, "sku"),
+      is_deleted: available(product, "is_deleted")
+    })),
+    sku_on_property: inventory ? available(inventory, "sku_on_property") : NOT_AVAILABLE,
+    quantity_on_property: inventory
+      ? available(inventory, "quantity_on_property")
+      : NOT_AVAILABLE,
+    price_on_property: inventory
+      ? available(inventory, "price_on_property")
+      : NOT_AVAILABLE
+  };
+}
+
+function listingPersonalization(payload: unknown) {
+  const questions =
+    isRecord(payload) && Array.isArray(payload.personalization_questions)
+      ? payload.personalization_questions.filter(isRecord)
+      : [];
+
+  return {
+    status: isRecord(payload) ? ("PASS" as const) : NOT_AVAILABLE,
+    count: questions.length,
+    questions: questions.map((question, index) => ({
+      provider_position: index + 1,
+      question_id: available(question, "question_id"),
+      question_type: available(question, "question_type"),
+      question_text: available(question, "question_text"),
+      instructions: available(question, "instructions"),
+      required: available(question, "required"),
+      max_allowed_characters: available(question, "max_allowed_characters"),
+      max_allowed_files: available(question, "max_allowed_files"),
+      options: available(question, "options"),
+      add_on_price: available(question, "add_on_price")
     }))
   };
 }
@@ -228,19 +292,34 @@ export async function getEtsyListingDetailEvidence(input: EtsyListingDetailInput
   const imageEndpoint = `${base}/listings/${input.listingId}/images`;
   const propertiesEndpoint = `${base}/shops/${input.shopId}/listings/${input.listingId}/properties`;
   const filesEndpoint = `${base}/shops/${input.shopId}/listings/${input.listingId}/files`;
+  const inventoryEndpoint =
+    `${base}/listings/batch/inventory?listing_ids=${input.listingId}`;
+  const personalizationEndpoint =
+    `${base}/listings/${input.listingId}/personalization`;
 
-  const [coreResult, imageResult, propertiesResult, filesResult] = await Promise.all([
+  const [
+    coreResult,
+    imageResult,
+    propertiesResult,
+    filesResult,
+    inventoryResult,
+    personalizationResult
+  ] = await Promise.all([
     providerGet("listing_core", coreEndpoint, input.headers, fetchImpl),
     providerGet("listing_images", imageEndpoint, input.headers, fetchImpl),
     providerGet("listing_properties", propertiesEndpoint, input.headers, fetchImpl),
-    providerGet("listing_files", filesEndpoint, input.headers, fetchImpl)
+    providerGet("listing_files", filesEndpoint, input.headers, fetchImpl),
+    providerGet("listing_inventory", inventoryEndpoint, input.headers, fetchImpl),
+    providerGet("listing_personalization", personalizationEndpoint, input.headers, fetchImpl)
   ]);
 
   const providerRequests = [
     coreResult.evidence,
     imageResult.evidence,
     propertiesResult.evidence,
-    filesResult.evidence
+    filesResult.evidence,
+    inventoryResult.evidence,
+    personalizationResult.evidence
   ];
   const listing = isRecord(coreResult.payload) ? coreResult.payload : {};
 
@@ -302,6 +381,8 @@ export async function getEtsyListingDetailEvidence(input: EtsyListingDetailInput
   const imageEvidence = gallery(imageResult.payload);
   const propertyEvidence = properties(propertiesResult.payload);
   const fileEvidence = digitalBuyerFiles(filesResult.payload);
+  const inventoryEvidence = listingInventory(inventoryResult.payload, input.listingId);
+  const personalizationEvidence = listingPersonalization(personalizationResult.payload);
   const evidenceGaps = [
     "GALLERY_BYTE_HASH:BYTE_HASH_NOT_AVAILABLE_FROM_PROVIDER",
     "DIGITAL_BUYER_FILE_SHA256:SHA256_NOT_AVAILABLE_FROM_PROVIDER",
@@ -331,6 +412,8 @@ export async function getEtsyListingDetailEvidence(input: EtsyListingDetailInput
     gallery: imageEvidence,
     attributes: propertyEvidence,
     digitalBuyerFiles: fileEvidence,
+    inventory: inventoryEvidence,
+    personalization: personalizationEvidence,
     offerDiscount: {
       status: NOT_AVAILABLE_FROM_CURRENT_ETSY_API_PATH,
       evidence:
@@ -344,6 +427,10 @@ export async function getEtsyListingDetailEvidence(input: EtsyListingDetailInput
       attributes: propertiesResult.evidence.outcome === "PASS" ? "PASS" : NOT_AVAILABLE,
       digitalBuyerFileMetadata: filesResult.evidence.outcome === "PASS" ? "PASS" : NOT_AVAILABLE,
       digitalBuyerFileSha256: SHA256_NOT_AVAILABLE_FROM_PROVIDER,
+      inventorySkuMetadata:
+        inventoryResult.evidence.outcome === "PASS" ? "PASS" : NOT_AVAILABLE,
+      personalization:
+        personalizationResult.evidence.outcome === "PASS" ? "PASS" : NOT_AVAILABLE,
       offerDiscount: NOT_AVAILABLE_FROM_CURRENT_ETSY_API_PATH,
       deliveryConfiguration: "PARTIAL_PROVIDER_EVIDENCE"
     },
