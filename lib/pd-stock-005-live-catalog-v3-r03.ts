@@ -115,6 +115,7 @@ type Runtime = {
   getAccessToken?: () => Promise<string>;
   repository?: OperationLedgerRepository;
   loadAsset?: (target: Target) => Promise<Buffer>;
+  verifyAsset?: (bytes: Buffer, target: Target, fileName?: string) => boolean;
   now?: () => string;
 };
 
@@ -300,7 +301,7 @@ export async function handlePdStock005R03(body:Rec,authorizationRequestHash:stri
   const assets=[] as Array<{target:Target;bytes:Buffer}>;
   for(const target of PD_STOCK_005_R03.targets){
     let bytes:Buffer; try{bytes=await (runtime.loadAsset?runtime.loadAsset(target):loadAuthorizedAsset(PD_STOCK_005_R03.operationId,target.sha256));}catch{return NextResponse.json({error:"PD_STOCK_005_R03_ASSET_NOT_READY",slot:target.slot,ETSY_WRITE_COUNT:0},{status:409});}
-    if(!verifyPdStock005R03Asset(bytes,target)) return NextResponse.json({error:"PD_STOCK_005_R03_ASSET_IDENTITY_MISMATCH",slot:target.slot,ETSY_WRITE_COUNT:0},{status:409});
+    if(!(runtime.verifyAsset??verifyPdStock005R03Asset)(bytes,target,target.fileName)) return NextResponse.json({error:"PD_STOCK_005_R03_ASSET_IDENTITY_MISMATCH",slot:target.slot,ETSY_WRITE_COUNT:0},{status:409});
     assets.push({target,bytes});
   }
 
