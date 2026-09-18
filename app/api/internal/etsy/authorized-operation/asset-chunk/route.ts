@@ -1,4 +1,7 @@
+[Reading 98 lines from start (total: 98 lines, 0 remaining)]
+
 import { PD_STOCK_005_R03 } from "../../../../../../lib/pd-stock-005-live-catalog-v3-r03";
+import { PD_STOCK_005_R03_RECOVERY_R01 } from "../../../../../../lib/pd-stock-005-r03-recovery-r01";
 import { NextResponse } from "next/server";
 import { PD_REST_003_A02 } from "../../../../../../lib/pd-rest-003-a02-title-tags-image1";
 import { PDT_BOBA_001_C03_GALLERY_REPAIR } from "../../../../../../lib/pdt-boba-001-c03-gallery-mobile-safe-repair";
@@ -56,6 +59,9 @@ export async function POST(request:Request){
     const asset=PD_STOCK_005_R03.targets.find(candidate=>candidate.sha256===requestedAssetSha256);
     if(!asset)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
     registeredAssetSha256=asset.sha256;
+  }else if(operationId===PD_STOCK_005_R03_RECOVERY_R01.operationId){
+    if(requestedAssetSha256!==PD_STOCK_005_R03_RECOVERY_R01.target.zip.sha256)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
+    registeredAssetSha256=PD_STOCK_005_R03_RECOVERY_R01.target.zip.sha256;
   }else if(operationId===PD_REST_003_A02.operationId){
     if(requestedAssetSha256&&requestedAssetSha256!==PD_REST_003_A02.image.sha256)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
     registeredAssetSha256=PD_REST_003_A02.image.sha256;
@@ -92,3 +98,5 @@ export async function POST(request:Request){
   catch(error){return NextResponse.json({error:error instanceof Error?error.message:"ASSET_STAGE_FAILED",ETSY_WRITE_COUNT:0},{status:409});}
   return NextResponse.json({status:"ASSET_CHUNK_STAGED",operationId,chunkIndex,chunkCount,assetSha256:registeredAssetSha256,ETSY_WRITE_COUNT:0});
 }
+
+[executed on device: nm72601186.metrosystems.co.th (9427ac97-a96d-4de8-84bf-50636a01c666)]
