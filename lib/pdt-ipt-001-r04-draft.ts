@@ -248,7 +248,7 @@ const VIDEO = Object.freeze({
 } as const satisfies VideoAsset);
 
 export const PDT_IPT_001_R04_DRAFT = Object.freeze({
-  operation: "CREATE_NEW_DIGITAL_DRAFT_EXACT_R03_ONLY",
+  operation: "CREATE_NEW_DIGITAL_DRAFT_EXACT_R04_ONLY",
   operationId: "PDT-IPT-001-R04-DRAFT-001",
   productId: "PDT-IPT-001",
   productVersion: "V1",
@@ -370,9 +370,9 @@ function coreDraftMatches(value: Rec) {
 function authError(request: Request) {
   const expected = process.env.ETSY_B01_WRITE_TOKEN?.trim() ?? "";
   const supplied = request.headers.get(WRITE_HEADER)?.trim() ?? "";
-  if (!expected) return NextResponse.json({ error: "PDT_IPT_R03_WRITE_TOKEN_NOT_CONFIGURED", ETSY_WRITE_COUNT: 0 }, { status: 503 });
+  if (!expected) return NextResponse.json({ error: "PDT_IPT_R04_WRITE_TOKEN_NOT_CONFIGURED", ETSY_WRITE_COUNT: 0 }, { status: 503 });
   if (!supplied || !secureEqual(supplied, expected)) {
-    return NextResponse.json({ error: "PDT_IPT_R03_WRITE_UNAUTHORIZED", ETSY_WRITE_COUNT: 0 }, { status: 401 });
+    return NextResponse.json({ error: "PDT_IPT_R04_WRITE_UNAUTHORIZED", ETSY_WRITE_COUNT: 0 }, { status: 401 });
   }
   return null;
 }
@@ -389,9 +389,9 @@ async function fetchListing(fetchImpl: typeof fetch, token: string, listingId: s
     `https://api.etsy.com/v3/application/listings/${listingId}`,
     { method: "GET", headers: etsyApiHeaders(token), cache: "no-store" }
   );
-  if (!response.ok) throw new Error(`PDT_IPT_R03_LISTING_READ_FAILED:${response.status}`);
+  if (!response.ok) throw new Error(`PDT_IPT_R04_LISTING_READ_FAILED:${response.status}`);
   const value = await parseJson(response);
-  if (!isRec(value)) throw new Error("PDT_IPT_R03_LISTING_READ_INVALID");
+  if (!isRec(value)) throw new Error("PDT_IPT_R04_LISTING_READ_INVALID");
   return value;
 }
 
@@ -399,7 +399,7 @@ async function protectedState(runtime: Runtime = {}) {
   const fetchImpl = runtime.fetchImpl ?? fetch;
   const getAccessToken = runtime.getAccessToken ?? getValidEtsyAccessToken;
   const configuredShopId = process.env.ETSY_SHOP_ID?.trim() ?? "";
-  if (configuredShopId !== PDT_IPT_001_R04_DRAFT.shopId) throw new Error("PDT_IPT_R03_SHOP_ID_MISMATCH");
+  if (configuredShopId !== PDT_IPT_001_R04_DRAFT.shopId) throw new Error("PDT_IPT_R04_SHOP_ID_MISMATCH");
   const token = await getAccessToken();
   const state = await getEtsySellerStateSnapshot({
     shopId: Number(PDT_IPT_001_R04_DRAFT.shopId),
@@ -500,7 +500,7 @@ class R03DraftProvider implements ReconciledWriteProvider {
     );
     const payload = await parseJson(response);
     const list = results(payload);
-    if (!response.ok || !list) throw new Error("PDT_IPT_R03_DRAFT_LIST_READ_FAILED");
+    if (!response.ok || !list) throw new Error("PDT_IPT_R04_DRAFT_LIST_READ_FAILED");
     const matches: string[] = [];
     for (const item of list) {
       if (item.title !== PDT_IPT_001_R04_DRAFT.title) continue;
@@ -513,7 +513,7 @@ class R03DraftProvider implements ReconciledWriteProvider {
   }
 
   async apply(): Promise<ProviderReceipt> {
-    if ((await this.exactDraftMatches()).length > 0) throw new Error("PDT_IPT_R03_DRAFT_COLLISION");
+    if ((await this.exactDraftMatches()).length > 0) throw new Error("PDT_IPT_R04_DRAFT_COLLISION");
     const body = new URLSearchParams({
       quantity: String(PDT_IPT_001_R04_DRAFT.quantity),
       title: PDT_IPT_001_R04_DRAFT.title,
@@ -546,7 +546,7 @@ class R03DraftProvider implements ReconciledWriteProvider {
     const responseText = await response.text();
     if (!response.ok) {
       const safe = safeProviderErrorText(responseText);
-      throw new Error(`PDT_IPT_R03_DRAFT_CREATE_REJECTED:${response.status}${safe ? `:${safe}` : ""}`);
+      throw new Error(`PDT_IPT_R04_DRAFT_CREATE_REJECTED:${response.status}${safe ? `:${safe}` : ""}`);
     }
     let value: unknown = {};
     try { value = responseText ? JSON.parse(responseText) : {}; } catch { value = {}; }
@@ -590,13 +590,13 @@ async function applyOptionalListingSettings(
   };
   const existing = await repository.load(operationId);
   if (existing?.status === "SUCCEEDED") return existing.receipt ?? {};
-  if (existing) throw new Error("PDT_IPT_R03_SETTINGS_OPERATION_ALREADY_CLAIMED");
+  if (existing) throw new Error("PDT_IPT_R04_SETTINGS_OPERATION_ALREADY_CLAIMED");
 
   const before = await fetchListing(fetchImpl, token, String(draftListingId));
-  if (!coreDraftMatches(before)) throw new Error("PDT_IPT_R03_PRE_SETTINGS_CORE_IDENTITY_MISMATCH");
+  if (!coreDraftMatches(before)) throw new Error("PDT_IPT_R04_PRE_SETTINGS_CORE_IDENTITY_MISMATCH");
 
   const begun = await beginOperation(repository, operationId, payload, now);
-  if (begun.status !== "STARTED") throw new Error("PDT_IPT_R03_SETTINGS_OPERATION_ALREADY_CLAIMED");
+  if (begun.status !== "STARTED") throw new Error("PDT_IPT_R04_SETTINGS_OPERATION_ALREADY_CLAIMED");
 
   const body = new URLSearchParams({
     tags: PDT_IPT_001_R04_DRAFT.tags.join(","),
@@ -625,7 +625,7 @@ async function applyOptionalListingSettings(
       now,
       { recoveryPoint: "SETTINGS_PATCH_RESPONSE_AMBIGUOUS" }
     );
-    throw new Error("PDT_IPT_R03_SETTINGS_RECONCILIATION_REQUIRED");
+    throw new Error("PDT_IPT_R04_SETTINGS_RECONCILIATION_REQUIRED");
   }
 
   const responseText = await response.text();
@@ -646,7 +646,7 @@ async function applyOptionalListingSettings(
       now,
       { recoveryPoint: `SETTINGS_PATCH_HTTP_${response.status}${safe ? `:${safe}` : ""}` }
     );
-    throw new Error(`PDT_IPT_R03_SETTINGS_PATCH_REJECTED:${response.status}${safe ? `:${safe}` : ""}`);
+    throw new Error(`PDT_IPT_R04_SETTINGS_PATCH_REJECTED:${response.status}${safe ? `:${safe}` : ""}`);
   }
   if (!matched) {
     await recordOperationResult(
@@ -657,7 +657,7 @@ async function applyOptionalListingSettings(
       now,
       { recoveryPoint: "SETTINGS_PATCH_READBACK_MISMATCH" }
     );
-    throw new Error("PDT_IPT_R03_SETTINGS_RECONCILIATION_REQUIRED");
+    throw new Error("PDT_IPT_R04_SETTINGS_RECONCILIATION_REQUIRED");
   }
 
   return (await recordOperationResult(
@@ -688,7 +688,7 @@ async function preloadAssets(runtime: Runtime) {
       : bytes.length === asset.sizeBytes &&
         createHash("sha256").update(bytes).digest("hex") === asset.sha256;
     if (!verified) {
-      throw new Error(`PDT_IPT_R03_ASSET_IDENTITY_MISMATCH:${asset.fileName}`);
+      throw new Error(`PDT_IPT_R04_ASSET_IDENTITY_MISMATCH:${asset.fileName}`);
     }
     loaded.set(asset.sha256, bytes);
   }
@@ -728,7 +728,7 @@ async function uploadAsset(
     before.observation
   );
   if (before.observation.state !== "draft" || identity.status !== "MATCH") {
-    throw new Error("PDT_IPT_R03_PRE_ASSET_LISTING_IDENTITY_MISMATCH");
+    throw new Error("PDT_IPT_R04_PRE_ASSET_LISTING_IDENTITY_MISMATCH");
   }
   const result = await executeReconciledWrite(repository, provider, {
     operationId: childOperationId(asset),
@@ -737,21 +737,21 @@ async function uploadAsset(
     now
   });
   if (result.status === "RECONCILIATION_REQUIRED") {
-    throw new Error("PDT_IPT_R03_ASSET_RECONCILIATION_REQUIRED");
+    throw new Error("PDT_IPT_R04_ASSET_RECONCILIATION_REQUIRED");
   }
   const receipt = result.receipt as ProviderReceipt;
   if (!(await provider.hasResource(receipt.providerResourceId))) {
-    throw new Error("PDT_IPT_R03_ASSET_READBACK_MISMATCH");
+    throw new Error("PDT_IPT_R04_ASSET_READBACK_MISMATCH");
   }
   return receipt;
 }
 
 function moneyDecimal(value: unknown) {
-  if (!isRec(value)) throw new Error("PDT_IPT_R03_INVENTORY_PRICE_INVALID");
+  if (!isRec(value)) throw new Error("PDT_IPT_R04_INVENTORY_PRICE_INVALID");
   const amount = Number(value.amount);
   const divisor = Number(value.divisor);
   if (!Number.isFinite(amount) || !Number.isFinite(divisor) || divisor <= 0) {
-    throw new Error("PDT_IPT_R03_INVENTORY_PRICE_INVALID");
+    throw new Error("PDT_IPT_R04_INVENTORY_PRICE_INVALID");
   }
   return amount / divisor;
 }
@@ -765,7 +765,7 @@ async function readInventory(fetchImpl: typeof fetch, token: string, listingId: 
   );
   const value = await parseJson(response);
   if (!response.ok || !isRec(value) || !Array.isArray(value.products)) {
-    throw new Error(`PDT_IPT_R03_INVENTORY_READ_FAILED:${response.status}`);
+    throw new Error(`PDT_IPT_R04_INVENTORY_READ_FAILED:${response.status}`);
   }
   return { ...value, products: value.products.filter(isRec) } as InventoryRecord;
 }
@@ -785,18 +785,18 @@ async function ensureSku(
   };
   const existing = await repository.load(operationId);
   if (existing?.status === "SUCCEEDED") return existing.receipt ?? {};
-  if (existing) throw new Error("PDT_IPT_R03_SKU_OPERATION_ALREADY_CLAIMED");
+  if (existing) throw new Error("PDT_IPT_R04_SKU_OPERATION_ALREADY_CLAIMED");
 
   const before = await readInventory(fetchImpl, token, draftListingId);
   const products = before.products.filter(isRec);
-  if (products.length !== 1) throw new Error("PDT_IPT_R03_SIMPLE_INVENTORY_EXPECTED");
+  if (products.length !== 1) throw new Error("PDT_IPT_R04_SIMPLE_INVENTORY_EXPECTED");
   const product = products[0];
   const propertyValues = Array.isArray(product.property_values)
     ? product.property_values.filter(isRec)
     : [];
-  if (propertyValues.length !== 0) throw new Error("PDT_IPT_R03_UNEXPECTED_VARIATIONS");
+  if (propertyValues.length !== 0) throw new Error("PDT_IPT_R04_UNEXPECTED_VARIATIONS");
   const offerings = Array.isArray(product.offerings) ? product.offerings.filter(isRec) : [];
-  if (offerings.length !== 1) throw new Error("PDT_IPT_R03_SINGLE_OFFERING_EXPECTED");
+  if (offerings.length !== 1) throw new Error("PDT_IPT_R04_SINGLE_OFFERING_EXPECTED");
   const offering = offerings[0];
   const body = {
     products: [{
@@ -819,11 +819,11 @@ async function ensureSku(
   };
   if (body.products[0].offerings[0].quantity !== PDT_IPT_001_R04_DRAFT.quantity ||
       Math.abs(body.products[0].offerings[0].price - PDT_IPT_001_R04_DRAFT.priceUsd) > 0.005) {
-    throw new Error("PDT_IPT_R03_INVENTORY_BASELINE_MISMATCH");
+    throw new Error("PDT_IPT_R04_INVENTORY_BASELINE_MISMATCH");
   }
 
   const begun = await beginOperation(repository, operationId, payload, now);
-  if (begun.status !== "STARTED") throw new Error("PDT_IPT_R03_SKU_OPERATION_ALREADY_CLAIMED");
+  if (begun.status !== "STARTED") throw new Error("PDT_IPT_R04_SKU_OPERATION_ALREADY_CLAIMED");
 
   let response: Response;
   try {
@@ -848,7 +848,7 @@ async function ensureSku(
       now,
       { recoveryPoint: "SKU_UPDATE_RESPONSE_AMBIGUOUS" }
     );
-    throw new Error("PDT_IPT_R03_SKU_RECONCILIATION_REQUIRED");
+    throw new Error("PDT_IPT_R04_SKU_RECONCILIATION_REQUIRED");
   }
   if (!response.ok) {
     await recordOperationResult(
@@ -859,7 +859,7 @@ async function ensureSku(
       now,
       { recoveryPoint: `SKU_UPDATE_HTTP_${response.status}` }
     );
-    throw new Error(`PDT_IPT_R03_SKU_UPDATE_FAILED:${response.status}`);
+    throw new Error(`PDT_IPT_R04_SKU_UPDATE_FAILED:${response.status}`);
   }
   const after = await readInventory(fetchImpl, token, draftListingId);
   const afterProducts = after.products.filter(isRec);
@@ -872,7 +872,7 @@ async function ensureSku(
       now,
       { recoveryPoint: "SKU_READBACK_MISMATCH" }
     );
-    throw new Error("PDT_IPT_R03_SKU_READBACK_MISMATCH");
+    throw new Error("PDT_IPT_R04_SKU_READBACK_MISMATCH");
   }
   return (await recordOperationResult(
     repository,
@@ -892,7 +892,7 @@ async function readVideos(fetchImpl: typeof fetch, token: string, listingId: num
   const value = await parseJson(response);
   const list = results(value);
   if (!response.ok || !list) {
-    throw new Error(`PDT_IPT_R03_VIDEO_READ_FAILED:${response.status}`);
+    throw new Error(`PDT_IPT_R04_VIDEO_READ_FAILED:${response.status}`);
   }
   return list;
 }
@@ -914,12 +914,12 @@ async function uploadVideo(
   };
   const existing = await repository.load(operationId);
   if (existing?.status === "SUCCEEDED") return existing.receipt ?? {};
-  if (existing) throw new Error("PDT_IPT_R03_VIDEO_OPERATION_ALREADY_CLAIMED");
+  if (existing) throw new Error("PDT_IPT_R04_VIDEO_OPERATION_ALREADY_CLAIMED");
   const before = await readVideos(fetchImpl, token, draftListingId);
-  if (before.length !== 0) throw new Error("PDT_IPT_R03_VIDEO_BASELINE_NOT_EMPTY");
+  if (before.length !== 0) throw new Error("PDT_IPT_R04_VIDEO_BASELINE_NOT_EMPTY");
 
   const begun = await beginOperation(repository, operationId, payload, now);
-  if (begun.status !== "STARTED") throw new Error("PDT_IPT_R03_VIDEO_OPERATION_ALREADY_CLAIMED");
+  if (begun.status !== "STARTED") throw new Error("PDT_IPT_R04_VIDEO_OPERATION_ALREADY_CLAIMED");
   const form = new FormData();
   form.set("name", VIDEO.fileName);
   form.set("video", new File([new Uint8Array(bytes)], VIDEO.fileName, { type: VIDEO.mimeType }));
@@ -943,7 +943,7 @@ async function uploadVideo(
       now,
       { recoveryPoint: "VIDEO_UPLOAD_RESPONSE_AMBIGUOUS" }
     );
-    throw new Error("PDT_IPT_R03_VIDEO_RECONCILIATION_REQUIRED");
+    throw new Error("PDT_IPT_R04_VIDEO_RECONCILIATION_REQUIRED");
   }
   const value = await parseJson(response);
   const videoId = isRec(value) ? positiveId(value.video_id) : null;
@@ -956,7 +956,7 @@ async function uploadVideo(
       now,
       { recoveryPoint: `VIDEO_UPLOAD_HTTP_${response.status}` }
     );
-    throw new Error(`PDT_IPT_R03_VIDEO_UPLOAD_FAILED:${response.status}`);
+    throw new Error(`PDT_IPT_R04_VIDEO_UPLOAD_FAILED:${response.status}`);
   }
   const after = await readVideos(fetchImpl, token, draftListingId);
   const found = after.find((item) => String(item.video_id ?? "") === videoId);
@@ -969,7 +969,7 @@ async function uploadVideo(
       now,
       { recoveryPoint: "VIDEO_READBACK_MISMATCH" }
     );
-    throw new Error("PDT_IPT_R03_VIDEO_READBACK_MISMATCH");
+    throw new Error("PDT_IPT_R04_VIDEO_READBACK_MISMATCH");
   }
   return (await recordOperationResult(
     repository,
@@ -999,10 +999,10 @@ async function verifyFinal(
     observation(listing)
   );
   if (listing.state !== "draft" || identity.status !== "MATCH") {
-    throw new Error("PDT_IPT_R03_FINAL_LISTING_IDENTITY_MISMATCH");
+    throw new Error("PDT_IPT_R04_FINAL_LISTING_IDENTITY_MISMATCH");
   }
   if (listing.is_supply !== false || listing.should_auto_renew !== true) {
-    throw new Error("PDT_IPT_R03_FINAL_LISTING_SETTINGS_MISMATCH");
+    throw new Error("PDT_IPT_R04_FINAL_LISTING_SETTINGS_MISMATCH");
   }
 
   const [imagesResponse, filesResponse, inventory, videos] = await Promise.all([
@@ -1020,31 +1020,31 @@ async function verifyFinal(
   const images = results(await parseJson(imagesResponse));
   const files = results(await parseJson(filesResponse));
   if (!imagesResponse.ok || !filesResponse.ok || !images || !files) {
-    throw new Error("PDT_IPT_R03_FINAL_ASSET_READBACK_FAILED");
+    throw new Error("PDT_IPT_R04_FINAL_ASSET_READBACK_FAILED");
   }
   const ordered = [...images].sort((a, b) => Number(a.rank) - Number(b.rank));
-  if (ordered.length !== 10) throw new Error("PDT_IPT_R03_FINAL_GALLERY_COUNT_MISMATCH");
+  if (ordered.length !== 10) throw new Error("PDT_IPT_R04_FINAL_GALLERY_COUNT_MISMATCH");
   for (let index = 0; index < GALLERY.length; index += 1) {
     const expected = GALLERY[index];
     const actual = ordered[index];
     if (Number(actual.rank) !== expected.rank ||
         String(actual.alt_text ?? "").normalize("NFC").trim() !== expected.altText) {
-      throw new Error(`PDT_IPT_R03_FINAL_GALLERY_MISMATCH_${expected.rank}`);
+      throw new Error(`PDT_IPT_R04_FINAL_GALLERY_MISMATCH_${expected.rank}`);
     }
   }
   if (files.length !== 1 ||
       String(files[0].filename ?? "").normalize("NFC").trim() !== BUYER_FILE.fileName ||
       Number(files[0].size_bytes) !== BUYER_FILE.sizeBytes) {
-    throw new Error("PDT_IPT_R03_FINAL_BUYER_FILE_MISMATCH");
+    throw new Error("PDT_IPT_R04_FINAL_BUYER_FILE_MISMATCH");
   }
   const products = inventory.products.filter(isRec);
   if (products.length !== 1 || products[0].sku !== PDT_IPT_001_R04_DRAFT.sku) {
-    throw new Error("PDT_IPT_R03_FINAL_SKU_MISMATCH");
+    throw new Error("PDT_IPT_R04_FINAL_SKU_MISMATCH");
   }
   if (videos.length !== 1 ||
       Number(videos[0].width) !== VIDEO.width ||
       Number(videos[0].height) !== VIDEO.height) {
-    throw new Error("PDT_IPT_R03_FINAL_VIDEO_MISMATCH");
+    throw new Error("PDT_IPT_R04_FINAL_VIDEO_MISMATCH");
   }
 
   return {
@@ -1075,21 +1075,21 @@ export async function handlePdtIpt001R04Draft(
   const writeAuth = authError(request);
   if (writeAuth) return writeAuth;
   try {
-    if (!configuredForWrites()) throw new Error("PDT_IPT_R03_WRITES_DISABLED");
+    if (!configuredForWrites()) throw new Error("PDT_IPT_R04_WRITES_DISABLED");
     if (!AUTHORIZATION_ID.test(body.authorizationId)) {
-      throw new Error("PDT_IPT_R03_AUTHORIZATION_ID_INVALID");
+      throw new Error("PDT_IPT_R04_AUTHORIZATION_ID_INVALID");
     }
     if (!SHA256.test(body.protectedStateFingerprint)) {
-      throw new Error("PDT_IPT_R03_PROTECTED_STATE_FINGERPRINT_INVALID");
+      throw new Error("PDT_IPT_R04_PROTECTED_STATE_FINGERPRINT_INVALID");
     }
     if (!SHA256.test(authorizationRequestHash)) {
-      throw new Error("PDT_IPT_R03_AUTHORIZATION_REQUEST_HASH_INVALID");
+      throw new Error("PDT_IPT_R04_AUTHORIZATION_REQUEST_HASH_INVALID");
     }
     if (!COMMIT_SHA.test(body.productionCommit) || body.productionCommit !== currentCommit()) {
-      throw new Error("PDT_IPT_R03_PRODUCTION_COMMIT_MISMATCH");
+      throw new Error("PDT_IPT_R04_PRODUCTION_COMMIT_MISMATCH");
     }
     if (PDT_IPT_001_R04_LISTING_FINGERPRINT !== PDT_IPT_001_R04_DRAFT.listingFingerprint) {
-      throw new Error("PDT_IPT_R03_COMPILED_LISTING_FINGERPRINT_MISMATCH");
+      throw new Error("PDT_IPT_R04_COMPILED_LISTING_FINGERPRINT_MISMATCH");
     }
     const exactBody = exactPdtIpt001R04DraftBody(
       body.authorizationId,
@@ -1099,7 +1099,7 @@ export async function handlePdtIpt001R04Draft(
     const requestHash = hashOperationRequest(body);
     if (requestHash !== hashOperationRequest(exactBody) ||
         !secureEqual(requestHash, authorizationRequestHash)) {
-      throw new Error("PDT_IPT_R03_AUTHORIZATION_CONTRACT_MISMATCH");
+      throw new Error("PDT_IPT_R04_AUTHORIZATION_CONTRACT_MISMATCH");
     }
 
     const repository = runtime.repository ?? new NeonOperationLedgerRepository();
@@ -1115,16 +1115,16 @@ export async function handlePdtIpt001R04Draft(
       });
     }
     if (existing) {
-      throw new Error("PDT_IPT_R03_OPERATION_ALREADY_CLAIMED_DO_NOT_RETRY");
+      throw new Error("PDT_IPT_R04_OPERATION_ALREADY_CLAIMED_DO_NOT_RETRY");
     }
 
     const loadedAssets = await preloadAssets(runtime);
     const fetchImpl = runtime.fetchImpl ?? fetch;
     const getAccessToken = runtime.getAccessToken ?? getValidEtsyAccessToken;
     const state = await protectedState({ ...runtime, fetchImpl, getAccessToken });
-    if (state.collisions.length > 0) throw new Error("PDT_IPT_R03_TARGET_COLLISION");
+    if (state.collisions.length > 0) throw new Error("PDT_IPT_R04_TARGET_COLLISION");
     if (!secureEqual(state.fingerprint, body.protectedStateFingerprint)) {
-      throw new Error("PDT_IPT_R03_PROTECTED_STATE_DRIFT");
+      throw new Error("PDT_IPT_R04_PROTECTED_STATE_DRIFT");
     }
 
     const now = runtime.now?.() ?? new Date().toISOString();
@@ -1135,7 +1135,7 @@ export async function handlePdtIpt001R04Draft(
       now
     );
     if (parent.status !== "STARTED") {
-      throw new Error("PDT_IPT_R03_OPERATION_ALREADY_CLAIMED_DO_NOT_RETRY");
+      throw new Error("PDT_IPT_R04_OPERATION_ALREADY_CLAIMED_DO_NOT_RETRY");
     }
 
     try {
@@ -1153,11 +1153,11 @@ export async function handlePdtIpt001R04Draft(
         now
       });
       if (draftResult.status === "RECONCILIATION_REQUIRED") {
-        throw new Error("PDT_IPT_R03_DRAFT_RECONCILIATION_REQUIRED");
+        throw new Error("PDT_IPT_R04_DRAFT_RECONCILIATION_REQUIRED");
       }
       const draftReceipt = draftResult.receipt as ProviderReceipt;
       const draftId = positiveId(draftReceipt.providerResourceId);
-      if (!draftId) throw new Error("PDT_IPT_R03_DRAFT_ID_INVALID");
+      if (!draftId) throw new Error("PDT_IPT_R04_DRAFT_ID_INVALID");
       const draftListingId = Number(draftId);
 
       await applyOptionalListingSettings(draftListingId, token, repository, now, fetchImpl);
@@ -1166,13 +1166,13 @@ export async function handlePdtIpt001R04Draft(
       const assetReceipts: ProviderReceipt[] = [];
       for (const asset of [...GALLERY, BUYER_FILE]) {
         const bytes = loadedAssets.get(asset.sha256);
-        if (!bytes) throw new Error("PDT_IPT_R03_STAGED_ASSET_MISSING");
+        if (!bytes) throw new Error("PDT_IPT_R04_STAGED_ASSET_MISSING");
         assetReceipts.push(
           await uploadAsset(asset, bytes, draftListingId, token, repository, now, fetchImpl)
         );
       }
       const videoBytes = loadedAssets.get(VIDEO.sha256);
-      if (!videoBytes) throw new Error("PDT_IPT_R03_STAGED_VIDEO_MISSING");
+      if (!videoBytes) throw new Error("PDT_IPT_R04_STAGED_VIDEO_MISSING");
       const videoReceipt = await uploadVideo(
         videoBytes,
         draftListingId,
