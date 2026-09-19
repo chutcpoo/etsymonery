@@ -27,7 +27,12 @@ on:
         default: ""
         type: string
       authorization_request_hash:
-        description: Exact authorization request SHA-256; required for C09 execute only
+        description: Exact authorization request SHA-256; required for governed exact execute operations
+        required: false
+        default: ""
+        type: string
+      production_commit:
+        description: Exact production commit authorized for execution
         required: false
         default: ""
         type: string
@@ -73,6 +78,7 @@ jobs:
       AUTHORIZATION_ID: ${{ inputs.authorization_id }}
       PROTECTED_STATE_FINGERPRINT: ${{ inputs.protected_state_fingerprint }}
       AUTHORIZATION_REQUEST_HASH: ${{ inputs.authorization_request_hash }}
+      PRODUCTION_COMMIT: ${{ inputs.production_commit }}
       ASSET_SHA256: ${{ inputs.asset_sha256 }}
       CHUNK_INDEX: ${{ inputs.chunk_index }}
       CHUNK_COUNT: ${{ inputs.chunk_count }}
@@ -109,8 +115,1515 @@ jobs:
               fi
               if [ "$OPERATION_ID" = "PDT-BPSC-001-C09-NEW-LISTING-001" ]; then
                 test -n "$AUTHORIZATION_ID" || { echo "Missing C09 authorization_id"; exit 1; }
-                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid C09 protected_state_fingerprint"; exit 1; }
-                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid C09 authorization_request_hash"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-REPAIR-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing R02 video authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video authorization_request_hash"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-DELETE-OLD-RECOVERY-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing R02 delete-old authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 delete-old protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 delete-old authorization_request_hash"; exit 1; }
+              fi
+              ;;
+            verify_protected_state) ;;
+            post_release_qc)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001" -o "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R02-001" -o "$OPERATION_ID" = "POONTHAIDIGITAL-IMAGE01-V2-9OF9-RELEASE-001" || { echo "Post-release QC operation not allowed"; exit 1; }
+              ;;
+            stage_asset_chunk)
+              test "$CHUNK_COUNT" -ge 1 || { echo "Invalid chunk_count"; exit 1; }
+              test "$CHUNK_INDEX" -ge 0 || { echo "Invalid chunk_index"; exit 1; }
+              test -n "$ASSET_CHUNK_BASE64" || { echo "Missing asset chunk"; exit 1; }
+              if [ "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for STOCK R03"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for Boba C03"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BPSC-001-C09-NEW-LISTING-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for C09"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-REPAIR-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for R02 video"; exit 1; }
+              fi
+              ;;
+            stage_stock_r03_assets)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001" || { echo "Private staging is STOCK R03 only"; exit 1; }
+              test -n "$STOCK_R03_QUICK_URL" || { echo "Missing private Quick Start transport"; exit 1; }
+              test -n "$STOCK_R03_ZIP_URL" || { echo "Missing private ZIP transport"; exit 1; }
+              ;;
+            stage_stock_r03_recovery_zip)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001" -o "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R02-001" || { echo "Recovery staging is STOCK R03 Recovery only"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_0" || { echo "Missing encrypted recovery chunk 0"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_1" || { echo "Missing encrypted recovery chunk 1"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_2" || { echo "Missing encrypted recovery chunk 2"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_3" || { echo "Missing encrypted recovery chunk 3"; exit 1; }
+              ;;
+            *) echo "Invalid action"; exit 1 ;;
+          esac
+
+      - name: Acquire GitHub OIDC token
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "GitHub OIDC request URL unavailable"; exit 1; }
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" || { echo "GitHub OIDC request token unavailable"; exit 1; }
+          if [ "$ACTION" = "stage_asset_chunk" ] || [ "$ACTION" = "stage_stock_r03_assets" ] || [ "$ACTION" = "stage_stock_r03_recovery_zip" ]; then
+            AUDIENCE="$STAGE_URL"
+          else
+            AUDIENCE="$EXECUTION_URL"
+          fi
+          RESPONSE="$(curl --fail --silent --show-error \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUDIENCE}")"
+          TOKEN="$(node -e 'const v=JSON.parse(process.argv[1]).value; if(!v) process.exit(1); process.stdout.write(v)' "$RESPONSE")"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Stage exact asset chunk without Etsy write
+        if: ${{ inputs.action == 'stage_asset_chunk' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.STAGE_URL, {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              assetSha256: process.env.ASSET_SHA256 || undefined,
+              chunkIndex: Number(process.env.CHUNK_INDEX),
+              chunkCount: Number(process.env.CHUNK_COUNT),
+              dataBase64: process.env.ASSET_CHUNK_BASE64
+            })
+          });
+          const text = await response.text();
+          const payload = text ? JSON.parse(text) : {};
+          console.log(JSON.stringify({
+            status: payload.status,
+            operationId: payload.operationId,
+            assetSha256: payload.assetSha256,
+            chunkIndex: payload.chunkIndex,
+            chunkCount: payload.chunkCount,
+            ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+          }));
+          if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+            throw new Error(`AUTHORIZED_ETSY_ASSET_STAGE_HTTP_${response.status}`);
+          }
+          NODE
+
+      - name: Stage exact STOCK R03 assets from private Drive transport
+        if: ${{ inputs.action == 'stage_stock_r03_assets' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { createHash } = await import("node:crypto");
+          const sources = [
+            {
+              url: process.env.STOCK_R03_QUICK_URL,
+              sha256: "2d3d1da280bbaa0b51071a20cab9d737075e59d6e424daf3caea224c4c2f89a7",
+              size: 6448
+            },
+            {
+              url: process.env.STOCK_R03_ZIP_URL,
+              sha256: "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed",
+              size: 62008
+            }
+          ];
+          for (const source of sources) {
+            if (!source.url) throw new Error("STOCK_R03_PRIVATE_TRANSPORT_MISSING");
+            const download = await fetch(source.url, { cache: "no-store" });
+            if (!download.ok) throw new Error(`STOCK_R03_PRIVATE_DOWNLOAD_HTTP_${download.status}`);
+            const bytes = Buffer.from(await download.arrayBuffer());
+            const actualSha = createHash("sha256").update(bytes).digest("hex");
+            if (bytes.length !== source.size || actualSha !== source.sha256) {
+              throw new Error("STOCK_R03_PRIVATE_ASSET_IDENTITY_MISMATCH");
+            }
+            const chunkSize = 40000;
+            const chunkCount = Math.ceil(bytes.length / chunkSize);
+            for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
+              const chunk = bytes.subarray(chunkIndex * chunkSize, Math.min(bytes.length, (chunkIndex + 1) * chunkSize));
+              const response = await fetch(process.env.STAGE_URL, {
+                method: "POST",
+                headers: {
+                  "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+                  "content-type": "application/json"
+                },
+                body: JSON.stringify({
+                  operationId: process.env.OPERATION_ID,
+                  confirmation: process.env.CONFIRMATION,
+                  assetSha256: source.sha256,
+                  chunkIndex,
+                  chunkCount,
+                  dataBase64: chunk.toString("base64")
+                })
+              });
+              const text = await response.text();
+              const payload = text ? JSON.parse(text) : {};
+              console.log(JSON.stringify({
+                status: payload.status,
+                assetSha256: payload.assetSha256,
+                chunkIndex: payload.chunkIndex,
+                chunkCount: payload.chunkCount,
+                ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+              }));
+              if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+                throw new Error(`STOCK_R03_PRIVATE_STAGE_HTTP_${response.status}`);
+              }
+            }
+          }
+          console.log(JSON.stringify({ status: "STOCK_R03_PRIVATE_ASSETS_STAGED", ETSY_WRITE_COUNT: 0 }));
+          NODE
+
+      - name: Stage exact STOCK R03 Recovery ZIP from encrypted secret chunks
+        if: ${{ inputs.action == 'stage_stock_r03_recovery_zip' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { createHash } = await import("node:crypto");
+          const encodedChunks = [
+            process.env.STOCK_R03_RECOVERY_CHUNK_0,
+            process.env.STOCK_R03_RECOVERY_CHUNK_1,
+            process.env.STOCK_R03_RECOVERY_CHUNK_2,
+            process.env.STOCK_R03_RECOVERY_CHUNK_3
+          ];
+          if (encodedChunks.some((value) => !value)) {
+            throw new Error("STOCK_R03_RECOVERY_PRIVATE_CHUNK_MISSING");
+          }
+          const chunks = encodedChunks.map((value) => Buffer.from(value, "base64"));
+          for (let index = 0; index < chunks.length; index++) {
+            const canonical = chunks[index].toString("base64").replace(/=+$/u, "");
+            if (canonical !== encodedChunks[index].replace(/=+$/u, "")) {
+              throw new Error("STOCK_R03_RECOVERY_PRIVATE_CHUNK_INVALID_BASE64");
+            }
+          }
+          const bytes = Buffer.concat(chunks);
+          const expectedSha = "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed";
+          const expectedSize = 62008;
+          const actualSha = createHash("sha256").update(bytes).digest("hex");
+          if (bytes.length !== expectedSize || actualSha !== expectedSha) {
+            throw new Error("STOCK_R03_RECOVERY_PRIVATE_ASSET_IDENTITY_MISMATCH");
+          }
+          const carrierOperationId = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001";
+          const chunkCount = chunks.length;
+          for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
+            const response = await fetch(process.env.STAGE_URL, {
+              method: "POST",
+              headers: {
+                "authorization": "Bearer " + process.env.OIDC_TOKEN,
+                "content-type": "application/json"
+              },
+              body: JSON.stringify({
+                operationId: carrierOperationId,
+                confirmation: carrierOperationId,
+                assetSha256: expectedSha,
+                chunkIndex,
+                chunkCount,
+                dataBase64: encodedChunks[chunkIndex]
+              })
+            });
+            const text = await response.text();
+            const payload = text ? JSON.parse(text) : {};
+            console.log(JSON.stringify({
+              status: payload.status,
+              recoveryOperationId: process.env.OPERATION_ID,
+              carrierOperationId,
+              assetSha256: payload.assetSha256,
+              chunkIndex: payload.chunkIndex,
+              chunkCount: payload.chunkCount,
+              ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+            }));
+            if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error("STOCK_R03_RECOVERY_PRIVATE_STAGE_HTTP_" + response.status);
+            }
+          }
+          console.log(JSON.stringify({
+            status: "RECOVERY_ASSET_STAGED",
+            operationId: process.env.OPERATION_ID,
+            carrierOperationId,
+            assetSha256: expectedSha,
+            bytes: expectedSize,
+            ETSY_WRITE_COUNT: 0
+          }));
+          NODE
+
+      - name: Execute exact authorized operation once
+        if: ${{ inputs.action != 'stage_asset_chunk' && inputs.action != 'stage_stock_r03_assets' && inputs.action != 'stage_stock_r03_recovery_zip' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.EXECUTION_URL, {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              action: process.env.ACTION,
+              authorizationId: process.env.AUTHORIZATION_ID || undefined,
+              protectedStateFingerprint: process.env.PROTECTED_STATE_FINGERPRINT || undefined,
+              authorizationRequestHash: process.env.AUTHORIZATION_REQUEST_HASH || undefined,
+              productionCommit: process.env.PRODUCTION_COMMIT || undefined
+            })
+          });
+
+          const text = await response.text();
+          let payload;
+          try { payload = text ? JSON.parse(text) : {}; }
+          catch { payload = { raw: text }; }
+
+          console.log(`HTTP ${response.status}`);
+          console.log(JSON.stringify(payload, null, 2));
+
+          if (process.env.ACTION === "verify_protected_state") {
+            if (!response.ok || payload.status !== "PROTECTED_STATE_MATCH" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error(`PROTECTED_STATE_VERIFICATION_HTTP_${response.status}`);
+            }
+            process.exit(0);
+          }
+          if (process.env.ACTION === "post_release_qc") {
+            if (!response.ok || payload.status !== "POST_RELEASE_QC_PASS" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error("POST_RELEASE_QC_HTTP_" + response.status);
+            }
+            process.exit(0);
+          }
+          if (response.status === 202) {
+            throw new Error("RECONCILIATION_REQUIRED_DO_NOT_RETRY");
+          }
+          if (!response.ok) {
+            throw new Error(`AUTHORIZED_ETSY_HTTP_${response.status}`);
+          }
+
+          const acceptable = new Set(["UPDATED_AND_VERIFIED", "PUBLISHED_AND_VERIFIED", "RECONCILED", "REPLAY"]);
+          if (!acceptable.has(payload.status)) {
+            throw new Error(`AUTHORIZED_ETSY_NONTERMINAL_${payload.status ?? "UNKNOWN"}`);
+          }
+          NODE || { echo "Invalid C09 protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-REPAIR-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing R02 video authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video authorization_request_hash"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-DELETE-OLD-RECOVERY-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing R02 delete-old authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 delete-old protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 delete-old authorization_request_hash"; exit 1; }
+              fi
+              ;;
+            verify_protected_state) ;;
+            post_release_qc)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001" -o "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R02-001" -o "$OPERATION_ID" = "POONTHAIDIGITAL-IMAGE01-V2-9OF9-RELEASE-001" || { echo "Post-release QC operation not allowed"; exit 1; }
+              ;;
+            stage_asset_chunk)
+              test "$CHUNK_COUNT" -ge 1 || { echo "Invalid chunk_count"; exit 1; }
+              test "$CHUNK_INDEX" -ge 0 || { echo "Invalid chunk_index"; exit 1; }
+              test -n "$ASSET_CHUNK_BASE64" || { echo "Missing asset chunk"; exit 1; }
+              if [ "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for STOCK R03"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for Boba C03"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BPSC-001-C09-NEW-LISTING-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for C09"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-REPAIR-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for R02 video"; exit 1; }
+              fi
+              ;;
+            stage_stock_r03_assets)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001" || { echo "Private staging is STOCK R03 only"; exit 1; }
+              test -n "$STOCK_R03_QUICK_URL" || { echo "Missing private Quick Start transport"; exit 1; }
+              test -n "$STOCK_R03_ZIP_URL" || { echo "Missing private ZIP transport"; exit 1; }
+              ;;
+            stage_stock_r03_recovery_zip)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001" -o "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R02-001" || { echo "Recovery staging is STOCK R03 Recovery only"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_0" || { echo "Missing encrypted recovery chunk 0"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_1" || { echo "Missing encrypted recovery chunk 1"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_2" || { echo "Missing encrypted recovery chunk 2"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_3" || { echo "Missing encrypted recovery chunk 3"; exit 1; }
+              ;;
+            *) echo "Invalid action"; exit 1 ;;
+          esac
+
+      - name: Acquire GitHub OIDC token
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "GitHub OIDC request URL unavailable"; exit 1; }
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" || { echo "GitHub OIDC request token unavailable"; exit 1; }
+          if [ "$ACTION" = "stage_asset_chunk" ] || [ "$ACTION" = "stage_stock_r03_assets" ] || [ "$ACTION" = "stage_stock_r03_recovery_zip" ]; then
+            AUDIENCE="$STAGE_URL"
+          else
+            AUDIENCE="$EXECUTION_URL"
+          fi
+          RESPONSE="$(curl --fail --silent --show-error \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUDIENCE}")"
+          TOKEN="$(node -e 'const v=JSON.parse(process.argv[1]).value; if(!v) process.exit(1); process.stdout.write(v)' "$RESPONSE")"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Stage exact asset chunk without Etsy write
+        if: ${{ inputs.action == 'stage_asset_chunk' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.STAGE_URL, {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              assetSha256: process.env.ASSET_SHA256 || undefined,
+              chunkIndex: Number(process.env.CHUNK_INDEX),
+              chunkCount: Number(process.env.CHUNK_COUNT),
+              dataBase64: process.env.ASSET_CHUNK_BASE64
+            })
+          });
+          const text = await response.text();
+          const payload = text ? JSON.parse(text) : {};
+          console.log(JSON.stringify({
+            status: payload.status,
+            operationId: payload.operationId,
+            assetSha256: payload.assetSha256,
+            chunkIndex: payload.chunkIndex,
+            chunkCount: payload.chunkCount,
+            ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+          }));
+          if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+            throw new Error(`AUTHORIZED_ETSY_ASSET_STAGE_HTTP_${response.status}`);
+          }
+          NODE
+
+      - name: Stage exact STOCK R03 assets from private Drive transport
+        if: ${{ inputs.action == 'stage_stock_r03_assets' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { createHash } = await import("node:crypto");
+          const sources = [
+            {
+              url: process.env.STOCK_R03_QUICK_URL,
+              sha256: "2d3d1da280bbaa0b51071a20cab9d737075e59d6e424daf3caea224c4c2f89a7",
+              size: 6448
+            },
+            {
+              url: process.env.STOCK_R03_ZIP_URL,
+              sha256: "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed",
+              size: 62008
+            }
+          ];
+          for (const source of sources) {
+            if (!source.url) throw new Error("STOCK_R03_PRIVATE_TRANSPORT_MISSING");
+            const download = await fetch(source.url, { cache: "no-store" });
+            if (!download.ok) throw new Error(`STOCK_R03_PRIVATE_DOWNLOAD_HTTP_${download.status}`);
+            const bytes = Buffer.from(await download.arrayBuffer());
+            const actualSha = createHash("sha256").update(bytes).digest("hex");
+            if (bytes.length !== source.size || actualSha !== source.sha256) {
+              throw new Error("STOCK_R03_PRIVATE_ASSET_IDENTITY_MISMATCH");
+            }
+            const chunkSize = 40000;
+            const chunkCount = Math.ceil(bytes.length / chunkSize);
+            for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
+              const chunk = bytes.subarray(chunkIndex * chunkSize, Math.min(bytes.length, (chunkIndex + 1) * chunkSize));
+              const response = await fetch(process.env.STAGE_URL, {
+                method: "POST",
+                headers: {
+                  "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+                  "content-type": "application/json"
+                },
+                body: JSON.stringify({
+                  operationId: process.env.OPERATION_ID,
+                  confirmation: process.env.CONFIRMATION,
+                  assetSha256: source.sha256,
+                  chunkIndex,
+                  chunkCount,
+                  dataBase64: chunk.toString("base64")
+                })
+              });
+              const text = await response.text();
+              const payload = text ? JSON.parse(text) : {};
+              console.log(JSON.stringify({
+                status: payload.status,
+                assetSha256: payload.assetSha256,
+                chunkIndex: payload.chunkIndex,
+                chunkCount: payload.chunkCount,
+                ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+              }));
+              if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+                throw new Error(`STOCK_R03_PRIVATE_STAGE_HTTP_${response.status}`);
+              }
+            }
+          }
+          console.log(JSON.stringify({ status: "STOCK_R03_PRIVATE_ASSETS_STAGED", ETSY_WRITE_COUNT: 0 }));
+          NODE
+
+      - name: Stage exact STOCK R03 Recovery ZIP from encrypted secret chunks
+        if: ${{ inputs.action == 'stage_stock_r03_recovery_zip' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { createHash } = await import("node:crypto");
+          const encodedChunks = [
+            process.env.STOCK_R03_RECOVERY_CHUNK_0,
+            process.env.STOCK_R03_RECOVERY_CHUNK_1,
+            process.env.STOCK_R03_RECOVERY_CHUNK_2,
+            process.env.STOCK_R03_RECOVERY_CHUNK_3
+          ];
+          if (encodedChunks.some((value) => !value)) {
+            throw new Error("STOCK_R03_RECOVERY_PRIVATE_CHUNK_MISSING");
+          }
+          const chunks = encodedChunks.map((value) => Buffer.from(value, "base64"));
+          for (let index = 0; index < chunks.length; index++) {
+            const canonical = chunks[index].toString("base64").replace(/=+$/u, "");
+            if (canonical !== encodedChunks[index].replace(/=+$/u, "")) {
+              throw new Error("STOCK_R03_RECOVERY_PRIVATE_CHUNK_INVALID_BASE64");
+            }
+          }
+          const bytes = Buffer.concat(chunks);
+          const expectedSha = "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed";
+          const expectedSize = 62008;
+          const actualSha = createHash("sha256").update(bytes).digest("hex");
+          if (bytes.length !== expectedSize || actualSha !== expectedSha) {
+            throw new Error("STOCK_R03_RECOVERY_PRIVATE_ASSET_IDENTITY_MISMATCH");
+          }
+          const carrierOperationId = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001";
+          const chunkCount = chunks.length;
+          for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
+            const response = await fetch(process.env.STAGE_URL, {
+              method: "POST",
+              headers: {
+                "authorization": "Bearer " + process.env.OIDC_TOKEN,
+                "content-type": "application/json"
+              },
+              body: JSON.stringify({
+                operationId: carrierOperationId,
+                confirmation: carrierOperationId,
+                assetSha256: expectedSha,
+                chunkIndex,
+                chunkCount,
+                dataBase64: encodedChunks[chunkIndex]
+              })
+            });
+            const text = await response.text();
+            const payload = text ? JSON.parse(text) : {};
+            console.log(JSON.stringify({
+              status: payload.status,
+              recoveryOperationId: process.env.OPERATION_ID,
+              carrierOperationId,
+              assetSha256: payload.assetSha256,
+              chunkIndex: payload.chunkIndex,
+              chunkCount: payload.chunkCount,
+              ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+            }));
+            if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error("STOCK_R03_RECOVERY_PRIVATE_STAGE_HTTP_" + response.status);
+            }
+          }
+          console.log(JSON.stringify({
+            status: "RECOVERY_ASSET_STAGED",
+            operationId: process.env.OPERATION_ID,
+            carrierOperationId,
+            assetSha256: expectedSha,
+            bytes: expectedSize,
+            ETSY_WRITE_COUNT: 0
+          }));
+          NODE
+
+      - name: Execute exact authorized operation once
+        if: ${{ inputs.action != 'stage_asset_chunk' && inputs.action != 'stage_stock_r03_assets' && inputs.action != 'stage_stock_r03_recovery_zip' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.EXECUTION_URL, {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              action: process.env.ACTION,
+              authorizationId: process.env.AUTHORIZATION_ID || undefined,
+              protectedStateFingerprint: process.env.PROTECTED_STATE_FINGERPRINT || undefined,
+              authorizationRequestHash: process.env.AUTHORIZATION_REQUEST_HASH || undefined
+            })
+          });
+
+          const text = await response.text();
+          let payload;
+          try { payload = text ? JSON.parse(text) : {}; }
+          catch { payload = { raw: text }; }
+
+          console.log(`HTTP ${response.status}`);
+          console.log(JSON.stringify(payload, null, 2));
+
+          if (process.env.ACTION === "verify_protected_state") {
+            if (!response.ok || payload.status !== "PROTECTED_STATE_MATCH" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error(`PROTECTED_STATE_VERIFICATION_HTTP_${response.status}`);
+            }
+            process.exit(0);
+          }
+          if (process.env.ACTION === "post_release_qc") {
+            if (!response.ok || payload.status !== "POST_RELEASE_QC_PASS" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error("POST_RELEASE_QC_HTTP_" + response.status);
+            }
+            process.exit(0);
+          }
+          if (response.status === 202) {
+            throw new Error("RECONCILIATION_REQUIRED_DO_NOT_RETRY");
+          }
+          if (!response.ok) {
+            throw new Error(`AUTHORIZED_ETSY_HTTP_${response.status}`);
+          }
+
+          const acceptable = new Set(["UPDATED_AND_VERIFIED", "PUBLISHED_AND_VERIFIED", "RECONCILED", "REPLAY"]);
+          if (!acceptable.has(payload.status)) {
+            throw new Error(`AUTHORIZED_ETSY_NONTERMINAL_${payload.status ?? "UNKNOWN"}`);
+          }
+          NODE || { echo "Invalid C09 authorization_request_hash"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-IPT-001-R03-DRAFT-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing DAY03 R03 authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-REPAIR-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing R02 video authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video authorization_request_hash"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-DELETE-OLD-RECOVERY-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing R02 delete-old authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 delete-old protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 delete-old authorization_request_hash"; exit 1; }
+              fi
+              ;;
+            verify_protected_state) ;;
+            post_release_qc)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001" -o "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R02-001" -o "$OPERATION_ID" = "POONTHAIDIGITAL-IMAGE01-V2-9OF9-RELEASE-001" || { echo "Post-release QC operation not allowed"; exit 1; }
+              ;;
+            stage_asset_chunk)
+              test "$CHUNK_COUNT" -ge 1 || { echo "Invalid chunk_count"; exit 1; }
+              test "$CHUNK_INDEX" -ge 0 || { echo "Invalid chunk_index"; exit 1; }
+              test -n "$ASSET_CHUNK_BASE64" || { echo "Missing asset chunk"; exit 1; }
+              if [ "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for STOCK R03"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for Boba C03"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BPSC-001-C09-NEW-LISTING-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for C09"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-REPAIR-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for R02 video"; exit 1; }
+              fi
+              ;;
+            stage_stock_r03_assets)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001" || { echo "Private staging is STOCK R03 only"; exit 1; }
+              test -n "$STOCK_R03_QUICK_URL" || { echo "Missing private Quick Start transport"; exit 1; }
+              test -n "$STOCK_R03_ZIP_URL" || { echo "Missing private ZIP transport"; exit 1; }
+              ;;
+            stage_stock_r03_recovery_zip)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001" -o "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R02-001" || { echo "Recovery staging is STOCK R03 Recovery only"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_0" || { echo "Missing encrypted recovery chunk 0"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_1" || { echo "Missing encrypted recovery chunk 1"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_2" || { echo "Missing encrypted recovery chunk 2"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_3" || { echo "Missing encrypted recovery chunk 3"; exit 1; }
+              ;;
+            *) echo "Invalid action"; exit 1 ;;
+          esac
+
+      - name: Acquire GitHub OIDC token
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "GitHub OIDC request URL unavailable"; exit 1; }
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" || { echo "GitHub OIDC request token unavailable"; exit 1; }
+          if [ "$ACTION" = "stage_asset_chunk" ] || [ "$ACTION" = "stage_stock_r03_assets" ] || [ "$ACTION" = "stage_stock_r03_recovery_zip" ]; then
+            AUDIENCE="$STAGE_URL"
+          else
+            AUDIENCE="$EXECUTION_URL"
+          fi
+          RESPONSE="$(curl --fail --silent --show-error \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUDIENCE}")"
+          TOKEN="$(node -e 'const v=JSON.parse(process.argv[1]).value; if(!v) process.exit(1); process.stdout.write(v)' "$RESPONSE")"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Stage exact asset chunk without Etsy write
+        if: ${{ inputs.action == 'stage_asset_chunk' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.STAGE_URL, {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              assetSha256: process.env.ASSET_SHA256 || undefined,
+              chunkIndex: Number(process.env.CHUNK_INDEX),
+              chunkCount: Number(process.env.CHUNK_COUNT),
+              dataBase64: process.env.ASSET_CHUNK_BASE64
+            })
+          });
+          const text = await response.text();
+          const payload = text ? JSON.parse(text) : {};
+          console.log(JSON.stringify({
+            status: payload.status,
+            operationId: payload.operationId,
+            assetSha256: payload.assetSha256,
+            chunkIndex: payload.chunkIndex,
+            chunkCount: payload.chunkCount,
+            ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+          }));
+          if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+            throw new Error(`AUTHORIZED_ETSY_ASSET_STAGE_HTTP_${response.status}`);
+          }
+          NODE
+
+      - name: Stage exact STOCK R03 assets from private Drive transport
+        if: ${{ inputs.action == 'stage_stock_r03_assets' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { createHash } = await import("node:crypto");
+          const sources = [
+            {
+              url: process.env.STOCK_R03_QUICK_URL,
+              sha256: "2d3d1da280bbaa0b51071a20cab9d737075e59d6e424daf3caea224c4c2f89a7",
+              size: 6448
+            },
+            {
+              url: process.env.STOCK_R03_ZIP_URL,
+              sha256: "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed",
+              size: 62008
+            }
+          ];
+          for (const source of sources) {
+            if (!source.url) throw new Error("STOCK_R03_PRIVATE_TRANSPORT_MISSING");
+            const download = await fetch(source.url, { cache: "no-store" });
+            if (!download.ok) throw new Error(`STOCK_R03_PRIVATE_DOWNLOAD_HTTP_${download.status}`);
+            const bytes = Buffer.from(await download.arrayBuffer());
+            const actualSha = createHash("sha256").update(bytes).digest("hex");
+            if (bytes.length !== source.size || actualSha !== source.sha256) {
+              throw new Error("STOCK_R03_PRIVATE_ASSET_IDENTITY_MISMATCH");
+            }
+            const chunkSize = 40000;
+            const chunkCount = Math.ceil(bytes.length / chunkSize);
+            for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
+              const chunk = bytes.subarray(chunkIndex * chunkSize, Math.min(bytes.length, (chunkIndex + 1) * chunkSize));
+              const response = await fetch(process.env.STAGE_URL, {
+                method: "POST",
+                headers: {
+                  "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+                  "content-type": "application/json"
+                },
+                body: JSON.stringify({
+                  operationId: process.env.OPERATION_ID,
+                  confirmation: process.env.CONFIRMATION,
+                  assetSha256: source.sha256,
+                  chunkIndex,
+                  chunkCount,
+                  dataBase64: chunk.toString("base64")
+                })
+              });
+              const text = await response.text();
+              const payload = text ? JSON.parse(text) : {};
+              console.log(JSON.stringify({
+                status: payload.status,
+                assetSha256: payload.assetSha256,
+                chunkIndex: payload.chunkIndex,
+                chunkCount: payload.chunkCount,
+                ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+              }));
+              if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+                throw new Error(`STOCK_R03_PRIVATE_STAGE_HTTP_${response.status}`);
+              }
+            }
+          }
+          console.log(JSON.stringify({ status: "STOCK_R03_PRIVATE_ASSETS_STAGED", ETSY_WRITE_COUNT: 0 }));
+          NODE
+
+      - name: Stage exact STOCK R03 Recovery ZIP from encrypted secret chunks
+        if: ${{ inputs.action == 'stage_stock_r03_recovery_zip' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { createHash } = await import("node:crypto");
+          const encodedChunks = [
+            process.env.STOCK_R03_RECOVERY_CHUNK_0,
+            process.env.STOCK_R03_RECOVERY_CHUNK_1,
+            process.env.STOCK_R03_RECOVERY_CHUNK_2,
+            process.env.STOCK_R03_RECOVERY_CHUNK_3
+          ];
+          if (encodedChunks.some((value) => !value)) {
+            throw new Error("STOCK_R03_RECOVERY_PRIVATE_CHUNK_MISSING");
+          }
+          const chunks = encodedChunks.map((value) => Buffer.from(value, "base64"));
+          for (let index = 0; index < chunks.length; index++) {
+            const canonical = chunks[index].toString("base64").replace(/=+$/u, "");
+            if (canonical !== encodedChunks[index].replace(/=+$/u, "")) {
+              throw new Error("STOCK_R03_RECOVERY_PRIVATE_CHUNK_INVALID_BASE64");
+            }
+          }
+          const bytes = Buffer.concat(chunks);
+          const expectedSha = "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed";
+          const expectedSize = 62008;
+          const actualSha = createHash("sha256").update(bytes).digest("hex");
+          if (bytes.length !== expectedSize || actualSha !== expectedSha) {
+            throw new Error("STOCK_R03_RECOVERY_PRIVATE_ASSET_IDENTITY_MISMATCH");
+          }
+          const carrierOperationId = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001";
+          const chunkCount = chunks.length;
+          for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
+            const response = await fetch(process.env.STAGE_URL, {
+              method: "POST",
+              headers: {
+                "authorization": "Bearer " + process.env.OIDC_TOKEN,
+                "content-type": "application/json"
+              },
+              body: JSON.stringify({
+                operationId: carrierOperationId,
+                confirmation: carrierOperationId,
+                assetSha256: expectedSha,
+                chunkIndex,
+                chunkCount,
+                dataBase64: encodedChunks[chunkIndex]
+              })
+            });
+            const text = await response.text();
+            const payload = text ? JSON.parse(text) : {};
+            console.log(JSON.stringify({
+              status: payload.status,
+              recoveryOperationId: process.env.OPERATION_ID,
+              carrierOperationId,
+              assetSha256: payload.assetSha256,
+              chunkIndex: payload.chunkIndex,
+              chunkCount: payload.chunkCount,
+              ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+            }));
+            if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error("STOCK_R03_RECOVERY_PRIVATE_STAGE_HTTP_" + response.status);
+            }
+          }
+          console.log(JSON.stringify({
+            status: "RECOVERY_ASSET_STAGED",
+            operationId: process.env.OPERATION_ID,
+            carrierOperationId,
+            assetSha256: expectedSha,
+            bytes: expectedSize,
+            ETSY_WRITE_COUNT: 0
+          }));
+          NODE
+
+      - name: Execute exact authorized operation once
+        if: ${{ inputs.action != 'stage_asset_chunk' && inputs.action != 'stage_stock_r03_assets' && inputs.action != 'stage_stock_r03_recovery_zip' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.EXECUTION_URL, {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              action: process.env.ACTION,
+              authorizationId: process.env.AUTHORIZATION_ID || undefined,
+              protectedStateFingerprint: process.env.PROTECTED_STATE_FINGERPRINT || undefined,
+              authorizationRequestHash: process.env.AUTHORIZATION_REQUEST_HASH || undefined
+            })
+          });
+
+          const text = await response.text();
+          let payload;
+          try { payload = text ? JSON.parse(text) : {}; }
+          catch { payload = { raw: text }; }
+
+          console.log(`HTTP ${response.status}`);
+          console.log(JSON.stringify(payload, null, 2));
+
+          if (process.env.ACTION === "verify_protected_state") {
+            if (!response.ok || payload.status !== "PROTECTED_STATE_MATCH" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error(`PROTECTED_STATE_VERIFICATION_HTTP_${response.status}`);
+            }
+            process.exit(0);
+          }
+          if (process.env.ACTION === "post_release_qc") {
+            if (!response.ok || payload.status !== "POST_RELEASE_QC_PASS" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error("POST_RELEASE_QC_HTTP_" + response.status);
+            }
+            process.exit(0);
+          }
+          if (response.status === 202) {
+            throw new Error("RECONCILIATION_REQUIRED_DO_NOT_RETRY");
+          }
+          if (!response.ok) {
+            throw new Error(`AUTHORIZED_ETSY_HTTP_${response.status}`);
+          }
+
+          const acceptable = new Set(["UPDATED_AND_VERIFIED", "PUBLISHED_AND_VERIFIED", "RECONCILED", "REPLAY"]);
+          if (!acceptable.has(payload.status)) {
+            throw new Error(`AUTHORIZED_ETSY_NONTERMINAL_${payload.status ?? "UNKNOWN"}`);
+          }
+          NODE || { echo "Invalid DAY03 R03 protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-REPAIR-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing R02 video authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video authorization_request_hash"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-DELETE-OLD-RECOVERY-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing R02 delete-old authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 delete-old protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 delete-old authorization_request_hash"; exit 1; }
+              fi
+              ;;
+            verify_protected_state) ;;
+            post_release_qc)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001" -o "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R02-001" -o "$OPERATION_ID" = "POONTHAIDIGITAL-IMAGE01-V2-9OF9-RELEASE-001" || { echo "Post-release QC operation not allowed"; exit 1; }
+              ;;
+            stage_asset_chunk)
+              test "$CHUNK_COUNT" -ge 1 || { echo "Invalid chunk_count"; exit 1; }
+              test "$CHUNK_INDEX" -ge 0 || { echo "Invalid chunk_index"; exit 1; }
+              test -n "$ASSET_CHUNK_BASE64" || { echo "Missing asset chunk"; exit 1; }
+              if [ "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for STOCK R03"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for Boba C03"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BPSC-001-C09-NEW-LISTING-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for C09"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-REPAIR-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for R02 video"; exit 1; }
+              fi
+              ;;
+            stage_stock_r03_assets)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001" || { echo "Private staging is STOCK R03 only"; exit 1; }
+              test -n "$STOCK_R03_QUICK_URL" || { echo "Missing private Quick Start transport"; exit 1; }
+              test -n "$STOCK_R03_ZIP_URL" || { echo "Missing private ZIP transport"; exit 1; }
+              ;;
+            stage_stock_r03_recovery_zip)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001" -o "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R02-001" || { echo "Recovery staging is STOCK R03 Recovery only"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_0" || { echo "Missing encrypted recovery chunk 0"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_1" || { echo "Missing encrypted recovery chunk 1"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_2" || { echo "Missing encrypted recovery chunk 2"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_3" || { echo "Missing encrypted recovery chunk 3"; exit 1; }
+              ;;
+            *) echo "Invalid action"; exit 1 ;;
+          esac
+
+      - name: Acquire GitHub OIDC token
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "GitHub OIDC request URL unavailable"; exit 1; }
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" || { echo "GitHub OIDC request token unavailable"; exit 1; }
+          if [ "$ACTION" = "stage_asset_chunk" ] || [ "$ACTION" = "stage_stock_r03_assets" ] || [ "$ACTION" = "stage_stock_r03_recovery_zip" ]; then
+            AUDIENCE="$STAGE_URL"
+          else
+            AUDIENCE="$EXECUTION_URL"
+          fi
+          RESPONSE="$(curl --fail --silent --show-error \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUDIENCE}")"
+          TOKEN="$(node -e 'const v=JSON.parse(process.argv[1]).value; if(!v) process.exit(1); process.stdout.write(v)' "$RESPONSE")"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Stage exact asset chunk without Etsy write
+        if: ${{ inputs.action == 'stage_asset_chunk' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.STAGE_URL, {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              assetSha256: process.env.ASSET_SHA256 || undefined,
+              chunkIndex: Number(process.env.CHUNK_INDEX),
+              chunkCount: Number(process.env.CHUNK_COUNT),
+              dataBase64: process.env.ASSET_CHUNK_BASE64
+            })
+          });
+          const text = await response.text();
+          const payload = text ? JSON.parse(text) : {};
+          console.log(JSON.stringify({
+            status: payload.status,
+            operationId: payload.operationId,
+            assetSha256: payload.assetSha256,
+            chunkIndex: payload.chunkIndex,
+            chunkCount: payload.chunkCount,
+            ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+          }));
+          if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+            throw new Error(`AUTHORIZED_ETSY_ASSET_STAGE_HTTP_${response.status}`);
+          }
+          NODE
+
+      - name: Stage exact STOCK R03 assets from private Drive transport
+        if: ${{ inputs.action == 'stage_stock_r03_assets' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { createHash } = await import("node:crypto");
+          const sources = [
+            {
+              url: process.env.STOCK_R03_QUICK_URL,
+              sha256: "2d3d1da280bbaa0b51071a20cab9d737075e59d6e424daf3caea224c4c2f89a7",
+              size: 6448
+            },
+            {
+              url: process.env.STOCK_R03_ZIP_URL,
+              sha256: "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed",
+              size: 62008
+            }
+          ];
+          for (const source of sources) {
+            if (!source.url) throw new Error("STOCK_R03_PRIVATE_TRANSPORT_MISSING");
+            const download = await fetch(source.url, { cache: "no-store" });
+            if (!download.ok) throw new Error(`STOCK_R03_PRIVATE_DOWNLOAD_HTTP_${download.status}`);
+            const bytes = Buffer.from(await download.arrayBuffer());
+            const actualSha = createHash("sha256").update(bytes).digest("hex");
+            if (bytes.length !== source.size || actualSha !== source.sha256) {
+              throw new Error("STOCK_R03_PRIVATE_ASSET_IDENTITY_MISMATCH");
+            }
+            const chunkSize = 40000;
+            const chunkCount = Math.ceil(bytes.length / chunkSize);
+            for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
+              const chunk = bytes.subarray(chunkIndex * chunkSize, Math.min(bytes.length, (chunkIndex + 1) * chunkSize));
+              const response = await fetch(process.env.STAGE_URL, {
+                method: "POST",
+                headers: {
+                  "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+                  "content-type": "application/json"
+                },
+                body: JSON.stringify({
+                  operationId: process.env.OPERATION_ID,
+                  confirmation: process.env.CONFIRMATION,
+                  assetSha256: source.sha256,
+                  chunkIndex,
+                  chunkCount,
+                  dataBase64: chunk.toString("base64")
+                })
+              });
+              const text = await response.text();
+              const payload = text ? JSON.parse(text) : {};
+              console.log(JSON.stringify({
+                status: payload.status,
+                assetSha256: payload.assetSha256,
+                chunkIndex: payload.chunkIndex,
+                chunkCount: payload.chunkCount,
+                ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+              }));
+              if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+                throw new Error(`STOCK_R03_PRIVATE_STAGE_HTTP_${response.status}`);
+              }
+            }
+          }
+          console.log(JSON.stringify({ status: "STOCK_R03_PRIVATE_ASSETS_STAGED", ETSY_WRITE_COUNT: 0 }));
+          NODE
+
+      - name: Stage exact STOCK R03 Recovery ZIP from encrypted secret chunks
+        if: ${{ inputs.action == 'stage_stock_r03_recovery_zip' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { createHash } = await import("node:crypto");
+          const encodedChunks = [
+            process.env.STOCK_R03_RECOVERY_CHUNK_0,
+            process.env.STOCK_R03_RECOVERY_CHUNK_1,
+            process.env.STOCK_R03_RECOVERY_CHUNK_2,
+            process.env.STOCK_R03_RECOVERY_CHUNK_3
+          ];
+          if (encodedChunks.some((value) => !value)) {
+            throw new Error("STOCK_R03_RECOVERY_PRIVATE_CHUNK_MISSING");
+          }
+          const chunks = encodedChunks.map((value) => Buffer.from(value, "base64"));
+          for (let index = 0; index < chunks.length; index++) {
+            const canonical = chunks[index].toString("base64").replace(/=+$/u, "");
+            if (canonical !== encodedChunks[index].replace(/=+$/u, "")) {
+              throw new Error("STOCK_R03_RECOVERY_PRIVATE_CHUNK_INVALID_BASE64");
+            }
+          }
+          const bytes = Buffer.concat(chunks);
+          const expectedSha = "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed";
+          const expectedSize = 62008;
+          const actualSha = createHash("sha256").update(bytes).digest("hex");
+          if (bytes.length !== expectedSize || actualSha !== expectedSha) {
+            throw new Error("STOCK_R03_RECOVERY_PRIVATE_ASSET_IDENTITY_MISMATCH");
+          }
+          const carrierOperationId = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001";
+          const chunkCount = chunks.length;
+          for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
+            const response = await fetch(process.env.STAGE_URL, {
+              method: "POST",
+              headers: {
+                "authorization": "Bearer " + process.env.OIDC_TOKEN,
+                "content-type": "application/json"
+              },
+              body: JSON.stringify({
+                operationId: carrierOperationId,
+                confirmation: carrierOperationId,
+                assetSha256: expectedSha,
+                chunkIndex,
+                chunkCount,
+                dataBase64: encodedChunks[chunkIndex]
+              })
+            });
+            const text = await response.text();
+            const payload = text ? JSON.parse(text) : {};
+            console.log(JSON.stringify({
+              status: payload.status,
+              recoveryOperationId: process.env.OPERATION_ID,
+              carrierOperationId,
+              assetSha256: payload.assetSha256,
+              chunkIndex: payload.chunkIndex,
+              chunkCount: payload.chunkCount,
+              ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+            }));
+            if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error("STOCK_R03_RECOVERY_PRIVATE_STAGE_HTTP_" + response.status);
+            }
+          }
+          console.log(JSON.stringify({
+            status: "RECOVERY_ASSET_STAGED",
+            operationId: process.env.OPERATION_ID,
+            carrierOperationId,
+            assetSha256: expectedSha,
+            bytes: expectedSize,
+            ETSY_WRITE_COUNT: 0
+          }));
+          NODE
+
+      - name: Execute exact authorized operation once
+        if: ${{ inputs.action != 'stage_asset_chunk' && inputs.action != 'stage_stock_r03_assets' && inputs.action != 'stage_stock_r03_recovery_zip' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.EXECUTION_URL, {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              action: process.env.ACTION,
+              authorizationId: process.env.AUTHORIZATION_ID || undefined,
+              protectedStateFingerprint: process.env.PROTECTED_STATE_FINGERPRINT || undefined,
+              authorizationRequestHash: process.env.AUTHORIZATION_REQUEST_HASH || undefined
+            })
+          });
+
+          const text = await response.text();
+          let payload;
+          try { payload = text ? JSON.parse(text) : {}; }
+          catch { payload = { raw: text }; }
+
+          console.log(`HTTP ${response.status}`);
+          console.log(JSON.stringify(payload, null, 2));
+
+          if (process.env.ACTION === "verify_protected_state") {
+            if (!response.ok || payload.status !== "PROTECTED_STATE_MATCH" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error(`PROTECTED_STATE_VERIFICATION_HTTP_${response.status}`);
+            }
+            process.exit(0);
+          }
+          if (process.env.ACTION === "post_release_qc") {
+            if (!response.ok || payload.status !== "POST_RELEASE_QC_PASS" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error("POST_RELEASE_QC_HTTP_" + response.status);
+            }
+            process.exit(0);
+          }
+          if (response.status === 202) {
+            throw new Error("RECONCILIATION_REQUIRED_DO_NOT_RETRY");
+          }
+          if (!response.ok) {
+            throw new Error(`AUTHORIZED_ETSY_HTTP_${response.status}`);
+          }
+
+          const acceptable = new Set(["UPDATED_AND_VERIFIED", "PUBLISHED_AND_VERIFIED", "RECONCILED", "REPLAY"]);
+          if (!acceptable.has(payload.status)) {
+            throw new Error(`AUTHORIZED_ETSY_NONTERMINAL_${payload.status ?? "UNKNOWN"}`);
+          }
+          NODE || { echo "Invalid DAY03 R03 authorization_request_hash"; exit 1; }
+                echo "$PRODUCTION_COMMIT" | grep -Eq '^[a-f0-9]{40}
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-REPAIR-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing R02 video authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 video authorization_request_hash"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-DELETE-OLD-RECOVERY-001" ]; then
+                test -n "$AUTHORIZATION_ID" || { echo "Missing R02 delete-old authorization_id"; exit 1; }
+                echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 delete-old protected_state_fingerprint"; exit 1; }
+                echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid R02 delete-old authorization_request_hash"; exit 1; }
+              fi
+              ;;
+            verify_protected_state) ;;
+            post_release_qc)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001" -o "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R02-001" -o "$OPERATION_ID" = "POONTHAIDIGITAL-IMAGE01-V2-9OF9-RELEASE-001" || { echo "Post-release QC operation not allowed"; exit 1; }
+              ;;
+            stage_asset_chunk)
+              test "$CHUNK_COUNT" -ge 1 || { echo "Invalid chunk_count"; exit 1; }
+              test "$CHUNK_INDEX" -ge 0 || { echo "Invalid chunk_index"; exit 1; }
+              test -n "$ASSET_CHUNK_BASE64" || { echo "Missing asset chunk"; exit 1; }
+              if [ "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for STOCK R03"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-C03-GALLERY-MOBILE-SAFE-REPAIR-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for Boba C03"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BPSC-001-C09-NEW-LISTING-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for C09"; exit 1; }
+              fi
+              if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-REPAIR-001" ]; then
+                test -n "$ASSET_SHA256" || { echo "Missing asset_sha256 for R02 video"; exit 1; }
+              fi
+              ;;
+            stage_stock_r03_assets)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001" || { echo "Private staging is STOCK R03 only"; exit 1; }
+              test -n "$STOCK_R03_QUICK_URL" || { echo "Missing private Quick Start transport"; exit 1; }
+              test -n "$STOCK_R03_ZIP_URL" || { echo "Missing private ZIP transport"; exit 1; }
+              ;;
+            stage_stock_r03_recovery_zip)
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001" -o "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R02-001" || { echo "Recovery staging is STOCK R03 Recovery only"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_0" || { echo "Missing encrypted recovery chunk 0"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_1" || { echo "Missing encrypted recovery chunk 1"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_2" || { echo "Missing encrypted recovery chunk 2"; exit 1; }
+              test -n "$STOCK_R03_RECOVERY_CHUNK_3" || { echo "Missing encrypted recovery chunk 3"; exit 1; }
+              ;;
+            *) echo "Invalid action"; exit 1 ;;
+          esac
+
+      - name: Acquire GitHub OIDC token
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "GitHub OIDC request URL unavailable"; exit 1; }
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" || { echo "GitHub OIDC request token unavailable"; exit 1; }
+          if [ "$ACTION" = "stage_asset_chunk" ] || [ "$ACTION" = "stage_stock_r03_assets" ] || [ "$ACTION" = "stage_stock_r03_recovery_zip" ]; then
+            AUDIENCE="$STAGE_URL"
+          else
+            AUDIENCE="$EXECUTION_URL"
+          fi
+          RESPONSE="$(curl --fail --silent --show-error \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUDIENCE}")"
+          TOKEN="$(node -e 'const v=JSON.parse(process.argv[1]).value; if(!v) process.exit(1); process.stdout.write(v)' "$RESPONSE")"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Stage exact asset chunk without Etsy write
+        if: ${{ inputs.action == 'stage_asset_chunk' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.STAGE_URL, {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              assetSha256: process.env.ASSET_SHA256 || undefined,
+              chunkIndex: Number(process.env.CHUNK_INDEX),
+              chunkCount: Number(process.env.CHUNK_COUNT),
+              dataBase64: process.env.ASSET_CHUNK_BASE64
+            })
+          });
+          const text = await response.text();
+          const payload = text ? JSON.parse(text) : {};
+          console.log(JSON.stringify({
+            status: payload.status,
+            operationId: payload.operationId,
+            assetSha256: payload.assetSha256,
+            chunkIndex: payload.chunkIndex,
+            chunkCount: payload.chunkCount,
+            ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+          }));
+          if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+            throw new Error(`AUTHORIZED_ETSY_ASSET_STAGE_HTTP_${response.status}`);
+          }
+          NODE
+
+      - name: Stage exact STOCK R03 assets from private Drive transport
+        if: ${{ inputs.action == 'stage_stock_r03_assets' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { createHash } = await import("node:crypto");
+          const sources = [
+            {
+              url: process.env.STOCK_R03_QUICK_URL,
+              sha256: "2d3d1da280bbaa0b51071a20cab9d737075e59d6e424daf3caea224c4c2f89a7",
+              size: 6448
+            },
+            {
+              url: process.env.STOCK_R03_ZIP_URL,
+              sha256: "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed",
+              size: 62008
+            }
+          ];
+          for (const source of sources) {
+            if (!source.url) throw new Error("STOCK_R03_PRIVATE_TRANSPORT_MISSING");
+            const download = await fetch(source.url, { cache: "no-store" });
+            if (!download.ok) throw new Error(`STOCK_R03_PRIVATE_DOWNLOAD_HTTP_${download.status}`);
+            const bytes = Buffer.from(await download.arrayBuffer());
+            const actualSha = createHash("sha256").update(bytes).digest("hex");
+            if (bytes.length !== source.size || actualSha !== source.sha256) {
+              throw new Error("STOCK_R03_PRIVATE_ASSET_IDENTITY_MISMATCH");
+            }
+            const chunkSize = 40000;
+            const chunkCount = Math.ceil(bytes.length / chunkSize);
+            for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
+              const chunk = bytes.subarray(chunkIndex * chunkSize, Math.min(bytes.length, (chunkIndex + 1) * chunkSize));
+              const response = await fetch(process.env.STAGE_URL, {
+                method: "POST",
+                headers: {
+                  "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+                  "content-type": "application/json"
+                },
+                body: JSON.stringify({
+                  operationId: process.env.OPERATION_ID,
+                  confirmation: process.env.CONFIRMATION,
+                  assetSha256: source.sha256,
+                  chunkIndex,
+                  chunkCount,
+                  dataBase64: chunk.toString("base64")
+                })
+              });
+              const text = await response.text();
+              const payload = text ? JSON.parse(text) : {};
+              console.log(JSON.stringify({
+                status: payload.status,
+                assetSha256: payload.assetSha256,
+                chunkIndex: payload.chunkIndex,
+                chunkCount: payload.chunkCount,
+                ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+              }));
+              if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+                throw new Error(`STOCK_R03_PRIVATE_STAGE_HTTP_${response.status}`);
+              }
+            }
+          }
+          console.log(JSON.stringify({ status: "STOCK_R03_PRIVATE_ASSETS_STAGED", ETSY_WRITE_COUNT: 0 }));
+          NODE
+
+      - name: Stage exact STOCK R03 Recovery ZIP from encrypted secret chunks
+        if: ${{ inputs.action == 'stage_stock_r03_recovery_zip' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { createHash } = await import("node:crypto");
+          const encodedChunks = [
+            process.env.STOCK_R03_RECOVERY_CHUNK_0,
+            process.env.STOCK_R03_RECOVERY_CHUNK_1,
+            process.env.STOCK_R03_RECOVERY_CHUNK_2,
+            process.env.STOCK_R03_RECOVERY_CHUNK_3
+          ];
+          if (encodedChunks.some((value) => !value)) {
+            throw new Error("STOCK_R03_RECOVERY_PRIVATE_CHUNK_MISSING");
+          }
+          const chunks = encodedChunks.map((value) => Buffer.from(value, "base64"));
+          for (let index = 0; index < chunks.length; index++) {
+            const canonical = chunks[index].toString("base64").replace(/=+$/u, "");
+            if (canonical !== encodedChunks[index].replace(/=+$/u, "")) {
+              throw new Error("STOCK_R03_RECOVERY_PRIVATE_CHUNK_INVALID_BASE64");
+            }
+          }
+          const bytes = Buffer.concat(chunks);
+          const expectedSha = "c62011b1cbd09e3a4de910e0a9fe86e01d5a688dd05f1e2df16c0f8f536fd8ed";
+          const expectedSize = 62008;
+          const actualSha = createHash("sha256").update(bytes).digest("hex");
+          if (bytes.length !== expectedSize || actualSha !== expectedSha) {
+            throw new Error("STOCK_R03_RECOVERY_PRIVATE_ASSET_IDENTITY_MISMATCH");
+          }
+          const carrierOperationId = "PD-STOCK-005-LIVE-CATALOG-V3-R03-API-MINIMAL-001";
+          const chunkCount = chunks.length;
+          for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
+            const response = await fetch(process.env.STAGE_URL, {
+              method: "POST",
+              headers: {
+                "authorization": "Bearer " + process.env.OIDC_TOKEN,
+                "content-type": "application/json"
+              },
+              body: JSON.stringify({
+                operationId: carrierOperationId,
+                confirmation: carrierOperationId,
+                assetSha256: expectedSha,
+                chunkIndex,
+                chunkCount,
+                dataBase64: encodedChunks[chunkIndex]
+              })
+            });
+            const text = await response.text();
+            const payload = text ? JSON.parse(text) : {};
+            console.log(JSON.stringify({
+              status: payload.status,
+              recoveryOperationId: process.env.OPERATION_ID,
+              carrierOperationId,
+              assetSha256: payload.assetSha256,
+              chunkIndex: payload.chunkIndex,
+              chunkCount: payload.chunkCount,
+              ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+            }));
+            if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error("STOCK_R03_RECOVERY_PRIVATE_STAGE_HTTP_" + response.status);
+            }
+          }
+          console.log(JSON.stringify({
+            status: "RECOVERY_ASSET_STAGED",
+            operationId: process.env.OPERATION_ID,
+            carrierOperationId,
+            assetSha256: expectedSha,
+            bytes: expectedSize,
+            ETSY_WRITE_COUNT: 0
+          }));
+          NODE
+
+      - name: Execute exact authorized operation once
+        if: ${{ inputs.action != 'stage_asset_chunk' && inputs.action != 'stage_stock_r03_assets' && inputs.action != 'stage_stock_r03_recovery_zip' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.EXECUTION_URL, {
+            method: "POST",
+            headers: {
+              "authorization": `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              action: process.env.ACTION,
+              authorizationId: process.env.AUTHORIZATION_ID || undefined,
+              protectedStateFingerprint: process.env.PROTECTED_STATE_FINGERPRINT || undefined,
+              authorizationRequestHash: process.env.AUTHORIZATION_REQUEST_HASH || undefined
+            })
+          });
+
+          const text = await response.text();
+          let payload;
+          try { payload = text ? JSON.parse(text) : {}; }
+          catch { payload = { raw: text }; }
+
+          console.log(`HTTP ${response.status}`);
+          console.log(JSON.stringify(payload, null, 2));
+
+          if (process.env.ACTION === "verify_protected_state") {
+            if (!response.ok || payload.status !== "PROTECTED_STATE_MATCH" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error(`PROTECTED_STATE_VERIFICATION_HTTP_${response.status}`);
+            }
+            process.exit(0);
+          }
+          if (process.env.ACTION === "post_release_qc") {
+            if (!response.ok || payload.status !== "POST_RELEASE_QC_PASS" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error("POST_RELEASE_QC_HTTP_" + response.status);
+            }
+            process.exit(0);
+          }
+          if (response.status === 202) {
+            throw new Error("RECONCILIATION_REQUIRED_DO_NOT_RETRY");
+          }
+          if (!response.ok) {
+            throw new Error(`AUTHORIZED_ETSY_HTTP_${response.status}`);
+          }
+
+          const acceptable = new Set(["UPDATED_AND_VERIFIED", "PUBLISHED_AND_VERIFIED", "RECONCILED", "REPLAY"]);
+          if (!acceptable.has(payload.status)) {
+            throw new Error(`AUTHORIZED_ETSY_NONTERMINAL_${payload.status ?? "UNKNOWN"}`);
+          }
+          NODE || { echo "Invalid DAY03 R03 production_commit"; exit 1; }
               fi
               if [ "$OPERATION_ID" = "PDT-BOBA-001-R02-VIDEO-REPAIR-001" ]; then
                 test -n "$AUTHORIZATION_ID" || { echo "Missing R02 video authorization_id"; exit 1; }
