@@ -621,7 +621,9 @@ function moneyDecimal(value: unknown) {
   return amount / divisor;
 }
 
-async function readInventory(fetchImpl: typeof fetch, token: string, listingId: number) {
+type InventoryRecord = Rec & { products: Rec[] };
+
+async function readInventory(fetchImpl: typeof fetch, token: string, listingId: number): Promise<InventoryRecord> {
   const response = await fetchImpl(
     `https://api.etsy.com/v3/application/listings/${listingId}/inventory`,
     { method: "GET", headers: etsyApiHeaders(token), cache: "no-store" }
@@ -630,7 +632,7 @@ async function readInventory(fetchImpl: typeof fetch, token: string, listingId: 
   if (!response.ok || !isRec(value) || !Array.isArray(value.products)) {
     throw new Error(`PDT_IPT_R03_INVENTORY_READ_FAILED:${response.status}`);
   }
-  return value;
+  return { ...value, products: value.products.filter(isRec) } as InventoryRecord;
 }
 
 async function ensureSku(
