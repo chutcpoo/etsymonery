@@ -62,6 +62,7 @@ type Runtime = {
   repository?: OperationLedgerRepository;
   loadAsset?: (asset: Asset | VideoAsset) => Promise<Buffer>;
   clearAsset?: (asset: Asset | VideoAsset) => Promise<void>;
+  verifyAsset?: (bytes: Buffer, asset: Asset | VideoAsset) => boolean;
   now?: () => string;
 };
 
@@ -547,12 +548,12 @@ async function preloadAssets(runtime: Runtime) {
   const loaded = new Map<string, Buffer>();
   for (const asset of PDT_IPT_001_R03_DRAFT_ASSETS) {
     const bytes = await load(asset);
-    if (bytes.length !== asset.sizeBytes) {
-      throw new Error(`PDT_IPT_R03_ASSET_SIZE_MISMATCH:${asset.fileName}`);
-    }
-    const actualSha = createHash("sha256").update(bytes).digest("hex");
-    if (actualSha !== asset.sha256) {
-      throw new Error(`PDT_IPT_R03_ASSET_SHA256_MISMATCH:${asset.fileName}`);
+    const verified = runtime.verifyAsset
+      ? runtime.verifyAsset(bytes, asset)
+      : bytes.length === asset.sizeBytes &&
+        createHash("sha256").update(bytes).digest("hex") === asset.sha256;
+    if (!verified) {
+      throw new Error(`PDT_IPT_R03_ASSET_IDENTITY_MISMATCH:${asset.fileName}`);
     }
     loaded.set(asset.sha256, bytes);
   }
