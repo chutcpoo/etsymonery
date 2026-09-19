@@ -32,7 +32,7 @@ import {
 
 const WRITE_HEADER = "x-autodigitalpublisher-write-token";
 const SHA256 = /^[a-f0-9]{64}$/;
-const AUTHORIZATION_ID = /^PDT-IPT-001-R03-DRAFT-RECOVERY-R02-AUTH-20260919-[0-9]{2}$/;
+const AUTHORIZATION_ID = /^PDT-IPT-001-R03-DRAFT-RECOVERY-R03-AUTH-20260919-[0-9]{2}$/;
 const COMMIT_SHA = /^[a-f0-9]{40}$/;
 
 type Rec = Record<string, unknown>;
@@ -249,7 +249,7 @@ const VIDEO = Object.freeze({
 
 export const PDT_IPT_001_R03_DRAFT = Object.freeze({
   operation: "CREATE_NEW_DIGITAL_DRAFT_EXACT_R03_ONLY",
-  operationId: "PDT-IPT-001-R03-DRAFT-RECOVERY-R02-001",
+  operationId: "PDT-IPT-001-R03-DRAFT-RECOVERY-R03-001",
   productId: "PDT-IPT-001",
   productVersion: "V1",
   shopId: "23582741",
@@ -333,6 +333,39 @@ function observation(value: Rec): EtsyReadBackObservation {
     type: value.listing_type ?? value.type ?? "download",
     state: value.state
   };
+}
+
+function safeProviderErrorText(responseText: string) {
+  let detail = responseText;
+  try {
+    const parsed = responseText ? JSON.parse(responseText) as Record<string, unknown> : {};
+    const candidates = [parsed.error, parsed.message, parsed.detail, parsed.error_message];
+    const found = candidates.find((value) => typeof value === "string");
+    if (typeof found === "string") detail = found;
+  } catch {}
+  return detail
+    .normalize("NFC")
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/[^\p{L}\p{Nd}\p{P}\p{Sm}\p{Zs}]/gu, "")
+    .trim()
+    .slice(0, 300);
+}
+
+function coreDraftMatches(value: Rec) {
+  let price = Number.NaN;
+  try { price = moneyDecimal(value.price); } catch {}
+  return (
+    value.title === PDT_IPT_001_R03_DRAFT.title &&
+    value.description === PDT_IPT_001_R03_DRAFT.description &&
+    Math.abs(price - PDT_IPT_001_R03_DRAFT.priceUsd) <= 0.005 &&
+    Number(value.quantity) === PDT_IPT_001_R03_DRAFT.quantity &&
+    value.who_made === PDT_IPT_001_R03_DRAFT.whoMade &&
+    value.when_made === PDT_IPT_001_R03_DRAFT.whenMade &&
+    Number(value.taxonomy_id) === PDT_IPT_001_R03_DRAFT.taxonomyId &&
+    value.is_supply === false &&
+    (value.listing_type ?? value.type) === "download" &&
+    value.state === "draft"
+  );
 }
 function authError(request: Request) {
   const expected = process.env.ETSY_B01_WRITE_TOKEN?.trim() ?? "";
@@ -438,6 +471,7 @@ export function exactPdtIpt001R03DraftBody(
     sku: PDT_IPT_001_R03_DRAFT.sku,
     isSupply: false,
     shouldAutoRenew: true,
+    createStrategy: "MINIMAL_REQUIRED_THEN_SETTINGS_PATCH",
     gallerySha256: PDT_IPT_001_R03_DRAFT.gallery.map((asset) => asset.sha256),
     galleryAltText: PDT_IPT_001_R03_DRAFT.gallery.map((asset) => asset.altText),
     buyerFileSha256: PDT_IPT_001_R03_DRAFT.buyerFile.sha256,
@@ -473,11 +507,7 @@ class R03DraftProvider implements ReconciledWriteProvider {
       const id = positiveId(item.listing_id);
       if (!id) continue;
       const detail = await fetchListing(this.fetchImpl, this.token, id);
-      const identity = verifyEtsyReadBackIdentity(
-        PDT_IPT_001_R03_DRAFT.listingFingerprint,
-        observation(detail)
-      );
-      if (identity.status === "MATCH") matches.push(id);
+      if (coreDraftMatches(detail)) matches.push(id);
     }
     return matches;
   }
@@ -493,9 +523,7 @@ class R03DraftProvider implements ReconciledWriteProvider {
       when_made: PDT_IPT_001_R03_DRAFT.whenMade,
       taxonomy_id: String(PDT_IPT_001_R03_DRAFT.taxonomyId),
       is_supply: "false",
-      should_auto_renew: "true",
-      type: "download",
-      tags: PDT_IPT_001_R03_DRAFT.tags.join(",")
+      type: "download"
     });
     let response: Response;
     try {
@@ -517,17 +545,7 @@ class R03DraftProvider implements ReconciledWriteProvider {
     if (response.status >= 500) throw new ProviderAmbiguousResultError();
     const responseText = await response.text();
     if (!response.ok) {
-      let providerError = "";
-      try {
-        const parsed = responseText ? JSON.parse(responseText) as { error?: unknown } : {};
-        if (typeof parsed.error === "string") providerError = parsed.error;
-      } catch {}
-      const safe = providerError
-        .normalize("NFC")
-        .replace(/[\r\n\t]+/g, " ")
-        .replace(/[^\p{L}\p{Nd}\p{P}\p{Sm}\p{Zs}]/gu, "")
-        .trim()
-        .slice(0, 240);
+      const safe = safeProviderErrorText(responseText);
       throw new Error(`PDT_IPT_R03_DRAFT_CREATE_REJECTED:${response.status}${safe ? `:${safe}` : ""}`);
     }
     let value: unknown = {};
@@ -536,15 +554,11 @@ class R03DraftProvider implements ReconciledWriteProvider {
     const id = positiveId(value.listing_id);
     if (!id) throw new ProviderAmbiguousResultError();
     const detail = await fetchListing(this.fetchImpl, this.token, id);
-    const identity = verifyEtsyReadBackIdentity(
-      PDT_IPT_001_R03_DRAFT.listingFingerprint,
-      observation(detail)
-    );
-    if (identity.status !== "MATCH") throw new ProviderAmbiguousResultError();
+    if (!coreDraftMatches(detail)) throw new ProviderAmbiguousResultError();
     return {
       providerResourceId: id,
       kind: "CREATE_DRAFT",
-      metadata: { listingFingerprint: identity.actualFingerprint }
+      metadata: { coreDraftVerified: true }
     };
   }
 
@@ -558,6 +572,108 @@ class R03DraftProvider implements ReconciledWriteProvider {
       metadata: { readBack: true }
     };
   }
+}
+
+async function applyOptionalListingSettings(
+  draftListingId: number,
+  token: string,
+  repository: OperationLedgerRepository,
+  now: string,
+  fetchImpl: typeof fetch
+) {
+  const operationId = `${PDT_IPT_001_R03_DRAFT.operationId}:SETTINGS`;
+  const payload = {
+    draftListingId,
+    candidateFingerprint: PDT_IPT_001_R03_DRAFT.candidateFingerprint,
+    tags: [...PDT_IPT_001_R03_DRAFT.tags],
+    shouldAutoRenew: true
+  };
+  const existing = await repository.load(operationId);
+  if (existing?.status === "SUCCEEDED") return existing.receipt ?? {};
+  if (existing) throw new Error("PDT_IPT_R03_SETTINGS_OPERATION_ALREADY_CLAIMED");
+
+  const before = await fetchListing(fetchImpl, token, String(draftListingId));
+  if (!coreDraftMatches(before)) throw new Error("PDT_IPT_R03_PRE_SETTINGS_CORE_IDENTITY_MISMATCH");
+
+  const begun = await beginOperation(repository, operationId, payload, now);
+  if (begun.status !== "STARTED") throw new Error("PDT_IPT_R03_SETTINGS_OPERATION_ALREADY_CLAIMED");
+
+  const body = new URLSearchParams({
+    tags: PDT_IPT_001_R03_DRAFT.tags.join(","),
+    should_auto_renew: "true"
+  });
+  let response: Response;
+  try {
+    response = await fetchImpl(
+      `https://api.etsy.com/v3/application/shops/${PDT_IPT_001_R03_DRAFT.shopId}/listings/${draftListingId}`,
+      {
+        method: "PATCH",
+        headers: {
+          ...etsyApiHeaders(token),
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        body,
+        cache: "no-store"
+      }
+    );
+  } catch {
+    await recordOperationResult(
+      repository,
+      operationId,
+      begun.record.requestHash,
+      "RECONCILIATION_REQUIRED",
+      now,
+      { recoveryPoint: "SETTINGS_PATCH_RESPONSE_AMBIGUOUS" }
+    );
+    throw new Error("PDT_IPT_R03_SETTINGS_RECONCILIATION_REQUIRED");
+  }
+
+  const responseText = await response.text();
+  const after = await fetchListing(fetchImpl, token, String(draftListingId));
+  const identity = verifyEtsyReadBackIdentity(
+    PDT_IPT_001_R03_DRAFT.listingFingerprint,
+    observation(after)
+  );
+  const matched = identity.status === "MATCH" && after.should_auto_renew === true;
+
+  if (!response.ok && !matched) {
+    const safe = safeProviderErrorText(responseText);
+    await recordOperationResult(
+      repository,
+      operationId,
+      begun.record.requestHash,
+      response.status >= 500 ? "RECONCILIATION_REQUIRED" : "FAILED",
+      now,
+      { recoveryPoint: `SETTINGS_PATCH_HTTP_${response.status}${safe ? `:${safe}` : ""}` }
+    );
+    throw new Error(`PDT_IPT_R03_SETTINGS_PATCH_REJECTED:${response.status}${safe ? `:${safe}` : ""}`);
+  }
+  if (!matched) {
+    await recordOperationResult(
+      repository,
+      operationId,
+      begun.record.requestHash,
+      "RECONCILIATION_REQUIRED",
+      now,
+      { recoveryPoint: "SETTINGS_PATCH_READBACK_MISMATCH" }
+    );
+    throw new Error("PDT_IPT_R03_SETTINGS_RECONCILIATION_REQUIRED");
+  }
+
+  return (await recordOperationResult(
+    repository,
+    operationId,
+    begun.record.requestHash,
+    "SUCCEEDED",
+    now,
+    {
+      receipt: {
+        listingFingerprint: identity.actualFingerprint,
+        shouldAutoRenew: true,
+        tagCount: PDT_IPT_001_R03_DRAFT.tags.length
+      }
+    }
+  )).receipt ?? {};
 }
 
 async function preloadAssets(runtime: Runtime) {
@@ -1044,6 +1160,7 @@ export async function handlePdtIpt001R03Draft(
       if (!draftId) throw new Error("PDT_IPT_R03_DRAFT_ID_INVALID");
       const draftListingId = Number(draftId);
 
+      await applyOptionalListingSettings(draftListingId, token, repository, now, fetchImpl);
       await ensureSku(draftListingId, token, repository, now, fetchImpl);
 
       const assetReceipts: ProviderReceipt[] = [];
@@ -1087,7 +1204,7 @@ export async function handlePdtIpt001R03Draft(
             verified,
             publishPerformed: false,
             DAY03_OPERATION_WRITE_COUNT: 1,
-            ETSY_PROVIDER_WRITE_COUNT: 14,
+            ETSY_PROVIDER_WRITE_COUNT: 15,
             sellerUiFieldsPending: [
               "creation disclosure / ai_gen",
               "Featured OFF if not exposed by listing readback",
@@ -1121,7 +1238,7 @@ export async function handlePdtIpt001R03Draft(
         verified,
         publishPerformed: false,
         DAY03_OPERATION_WRITE_COUNT: 1,
-        ETSY_PROVIDER_WRITE_COUNT: 14,
+        ETSY_PROVIDER_WRITE_COUNT: 15,
         sellerUiGateRequired: true,
         sellerUiFieldsPending: done.receipt?.sellerUiFieldsPending
       });
