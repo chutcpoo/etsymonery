@@ -10,6 +10,10 @@ import { PDT_BOBA_001_B01_ZIP_UPLOAD_RECOVERY_002 } from "../../../../../../lib/
 import { PDT_BOBA_001_R02_VIDEO_REPAIR } from "../../../../../../lib/pdt-boba-001-r02-video-repair";
 import { PDT_BPSC_001_C09, PDT_BPSC_001_C09_ASSETS } from "../../../../../../lib/pdt-bpsc-001-c09-new-listing";
 import { stageAuthorizedAssetChunk } from "../../../../../../lib/authorized-operation-asset-store";
+import {
+  PDT_IPT_001_R03_DRAFT,
+  PDT_IPT_001_R03_DRAFT_ASSETS
+} from "../../../../../../lib/pdt-ipt-001-r03-draft";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -86,6 +90,10 @@ export async function POST(request:Request){
     registeredAssetSha256=PDT_BOBA_001_R02_VIDEO_REPAIR.asset.sha256;
   }else if(operationId===PDT_BPSC_001_C09.operationId){
     const asset=PDT_BPSC_001_C09_ASSETS.find(candidate=>candidate.sha256===requestedAssetSha256);
+    if(!asset)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
+    registeredAssetSha256=asset.sha256;
+  }else if(operationId===PDT_IPT_001_R03_DRAFT.operationId){
+    const asset=PDT_IPT_001_R03_DRAFT_ASSETS.find(candidate=>candidate.sha256===requestedAssetSha256);
     if(!asset)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
     registeredAssetSha256=asset.sha256;
   }else{

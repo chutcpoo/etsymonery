@@ -19,6 +19,7 @@ export type EtsyDraftAssetPayload = {
   assetSha256: string;
   assetName: string;
   rank: number;
+  altText?: string;
 };
 
 type EtsyDraftAssetProviderDependencies = {
@@ -174,6 +175,9 @@ export class EtsyDraftAssetProvider implements ReconciledWriteProvider {
     const field = this.payload.operationKind === "UPLOAD_IMAGE" ? "image" : "file";
     body.append(field, this.asset, this.payload.assetName);
     if (this.payload.operationKind === "UPLOAD_FILE") body.append("name", this.payload.assetName);
+    if (this.payload.operationKind === "UPLOAD_IMAGE" && this.payload.altText?.trim()) {
+      body.append("alt_text", this.payload.altText.normalize("NFC").trim());
+    }
     body.append("rank", String(this.payload.rank));
 
     let response: Response;
