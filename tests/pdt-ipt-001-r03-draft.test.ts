@@ -14,7 +14,11 @@ import {
 const COMMIT = "a".repeat(40);
 const TOKEN = "write-token";
 
-function listingRecord(id = 9000000001) {
+function listingRecord(
+  id = 9000000001,
+  tags: string[] = [],
+  shouldAutoRenew = false
+) {
   return {
     listing_id: id,
     shop_id: 23582741,
@@ -22,14 +26,14 @@ function listingRecord(id = 9000000001) {
     title: PDT_IPT_001_R03_DRAFT.title,
     description: PDT_IPT_001_R03_DRAFT.description,
     price: { amount: 690, divisor: 100, currency_code: "USD" },
-    tags: [...PDT_IPT_001_R03_DRAFT.tags],
+    tags,
     quantity: PDT_IPT_001_R03_DRAFT.quantity,
     who_made: PDT_IPT_001_R03_DRAFT.whoMade,
     when_made: PDT_IPT_001_R03_DRAFT.whenMade,
     taxonomy_id: PDT_IPT_001_R03_DRAFT.taxonomyId,
     listing_type: "download",
     is_supply: false,
-    should_auto_renew: true
+    should_auto_renew: shouldAutoRenew
   };
 }
 
@@ -111,6 +115,8 @@ test("full DAY03 executor creates exactly one verified draft package and never p
     const listingId = 9000000001;
     let created = false;
     let sku = "";
+    let listingTags: string[] = [];
+    let shouldAutoRenew = false;
     const images: Record<string, unknown>[] = [];
     const files: Record<string, unknown>[] = [];
     const videos: Record<string, unknown>[] = [];
@@ -132,7 +138,8 @@ test("full DAY03 executor creates exactly one verified draft package and never p
         assert.equal(created, false);
         const body = new URLSearchParams(String(init?.body ?? ""));
         assert.equal(body.get("is_supply"), "false");
-        assert.equal(body.get("should_auto_renew"), "true");
+        assert.equal(body.get("should_auto_renew"), null);
+        assert.equal(body.get("tags"), null);
         assert.equal(body.get("type"), "download");
         assert.equal(init?.headers && new Headers(init.headers).get("content-type"), "application/x-www-form-urlencoded; charset=utf-8");
         created = true;
@@ -141,7 +148,15 @@ test("full DAY03 executor creates exactly one verified draft package and never p
 
       if (url.pathname === `/v3/application/listings/${listingId}` && method === "GET") {
         assert.equal(created, true);
-        return Response.json(listingRecord(listingId));
+        return Response.json(listingRecord(listingId, listingTags, shouldAutoRenew));
+      }
+
+      if (url.pathname === `/v3/application/shops/23582741/listings/${listingId}` && method === "PATCH") {
+        writeCalls.push({ method, url: url.toString() });
+        const body = new URLSearchParams(String(init?.body ?? ""));
+        listingTags = String(body.get("tags") ?? "").split(",").filter(Boolean);
+        shouldAutoRenew = body.get("should_auto_renew") === "true";
+        return Response.json(listingRecord(listingId, listingTags, shouldAutoRenew));
       }
 
       if (url.pathname === `/v3/application/listings/${listingId}/inventory` && method === "GET") {
@@ -242,7 +257,7 @@ test("full DAY03 executor creates exactly one verified draft package and never p
 
     const psvResponse = await verifyPdtIpt001R03DraftProtectedState(runtime);
     const psv = await psvResponse.json() as { protectedStateFingerprint: string };
-    const authorizationId = "PDT-IPT-001-R03-DRAFT-RECOVERY-R02-AUTH-20260919-01";
+    const authorizationId = "PDT-IPT-001-R03-DRAFT-RECOVERY-R03-AUTH-20260919-01";
     const body = exactPdtIpt001R03DraftBody(
       authorizationId,
       psv.protectedStateFingerprint,
@@ -271,13 +286,13 @@ test("full DAY03 executor creates exactly one verified draft package and never p
     assert.equal(payload.draftListingId, listingId);
     assert.equal(payload.publishPerformed, false);
     assert.equal(payload.DAY03_OPERATION_WRITE_COUNT, 1);
-    assert.equal(payload.ETSY_PROVIDER_WRITE_COUNT, 14);
+    assert.equal(payload.ETSY_PROVIDER_WRITE_COUNT, 15);
     assert.equal(images.length, 10);
     assert.equal(files.length, 1);
     assert.equal(videos.length, 1);
     assert.equal(sku, "PDT-IPT-001");
-    assert.equal(writeCalls.length, 14);
-    assert.equal(writeCalls.some((call) => call.method === "PATCH"), false);
+    assert.equal(writeCalls.length, 15);
+    assert.equal(writeCalls.filter((call) => call.method === "PATCH").length, 1);
     assert.equal(writeCalls.some((call) => call.method === "DELETE"), false);
     assert.equal(
       writeCalls.some((call) => call.url.includes("state=active")),
@@ -293,7 +308,7 @@ test("executor fails closed before provider writes when authorized production co
       if ((init?.method ?? "GET") !== "GET") writes += 1;
       return Response.json({ count: 0, results: [] });
     };
-    const authorizationId = "PDT-IPT-001-R03-DRAFT-RECOVERY-R02-AUTH-20260919-01";
+    const authorizationId = "PDT-IPT-001-R03-DRAFT-RECOVERY-R03-AUTH-20260919-01";
     const protectedState = "b".repeat(64);
     const wrongCommit = "c".repeat(40);
     const body = exactPdtIpt001R03DraftBody(authorizationId, protectedState, wrongCommit);
