@@ -2,6 +2,7 @@ import {
   createCandidateFingerprint,
   createListingFingerprint
 } from "./candidate-fingerprint";
+import { validateAuthoritativeCandidateBinding } from "./authoritative-candidate-binding";
 import type {
   Channel,
   ChannelPlan,
@@ -75,6 +76,15 @@ function validateEtsy(pack: ProductPack, errors: string[]) {
   if (release?.productionAuthorized === true) {
     if (release.testerPass !== true) errors.push("PRODUCTION_AUTH_REQUIRES_TESTER_PASS");
     if (release.finalQcPass !== true) errors.push("PRODUCTION_AUTH_REQUIRES_FINAL_QC_PASS");
+  }
+
+  if (release?.authoritativeCandidate) {
+    const authoritative = validateAuthoritativeCandidateBinding(release.authoritativeCandidate, {
+      productId: pack.productId,
+      listingIdentity: etsyListingIdentity(pack),
+      buyerFileNames: pack.files
+    });
+    errors.push(...authoritative.errors);
   }
 }
 
@@ -155,12 +165,32 @@ function channelPlan(
       digital: true
     };
 
+    const authoritativeInput = pack.etsy?.release?.authoritativeCandidate;
+    const authoritative = authoritativeInput
+      ? validateAuthoritativeCandidateBinding(authoritativeInput, {
+          productId: pack.productId,
+          listingIdentity,
+          buyerFileNames: pack.files
+        })
+      : null;
+
     return {
       channel,
       action: "CREATE_DRAFT",
       payload,
-      candidateFingerprint: createCandidateFingerprint(payload),
-      listingFingerprint: createListingFingerprint(listingIdentity),
+      candidateFingerprint: authoritative?.pass
+        ? authoritative.candidateFingerprint
+        : createCandidateFingerprint(payload),
+      listingFingerprint: authoritative?.pass
+        ? authoritative.listingFingerprint
+        : createListingFingerprint(listingIdentity),
+      ...(authoritative?.pass
+        ? {
+            candidateId: authoritative.candidateId,
+            authoritativeCandidateBound: true,
+            authoritativeCandidate: authoritative.authoritativeCandidate
+          }
+        : {}),
       releaseState,
       draftWriteAllowed: etsyDraftWritesEnabled,
       liveWriteAllowed: false,
