@@ -14,6 +14,10 @@ import {
   PDT_IPT_001_R03_DRAFT,
   PDT_IPT_001_R03_DRAFT_ASSETS
 } from "../../../../../../lib/pdt-ipt-001-r03-draft";
+import {
+  PDT_IPT_001_R04_DRAFT,
+  PDT_IPT_001_R04_DRAFT_ASSETS
+} from "../../../../../../lib/pdt-ipt-001-r04-draft";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -97,6 +101,10 @@ export async function POST(request:Request){
     registeredAssetSha256=asset.sha256;
   }else if(operationId===PDT_IPT_001_R03_DRAFT.operationId){
     const asset=PDT_IPT_001_R03_DRAFT_ASSETS.find(candidate=>candidate.sha256===requestedAssetSha256);
+    if(!asset)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
+    registeredAssetSha256=asset.sha256;
+  }else if(operationId===PDT_IPT_001_R04_DRAFT.operationId){
+    const asset=PDT_IPT_001_R04_DRAFT_ASSETS.find(candidate=>candidate.sha256===requestedAssetSha256);
     if(!asset)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
     registeredAssetSha256=asset.sha256;
   }else{
