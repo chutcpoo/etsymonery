@@ -2,11 +2,33 @@ export type Channel = "etsy" | "gumroad" | "payhip";
 
 export type EtsyWhoMade = "i_did" | "collective" | "someone_else";
 
+export type AuthoritativeArtifactIdentity = {
+  driveId: string;
+  sha256: string;
+  fileName?: string;
+  altText?: string;
+};
+
+export type AuthoritativeCandidateBinding = {
+  schemaVersion: "1.0.0";
+  candidateId: string;
+  candidateFingerprint: string;
+  listingFingerprint: string;
+  productId: string;
+  buyerWorkbook: AuthoritativeArtifactIdentity;
+  gallery: AuthoritativeArtifactIdentity[];
+  video: AuthoritativeArtifactIdentity;
+  testerPassFingerprint: string;
+  finalQcPassFingerprint: string;
+  listingSettings: Record<string, unknown>;
+};
+
 export type EtsyReleaseGate = {
   productionBuildFrozen?: boolean;
   testerPass?: boolean;
   finalQcPass?: boolean;
   productionAuthorized?: boolean;
+  authoritativeCandidate?: AuthoritativeCandidateBinding;
 };
 
 export type EtsyDraftInput = {
@@ -47,6 +69,9 @@ export type ChannelPlan = {
   payload: Record<string, unknown>;
   candidateFingerprint?: string;
   listingFingerprint?: string;
+  candidateId?: string;
+  authoritativeCandidateBound?: boolean;
+  authoritativeCandidate?: AuthoritativeCandidateBinding;
   releaseState?: EtsyReleaseState;
   draftWriteAllowed?: boolean;
   liveWriteAllowed?: boolean;
