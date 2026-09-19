@@ -27,7 +27,9 @@ function listingRecord(id = 9000000001) {
     who_made: PDT_IPT_001_R03_DRAFT.whoMade,
     when_made: PDT_IPT_001_R03_DRAFT.whenMade,
     taxonomy_id: PDT_IPT_001_R03_DRAFT.taxonomyId,
-    listing_type: "download"
+    listing_type: "download",
+    is_supply: false,
+    should_auto_renew: true
   };
 }
 
@@ -128,6 +130,10 @@ test("full DAY03 executor creates exactly one verified draft package and never p
       if (url.pathname === "/v3/application/shops/23582741/listings" && method === "POST") {
         writeCalls.push({ method, url: url.toString() });
         assert.equal(created, false);
+        const body = new URLSearchParams(String(init?.body ?? ""));
+        assert.equal(body.get("is_supply"), "false");
+        assert.equal(body.get("should_auto_renew"), "true");
+        assert.equal(body.get("type"), "download");
         created = true;
         return Response.json({ listing_id: listingId }, { status: 201 });
       }
@@ -235,7 +241,7 @@ test("full DAY03 executor creates exactly one verified draft package and never p
 
     const psvResponse = await verifyPdtIpt001R03DraftProtectedState(runtime);
     const psv = await psvResponse.json() as { protectedStateFingerprint: string };
-    const authorizationId = "PDT-IPT-001-R03-DRAFT-AUTH-20260919-02";
+    const authorizationId = "PDT-IPT-001-R03-DRAFT-RECOVERY-R01-AUTH-20260919-01";
     const body = exactPdtIpt001R03DraftBody(
       authorizationId,
       psv.protectedStateFingerprint,
@@ -286,7 +292,7 @@ test("executor fails closed before provider writes when authorized production co
       if ((init?.method ?? "GET") !== "GET") writes += 1;
       return Response.json({ count: 0, results: [] });
     };
-    const authorizationId = "PDT-IPT-001-R03-DRAFT-AUTH-20260919-02";
+    const authorizationId = "PDT-IPT-001-R03-DRAFT-RECOVERY-R01-AUTH-20260919-01";
     const protectedState = "b".repeat(64);
     const wrongCommit = "c".repeat(40);
     const body = exactPdtIpt001R03DraftBody(authorizationId, protectedState, wrongCommit);
