@@ -1,3 +1,4 @@
+import { IMAGE01_V2_RELEASE, IMAGE01_V2_TARGETS } from "../../../../../../lib/poonthaidigital-image01-v2-9of9-release";
 import { PD_STOCK_005_R03 } from "../../../../../../lib/pd-stock-005-live-catalog-v3-r03";
 import { NextResponse } from "next/server";
 import { PD_REST_003_A02 } from "../../../../../../lib/pd-rest-003-a02-title-tags-image1";
@@ -52,7 +53,11 @@ export async function POST(request:Request){
   if(!operationId||confirmation!==operationId)return NextResponse.json({error:"AUTHORIZED_ETSY_CONFIRMATION_MISMATCH"},{status:409});
 
   let registeredAssetSha256="";
-  if(operationId===PD_STOCK_005_R03.operationId){
+  if(operationId===IMAGE01_V2_RELEASE.operationId){
+    const asset=IMAGE01_V2_TARGETS.find(candidate=>candidate.sha256===requestedAssetSha256);
+    if(!asset)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
+    registeredAssetSha256=asset.sha256;
+  }else   if(operationId===PD_STOCK_005_R03.operationId){
     const asset=PD_STOCK_005_R03.targets.find(candidate=>candidate.sha256===requestedAssetSha256);
     if(!asset)return NextResponse.json({error:"AUTHORIZED_ETSY_ASSET_NOT_REGISTERED"},{status:409});
     registeredAssetSha256=asset.sha256;

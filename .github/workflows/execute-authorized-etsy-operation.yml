@@ -125,7 +125,7 @@ jobs:
               ;;
             verify_protected_state) ;;
             post_release_qc)
-              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001" -o "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R02-001" || { echo "Post-release QC is STOCK R03 Recovery only"; exit 1; }
+              test "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R01-001" -o "$OPERATION_ID" = "PD-STOCK-005-LIVE-CATALOG-V3-R03-RECOVERY-R02-001" -o "$OPERATION_ID" = "POONTHAIDIGITAL-IMAGE01-V2-9OF9-RELEASE-001" || { echo "Post-release QC operation not allowed"; exit 1; }
               ;;
             stage_asset_chunk)
               test "$CHUNK_COUNT" -ge 1 || { echo "Invalid chunk_count"; exit 1; }

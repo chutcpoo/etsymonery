@@ -1,3 +1,4 @@
+import { IMAGE01_V2_RELEASE, executeImage01V2Release, postReleaseQcImage01V2, verifyImage01V2ProtectedState } from "../../../../../lib/poonthaidigital-image01-v2-9of9-release";
 import { exactPdStock005R03Body, handlePdStock005R03, PD_STOCK_005_R03, verifyPdStock005R03ProtectedState } from "../../../../../lib/pd-stock-005-live-catalog-v3-r03";
 import { exactPdStock005R03RecoveryR01Body, handlePdStock005R03RecoveryR01, PD_STOCK_005_R03_RECOVERY_R01, verifyPdStock005R03RecoveryR01PostRelease, verifyPdStock005R03RecoveryR01ProtectedState } from "../../../../../lib/pd-stock-005-r03-recovery-r01";
 import { exactPdStock005R03RecoveryR02Body, handlePdStock005R03RecoveryR02, PD_STOCK_005_R03_RECOVERY_R02, verifyPdStock005R03RecoveryR02PostRelease, verifyPdStock005R03RecoveryR02ProtectedState } from "../../../../../lib/pd-stock-005-r03-recovery-r02";
@@ -155,9 +156,12 @@ export async function POST(request: Request) {
     operationId !== PDT_BOBA_001_R02_VIDEO_REPAIR.operationId &&
     operationId !== PDT_BOBA_001_R02_DELETE_OLD_RECOVERY.operationId &&
     operationId !== PDT_PCSO_001_C03.operationId &&
+    operationId !== IMAGE01_V2_RELEASE.operationId &&
     operationId !== PDT_BPSC_001_C09.operationId
   ) return NextResponse.json({ error: "AUTHORIZED_ETSY_OPERATION_NOT_REGISTERED" }, { status: 409 });
 
+  if (operationId === IMAGE01_V2_RELEASE.operationId && input.action === "verify_protected_state") return verifyImage01V2ProtectedState();
+  if (operationId === IMAGE01_V2_RELEASE.operationId && input.action === "post_release_qc") return postReleaseQcImage01V2();
   if (operationId === PD_STOCK_005_R03.operationId && input.action === "verify_protected_state") return verifyPdStock005R03ProtectedState();
   if (operationId === PD_STOCK_005_R03_RECOVERY_R01.operationId && input.action === "verify_protected_state") return verifyPdStock005R03RecoveryR01ProtectedState();
   if (operationId === PD_STOCK_005_R03_RECOVERY_R01.operationId && input.action === "post_release_qc") return verifyPdStock005R03RecoveryR01PostRelease();
@@ -179,6 +183,15 @@ export async function POST(request: Request) {
   const writeToken = process.env.ETSY_B01_WRITE_TOKEN?.trim() ?? "";
   if (!writeToken) return NextResponse.json({ error: "AUTHORIZED_ETSY_WRITE_TOKEN_NOT_CONFIGURED" }, { status: 503 });
 
+  if (operationId === IMAGE01_V2_RELEASE.operationId) {
+    const authorizationId = typeof input.authorizationId === "string" ? input.authorizationId.trim() : "";
+    const protectedStateFingerprint = typeof input.protectedStateFingerprint === "string" ? input.protectedStateFingerprint.trim().toLowerCase() : "";
+    const authorizationRequestHash = typeof input.authorizationRequestHash === "string" ? input.authorizationRequestHash.trim().toLowerCase() : "";
+    if (!authorizationId || !protectedStateFingerprint || !authorizationRequestHash) {
+      return NextResponse.json({ error: "IMAGE01_V2_EXACT_AUTHORIZATION_BINDING_REQUIRED" }, { status: 409 });
+    }
+    return executeImage01V2Release({ authorizationId, protectedStateFingerprint, authorizationRequestHash });
+  }
   if (operationId === PDT_BPSC_001_C09.operationId) {
     const authorizationId = typeof input.authorizationId === "string" ? input.authorizationId.trim() : "";
     const protectedStateFingerprint = typeof input.protectedStateFingerprint === "string" ? input.protectedStateFingerprint.trim().toLowerCase() : "";
