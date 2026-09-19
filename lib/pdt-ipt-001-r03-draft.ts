@@ -32,7 +32,7 @@ import {
 
 const WRITE_HEADER = "x-autodigitalpublisher-write-token";
 const SHA256 = /^[a-f0-9]{64}$/;
-const AUTHORIZATION_ID = /^PDT-IPT-001-R03-DRAFT-RECOVERY-R01-AUTH-20260919-[0-9]{2}$/;
+const AUTHORIZATION_ID = /^PDT-IPT-001-R03-DRAFT-RECOVERY-R02-AUTH-20260919-[0-9]{2}$/;
 const COMMIT_SHA = /^[a-f0-9]{40}$/;
 
 type Rec = Record<string, unknown>;
@@ -249,7 +249,7 @@ const VIDEO = Object.freeze({
 
 export const PDT_IPT_001_R03_DRAFT = Object.freeze({
   operation: "CREATE_NEW_DIGITAL_DRAFT_EXACT_R03_ONLY",
-  operationId: "PDT-IPT-001-R03-DRAFT-RECOVERY-R01-001",
+  operationId: "PDT-IPT-001-R03-DRAFT-RECOVERY-R02-001",
   productId: "PDT-IPT-001",
   productVersion: "V1",
   shopId: "23582741",
@@ -505,7 +505,7 @@ class R03DraftProvider implements ReconciledWriteProvider {
           method: "POST",
           headers: {
             ...etsyApiHeaders(this.token),
-            "content-type": "application/x-www-form-urlencoded"
+            "content-type": "application/x-www-form-urlencoded; charset=utf-8"
           },
           body,
           cache: "no-store"
@@ -515,8 +515,23 @@ class R03DraftProvider implements ReconciledWriteProvider {
       throw new ProviderAmbiguousResultError();
     }
     if (response.status >= 500) throw new ProviderAmbiguousResultError();
-    if (!response.ok) throw new Error(`PDT_IPT_R03_DRAFT_CREATE_REJECTED:${response.status}`);
-    const value = await parseJson(response);
+    const responseText = await response.text();
+    if (!response.ok) {
+      let providerError = "";
+      try {
+        const parsed = responseText ? JSON.parse(responseText) as { error?: unknown } : {};
+        if (typeof parsed.error === "string") providerError = parsed.error;
+      } catch {}
+      const safe = providerError
+        .normalize("NFC")
+        .replace(/[\r\n\t]+/g, " ")
+        .replace(/[^\p{L}\p{Nd}\p{P}\p{Sm}\p{Zs}]/gu, "")
+        .trim()
+        .slice(0, 240);
+      throw new Error(`PDT_IPT_R03_DRAFT_CREATE_REJECTED:${response.status}${safe ? `:${safe}` : ""}`);
+    }
+    let value: unknown = {};
+    try { value = responseText ? JSON.parse(responseText) : {}; } catch { value = {}; }
     if (!isRec(value)) throw new ProviderAmbiguousResultError();
     const id = positiveId(value.listing_id);
     if (!id) throw new ProviderAmbiguousResultError();
