@@ -58,7 +58,7 @@ test("authoritative binding replaces lightweight candidate fingerprint without c
   const listingFingerprint = baseline.channels[0].listingFingerprint ?? "";
 
   const pack = basePack();
-  pack.etsy.release.authoritativeCandidate = genericBinding(listingFingerprint);
+  pack.etsy!.release!.authoritativeCandidate = genericBinding(listingFingerprint);
   const plan = buildPublishPlan(pack);
   const channel = plan.channels[0];
 
@@ -75,7 +75,7 @@ test("authoritative binding fails closed when current listing metadata drifts", 
   const binding = genericBinding(baseline.channels[0].listingFingerprint ?? "");
   const pack = basePack();
   pack.title = "Changed title";
-  pack.etsy.release.authoritativeCandidate = binding;
+  pack.etsy!.release!.authoritativeCandidate = binding;
   const plan = buildPublishPlan(pack);
   assert.equal(plan.status, "BLOCKED");
   assert.ok(plan.gate.errors.includes("AUTHORITATIVE_LISTING_FINGERPRINT_MISMATCH"));
@@ -86,7 +86,7 @@ test("authoritative binding fails closed when Tester or Final QC identity differ
   const binding = genericBinding(baseline.channels[0].listingFingerprint ?? "");
   binding.finalQcPassFingerprint = "e".repeat(64);
   const pack = basePack();
-  pack.etsy.release.authoritativeCandidate = binding;
+  pack.etsy!.release!.authoritativeCandidate = binding;
   const plan = buildPublishPlan(pack);
   assert.equal(plan.status, "BLOCKED");
   assert.ok(plan.gate.errors.includes("AUTHORITATIVE_FINAL_QC_FINGERPRINT_MISMATCH"));
