@@ -1,0 +1,223 @@
+name: Execute Authorized Etsy Operation V2
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation_id:
+        description: Exact governed operation ID
+        required: true
+        type: string
+      confirmation:
+        description: Re-type the exact operation ID
+        required: true
+        type: string
+      action:
+        description: execute, verify_protected_state, post_release_qc, or stage_asset_chunk
+        required: true
+        default: verify_protected_state
+        type: string
+      authorization_id:
+        description: Exact explicit one-use authorization ID
+        required: false
+        default: ""
+        type: string
+      protected_state_fingerprint:
+        description: Fresh protected-state SHA-256
+        required: false
+        default: ""
+        type: string
+      authorization_request_hash:
+        description: Exact authorization request SHA-256
+        required: false
+        default: ""
+        type: string
+      production_commit:
+        description: Exact production commit bound by authorization
+        required: false
+        default: ""
+        type: string
+      asset_sha256:
+        description: Exact registered asset SHA-256 for stage_asset_chunk
+        required: false
+        default: ""
+        type: string
+      chunk_index:
+        description: Zero-based chunk index
+        required: false
+        default: "0"
+        type: string
+      chunk_count:
+        description: Total chunk count
+        required: false
+        default: "0"
+        type: string
+      asset_chunk_base64:
+        description: Base64 asset chunk for staging only
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: authorized-etsy-v2-${{ inputs.operation_id }}
+  cancel-in-progress: false
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EXECUTION_URL: https://autodigitalpublisher.vercel.app/api/internal/etsy/authorized-operation
+      STAGE_URL: https://autodigitalpublisher.vercel.app/api/internal/etsy/authorized-operation/asset-chunk
+      OPERATION_ID: ${{ inputs.operation_id }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+      ACTION: ${{ inputs.action }}
+      AUTHORIZATION_ID: ${{ inputs.authorization_id }}
+      PROTECTED_STATE_FINGERPRINT: ${{ inputs.protected_state_fingerprint }}
+      AUTHORIZATION_REQUEST_HASH: ${{ inputs.authorization_request_hash }}
+      PRODUCTION_COMMIT: ${{ inputs.production_commit }}
+      ASSET_SHA256: ${{ inputs.asset_sha256 }}
+      CHUNK_INDEX: ${{ inputs.chunk_index }}
+      CHUNK_COUNT: ${{ inputs.chunk_count }}
+      ASSET_CHUNK_BASE64: ${{ inputs.asset_chunk_base64 }}
+    steps:
+      - name: Fail closed on request mismatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$OPERATION_ID" || { echo "Missing operation_id"; exit 1; }
+          test "$OPERATION_ID" = "$CONFIRMATION" || { echo "Operation confirmation mismatch"; exit 1; }
+          case "$ACTION" in
+            verify_protected_state|post_release_qc) ;;
+            stage_asset_chunk)
+              echo "$ASSET_SHA256" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid asset_sha256"; exit 1; }
+              test "$CHUNK_COUNT" -ge 1 || { echo "Invalid chunk_count"; exit 1; }
+              test "$CHUNK_INDEX" -ge 0 || { echo "Invalid chunk_index"; exit 1; }
+              test "$CHUNK_INDEX" -lt "$CHUNK_COUNT" || { echo "chunk_index out of range"; exit 1; }
+              test -n "$ASSET_CHUNK_BASE64" || { echo "Missing asset chunk"; exit 1; }
+              ;;
+            execute)
+              test -n "$AUTHORIZATION_ID" || { echo "Missing authorization_id"; exit 1; }
+              echo "$PROTECTED_STATE_FINGERPRINT" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid protected_state_fingerprint"; exit 1; }
+              echo "$AUTHORIZATION_REQUEST_HASH" | grep -Eq '^[a-f0-9]{64}$' || { echo "Invalid authorization_request_hash"; exit 1; }
+              echo "$PRODUCTION_COMMIT" | grep -Eq '^[a-f0-9]{40}$' || { echo "Invalid production_commit"; exit 1; }
+              ;;
+            *) echo "Invalid action"; exit 1 ;;
+          esac
+
+      - name: Acquire GitHub OIDC token
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" || { echo "GitHub OIDC request URL unavailable"; exit 1; }
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" || { echo "GitHub OIDC request token unavailable"; exit 1; }
+          if [ "$ACTION" = "stage_asset_chunk" ]; then
+            AUDIENCE="$STAGE_URL"
+          else
+            AUDIENCE="$EXECUTION_URL"
+          fi
+          RESPONSE="$(curl --fail --silent --show-error             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN"             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${AUDIENCE}")"
+          TOKEN="$(node -e 'const v=JSON.parse(process.argv[1]).value; if(!v) process.exit(1); process.stdout.write(v)' "$RESPONSE")"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Stage exact asset chunk without Etsy write
+        if: ${{ inputs.action == 'stage_asset_chunk' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.STAGE_URL, {
+            method: "POST",
+            headers: {
+              authorization: `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              assetSha256: process.env.ASSET_SHA256,
+              chunkIndex: Number(process.env.CHUNK_INDEX),
+              chunkCount: Number(process.env.CHUNK_COUNT),
+              dataBase64: process.env.ASSET_CHUNK_BASE64
+            })
+          });
+          const text = await response.text();
+          const payload = text ? JSON.parse(text) : {};
+          console.log(JSON.stringify({
+            http: response.status,
+            status: payload.status,
+            operationId: payload.operationId,
+            assetSha256: payload.assetSha256,
+            chunkIndex: payload.chunkIndex,
+            chunkCount: payload.chunkCount,
+            ETSY_WRITE_COUNT: payload.ETSY_WRITE_COUNT
+          }, null, 2));
+          if (!response.ok || payload.status !== "ASSET_CHUNK_STAGED" || payload.ETSY_WRITE_COUNT !== 0) {
+            throw new Error(`ASSET_STAGE_HTTP_${response.status}`);
+          }
+          NODE
+
+      - name: Invoke governed Etsy operation
+        if: ${{ inputs.action != 'stage_asset_chunk' }}
+        shell: bash
+        env:
+          OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const response = await fetch(process.env.EXECUTION_URL, {
+            method: "POST",
+            headers: {
+              authorization: `Bearer ${process.env.OIDC_TOKEN}`,
+              "content-type": "application/json"
+            },
+            body: JSON.stringify({
+              operationId: process.env.OPERATION_ID,
+              confirmation: process.env.CONFIRMATION,
+              action: process.env.ACTION,
+              authorizationId: process.env.AUTHORIZATION_ID || undefined,
+              protectedStateFingerprint: process.env.PROTECTED_STATE_FINGERPRINT || undefined,
+              authorizationRequestHash: process.env.AUTHORIZATION_REQUEST_HASH || undefined,
+              productionCommit: process.env.PRODUCTION_COMMIT || undefined
+            })
+          });
+          const text = await response.text();
+          let payload;
+          try { payload = text ? JSON.parse(text) : {}; }
+          catch { payload = { raw: text }; }
+          console.log(JSON.stringify({ http: response.status, ...payload }, null, 2));
+
+          if (process.env.ACTION === "verify_protected_state") {
+            if (!response.ok || payload.status !== "PROTECTED_STATE_MATCH" || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error(`PROTECTED_STATE_HTTP_${response.status}`);
+            }
+            process.exit(0);
+          }
+
+          if (process.env.ACTION === "post_release_qc") {
+            if (!response.ok || payload.ETSY_WRITE_COUNT !== 0) {
+              throw new Error(`POST_RELEASE_QC_HTTP_${response.status}`);
+            }
+            process.exit(0);
+          }
+
+          if (response.status === 202) throw new Error("RECONCILIATION_REQUIRED_DO_NOT_RETRY");
+          if (!response.ok) throw new Error(`AUTHORIZED_OPERATION_HTTP_${response.status}`);
+
+          const acceptable = new Set([
+            "UPDATED_AND_VERIFIED",
+            "PUBLISHED_AND_VERIFIED",
+            "RECONCILED",
+            "REPLAY",
+            "DRAFT_CREATED_VERIFIED_API_SCOPE"
+          ]);
+          if (!acceptable.has(payload.status)) {
+            throw new Error(`AUTHORIZED_OPERATION_NONTERMINAL_${payload.status ?? "UNKNOWN"}`);
+          }
+          NODE
