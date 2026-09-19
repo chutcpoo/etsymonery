@@ -32,7 +32,7 @@ import {
 
 const WRITE_HEADER = "x-autodigitalpublisher-write-token";
 const SHA256 = /^[a-f0-9]{64}$/;
-const AUTHORIZATION_ID = /^PDT-IPT-001-R03-DRAFT-AUTH-20260919-[0-9]{2}$/;
+const AUTHORIZATION_ID = /^PDT-IPT-001-R03-DRAFT-RECOVERY-R01-AUTH-20260919-[0-9]{2}$/;
 const COMMIT_SHA = /^[a-f0-9]{40}$/;
 
 type Rec = Record<string, unknown>;
@@ -249,7 +249,7 @@ const VIDEO = Object.freeze({
 
 export const PDT_IPT_001_R03_DRAFT = Object.freeze({
   operation: "CREATE_NEW_DIGITAL_DRAFT_EXACT_R03_ONLY",
-  operationId: "PDT-IPT-001-R03-DRAFT-001",
+  operationId: "PDT-IPT-001-R03-DRAFT-RECOVERY-R01-001",
   productId: "PDT-IPT-001",
   productVersion: "V1",
   shopId: "23582741",
@@ -436,6 +436,8 @@ export function exactPdtIpt001R03DraftBody(
     listingFingerprint: PDT_IPT_001_R03_DRAFT.listingFingerprint,
     scope: PDT_IPT_001_R03_DRAFT.operation,
     sku: PDT_IPT_001_R03_DRAFT.sku,
+    isSupply: false,
+    shouldAutoRenew: true,
     gallerySha256: PDT_IPT_001_R03_DRAFT.gallery.map((asset) => asset.sha256),
     galleryAltText: PDT_IPT_001_R03_DRAFT.gallery.map((asset) => asset.altText),
     buyerFileSha256: PDT_IPT_001_R03_DRAFT.buyerFile.sha256,
@@ -490,6 +492,8 @@ class R03DraftProvider implements ReconciledWriteProvider {
       who_made: PDT_IPT_001_R03_DRAFT.whoMade,
       when_made: PDT_IPT_001_R03_DRAFT.whenMade,
       taxonomy_id: String(PDT_IPT_001_R03_DRAFT.taxonomyId),
+      is_supply: "false",
+      should_auto_renew: "true",
       type: "download",
       tags: PDT_IPT_001_R03_DRAFT.tags.join(",")
     });
@@ -866,6 +870,9 @@ async function verifyFinal(
   if (listing.state !== "draft" || identity.status !== "MATCH") {
     throw new Error("PDT_IPT_R03_FINAL_LISTING_IDENTITY_MISMATCH");
   }
+  if (listing.is_supply !== false || listing.should_auto_renew !== true) {
+    throw new Error("PDT_IPT_R03_FINAL_LISTING_SETTINGS_MISMATCH");
+  }
 
   const [imagesResponse, filesResponse, inventory, videos] = await Promise.all([
     fetchImpl(
@@ -1068,7 +1075,6 @@ export async function handlePdtIpt001R03Draft(
             ETSY_PROVIDER_WRITE_COUNT: 14,
             sellerUiFieldsPending: [
               "creation disclosure / ai_gen",
-              "renewal Automatic if not exposed by listing readback",
               "Featured OFF if not exposed by listing readback",
               "Restock Requests OFF if not exposed by listing readback",
               "Digital Made-to-Order OFF if not exposed by listing readback"
