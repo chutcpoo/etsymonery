@@ -85,6 +85,13 @@ import {
   PDT_IPT_001_R04_DRAFT,
   verifyPdtIpt001R04DraftProtectedState
 } from "../../../../../lib/pdt-ipt-001-r04-draft";
+import {
+  exactPdtIpt001R04RecoveryR01Body,
+  handlePdtIpt001R04RecoveryR01,
+  PDT_IPT_001_R04_DRAFT_RECOVERY_R01,
+  verifyPdtIpt001R04RecoveryR01PostRelease,
+  verifyPdtIpt001R04RecoveryR01ProtectedState
+} from "../../../../../lib/pdt-ipt-001-r04-draft-recovery-r01";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -174,7 +181,8 @@ export async function POST(request: Request) {
     operationId !== IMAGE01_V2_RELEASE.operationId &&
     operationId !== PDT_BPSC_001_C09.operationId &&
     operationId !== PDT_IPT_001_R03_DRAFT.operationId &&
-    operationId !== PDT_IPT_001_R04_DRAFT.operationId
+    operationId !== PDT_IPT_001_R04_DRAFT.operationId &&
+    operationId !== PDT_IPT_001_R04_DRAFT_RECOVERY_R01.operationId
   ) return NextResponse.json({ error: "AUTHORIZED_ETSY_OPERATION_NOT_REGISTERED" }, { status: 409 });
 
   if (operationId === IMAGE01_V2_RELEASE.operationId && input.action === "verify_protected_state") return verifyImage01V2ProtectedState();
@@ -187,6 +195,8 @@ export async function POST(request: Request) {
   if (operationId === PDT_BPSC_001_C09.operationId && input.action === "verify_protected_state") return verifyPdtBpsc001C09ProtectedState();
   if (operationId === PDT_IPT_001_R03_DRAFT.operationId && input.action === "verify_protected_state") return verifyPdtIpt001R03DraftProtectedState();
   if (operationId === PDT_IPT_001_R04_DRAFT.operationId && input.action === "verify_protected_state") return verifyPdtIpt001R04DraftProtectedState();
+  if (operationId === PDT_IPT_001_R04_DRAFT_RECOVERY_R01.operationId && input.action === "verify_protected_state") return verifyPdtIpt001R04RecoveryR01ProtectedState();
+  if (operationId === PDT_IPT_001_R04_DRAFT_RECOVERY_R01.operationId && input.action === "post_release_qc") return verifyPdtIpt001R04RecoveryR01PostRelease();
   if (operationId === PD_STOCK_005_C01.operationId && input.action === "verify_protected_state") return verifyPdStock005C01ProtectedState();
   if (operationId === PDT_BOBA_001_B01_DESCRIPTION.operationId && input.action === "verify_protected_state") return verifyPdtBoba001B01ProtectedState();
   if (operationId === PDT_BOBA_001_B01_BUYER_FILES.operationId && input.action === "verify_protected_state") return verifyPdtBoba001B01BuyerFilesProtectedState();
@@ -210,6 +220,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "IMAGE01_V2_EXACT_AUTHORIZATION_BINDING_REQUIRED" }, { status: 409 });
     }
     return executeImage01V2Release({ authorizationId, protectedStateFingerprint, authorizationRequestHash });
+  }
+  if (operationId === PDT_IPT_001_R04_DRAFT_RECOVERY_R01.operationId) {
+    const authorizationId = typeof input.authorizationId === "string" ? input.authorizationId.trim() : "";
+    const protectedStateFingerprint = typeof input.protectedStateFingerprint === "string" ? input.protectedStateFingerprint.trim().toLowerCase() : "";
+    const authorizationRequestHash = typeof input.authorizationRequestHash === "string" ? input.authorizationRequestHash.trim().toLowerCase() : "";
+    const productionCommit = typeof input.productionCommit === "string" ? input.productionCommit.trim().toLowerCase() : "";
+    if (!authorizationId || !protectedStateFingerprint || !authorizationRequestHash || !productionCommit) {
+      return NextResponse.json({ error: "PDT_IPT_001_R04_RECOVERY_R01_EXACT_AUTHORIZATION_BINDING_REQUIRED" }, { status: 409 });
+    }
+    const delegated = new Request(request.url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-autodigitalpublisher-write-token": writeToken
+      }
+    });
+    return handlePdtIpt001R04RecoveryR01(
+      exactPdtIpt001R04RecoveryR01Body(authorizationId, protectedStateFingerprint, productionCommit),
+      authorizationRequestHash,
+      delegated
+    );
   }
   if (operationId === PDT_IPT_001_R04_DRAFT.operationId) {
     const authorizationId = typeof input.authorizationId === "string" ? input.authorizationId.trim() : "";
