@@ -326,7 +326,7 @@ test("executor fails closed before provider writes when authorized production co
     });
     const payload = await response.json() as Record<string, unknown>;
     assert.equal(response.status, 409);
-    assert.equal(payload.error, "PDT_IPT_R03_PRODUCTION_COMMIT_MISMATCH");
+    assert.equal(payload.error, "PDT_IPT_R04_PRODUCTION_COMMIT_MISMATCH");
     assert.equal(writes, 0);
   });
 });
