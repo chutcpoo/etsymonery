@@ -23,7 +23,10 @@ const AUDIENCE="https://autodigitalpublisher.vercel.app/api/internal/etsy/author
 const REPOSITORY="chutcpoo/etsymonery";
 const REF="refs/heads/main";
 const EVENT="workflow_dispatch";
-const WORKFLOW_REF="chutcpoo/etsymonery/.github/workflows/execute-authorized-etsy-operation.yml@refs/heads/main";
+const WORKFLOW_REFS=new Set([
+  "chutcpoo/etsymonery/.github/workflows/execute-authorized-etsy-operation.yml@refs/heads/main",
+  "chutcpoo/etsymonery/.github/workflows/execute-authorized-etsy-operation-v2.yml@refs/heads/main"
+]);
 type Claims={iss?:string;aud?:string|string[];exp?:number;nbf?:number;repository?:string;ref?:string;event_name?:string;workflow_ref?:string};
 type Jwk=JsonWebKey&{kid?:string};
 function decode<T>(s:string){return JSON.parse(Buffer.from(s,"base64url").toString("utf8")) as T;}
@@ -34,7 +37,7 @@ async function verify(token:string){
   const [h,c,s]=parts, header=decode<{alg?:string;kid?:string}>(h), claims=decode<Claims>(c);
   if(header.alg!=="RS256"||!header.kid)throw new Error("AUTHORIZED_ETSY_OIDC_HEADER_INVALID");
   const now=Math.floor(Date.now()/1000);
-  if(claims.iss!==ISSUER||!audienceMatches(claims.aud)||!claims.exp||claims.exp<now-30||(claims.nbf&&claims.nbf>now+30)||claims.repository!==REPOSITORY||claims.ref!==REF||claims.event_name!==EVENT||claims.workflow_ref!==WORKFLOW_REF)throw new Error("AUTHORIZED_ETSY_OIDC_CLAIMS_INVALID");
+  if(claims.iss!==ISSUER||!audienceMatches(claims.aud)||!claims.exp||claims.exp<now-30||(claims.nbf&&claims.nbf>now+30)||claims.repository!==REPOSITORY||claims.ref!==REF||claims.event_name!==EVENT||!claims.workflow_ref||!WORKFLOW_REFS.has(claims.workflow_ref))throw new Error("AUTHORIZED_ETSY_OIDC_CLAIMS_INVALID");
   const discovery=await fetch(`${ISSUER}/.well-known/openid-configuration`,{cache:"no-store"});if(!discovery.ok)throw new Error("AUTHORIZED_ETSY_OIDC_DISCOVERY_FAILED");
   const {jwks_uri}=await discovery.json() as {jwks_uri?:string};if(!jwks_uri)throw new Error("AUTHORIZED_ETSY_OIDC_JWKS_URI_MISSING");
   const jr=await fetch(jwks_uri,{cache:"no-store"});if(!jr.ok)throw new Error("AUTHORIZED_ETSY_OIDC_JWKS_FAILED");
