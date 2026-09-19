@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildPublishPlan } from "../lib/publisher";
-import type { AuthoritativeCandidateBinding } from "../lib/types";
+import type { AuthoritativeCandidateBinding, ProductPack } from "../lib/types";
 
 const SHA_A = "a".repeat(64);
 const SHA_B = "b".repeat(64);
@@ -13,7 +13,7 @@ const tags = [
   "owner toolkit", "business system", "instant download"
 ];
 
-function basePack() {
+function basePack(): ProductPack {
   return {
     productId: "TEST-001",
     title: "Digital Operations Template",
