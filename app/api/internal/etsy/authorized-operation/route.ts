@@ -88,7 +88,10 @@ const GITHUB_OIDC_AUDIENCE = "https://autodigitalpublisher.vercel.app/api/intern
 const GITHUB_REPOSITORY = "chutcpoo/etsymonery";
 const GITHUB_REF = "refs/heads/main";
 const GITHUB_EVENT = "workflow_dispatch";
-const GITHUB_WORKFLOW_REF = "chutcpoo/etsymonery/.github/workflows/execute-authorized-etsy-operation.yml@refs/heads/main";
+const GITHUB_WORKFLOW_REFS = new Set([
+  "chutcpoo/etsymonery/.github/workflows/execute-authorized-etsy-operation.yml@refs/heads/main",
+  "chutcpoo/etsymonery/.github/workflows/execute-authorized-etsy-operation-v2.yml@refs/heads/main"
+]);
 
 type JwtHeader = { alg?: string; kid?: string; typ?: string };
 type JwtClaims = { iss?: string; aud?: string | string[]; exp?: number; nbf?: number; repository?: string; ref?: string; event_name?: string; workflow_ref?: string };
@@ -111,7 +114,7 @@ async function verifyGithubOidcToken(token: string) {
   if (claims.repository !== GITHUB_REPOSITORY) throw new Error("AUTHORIZED_ETSY_OIDC_REPOSITORY_INVALID");
   if (claims.ref !== GITHUB_REF) throw new Error("AUTHORIZED_ETSY_OIDC_REF_INVALID");
   if (claims.event_name !== GITHUB_EVENT) throw new Error("AUTHORIZED_ETSY_OIDC_EVENT_INVALID");
-  if (claims.workflow_ref !== GITHUB_WORKFLOW_REF) throw new Error("AUTHORIZED_ETSY_OIDC_WORKFLOW_INVALID");
+  if (!claims.workflow_ref || !GITHUB_WORKFLOW_REFS.has(claims.workflow_ref)) throw new Error("AUTHORIZED_ETSY_OIDC_WORKFLOW_INVALID");
   const discoveryResponse = await fetch(`${GITHUB_OIDC_ISSUER}/.well-known/openid-configuration`, { cache: "no-store" });
   if (!discoveryResponse.ok) throw new Error("AUTHORIZED_ETSY_OIDC_DISCOVERY_FAILED");
   const discovery = await discoveryResponse.json() as { jwks_uri?: string };
