@@ -7,9 +7,9 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(request?: Request) {
+export async function GET(request: Request) {
   const plan = pdtFcmp002V1PublishR01Plan();
-  if (request) {
+  {
     const url = new URL(request.url);
     if (url.searchParams.get("action") === "execute_relay") {
       const nonce = url.searchParams.get("nonce")?.trim() ?? "";
