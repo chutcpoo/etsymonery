@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const RESET_DATE = "2026-09-20";
 const POST_RESET_V2_PDT_IPT_ROUTE = "/api/internal/etsy/post-reset-v2/pdt-ipt-001/draft";
 const POST_RESET_V2_PDT_FCMP_ROUTE = "/api/internal/etsy/post-reset-v2/pdt-fcmp-002/draft";
+const POST_RESET_V2_PDT_FCMP_RECOVERY_ROUTE = "/api/internal/etsy/post-reset-v2/pdt-fcmp-002/recovery-r01";
 
 const BLOCKED_PUBLIC_PREFIXES = [
   "/api/etsy/active-listing-update",
@@ -40,7 +41,8 @@ export function middleware(request: NextRequest) {
 
   if (
     pathname === POST_RESET_V2_PDT_IPT_ROUTE ||
-    pathname === POST_RESET_V2_PDT_FCMP_ROUTE
+    pathname === POST_RESET_V2_PDT_FCMP_ROUTE ||
+    pathname === POST_RESET_V2_PDT_FCMP_RECOVERY_ROUTE
   ) {
     return NextResponse.next();
   }
