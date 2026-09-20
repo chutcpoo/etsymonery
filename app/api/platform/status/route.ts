@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { POST_RESET_PLATFORM_STATE } from "../../../lib/post-reset-platform";
-import { ETSY_CHANNEL_INDEX } from "../../../lib/catalog-channel-index";
+import { POST_RESET_PLATFORM_STATE } from "../../../../lib/post-reset-platform";
+import { ETSY_CHANNEL_INDEX } from "../../../../lib/catalog-channel-index";
 
 export const dynamic = "force-dynamic";
 
