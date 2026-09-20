@@ -1,0 +1,55 @@
+name: Promote FCMP Publish Preview Once
+
+on:
+  push:
+    branches:
+      - promote-fcmp-preview-once-20260921
+    paths:
+      - .github/workflows/promote-fcmp-preview-once.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promote-fcmp-preview-once
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || secrets.VERCEL_ACCESS_TOKEN }}
+      PROJECT_ID: prj_jieHLVXCaOWAH4tvQlKMYdND07Km
+      TEAM_ID: team_DzA8GSt3dEv1yLfZYZkPpG8H
+      DEPLOYMENT_ID: dpl_NphEWpGNwdbqhSA9PBohEcAmH5Ui
+    steps:
+      - name: Promote exact READY deployment without rebuild
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$VERCEL_TOKEN" || { echo "BLOCKED: Vercel API token secret not configured"; exit 1; }
+          node <<'NODE'
+          const { PROJECT_ID, TEAM_ID, DEPLOYMENT_ID, VERCEL_TOKEN } = process.env;
+          const url =
+            "https://api.vercel.com/v10/projects/" +
+            encodeURIComponent(PROJECT_ID) +
+            "/promote/" +
+            encodeURIComponent(DEPLOYMENT_ID) +
+            "?teamId=" +
+            encodeURIComponent(TEAM_ID);
+          const r = await fetch(url, {
+            method: "POST",
+            headers: {
+              authorization: "Bearer " + VERCEL_TOKEN,
+              "content-type": "application/json"
+            }
+          });
+          const text = await r.text();
+          console.log("PROMOTE_HTTP", r.status);
+          if (![201, 202].includes(r.status)) {
+            console.log(text.slice(0, 1000));
+            throw new Error("VERCEL_PROMOTE_HTTP_" + r.status);
+          }
+          console.log("VERCEL_PROMOTE_ACCEPTED");
+          NODE
