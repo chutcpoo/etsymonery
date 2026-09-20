@@ -1,0 +1,134 @@
+name: Execute PDT-FCMP-002 Publish R01 Once
+
+on:
+  push:
+    branches:
+      - execute-fcmp-publish-r01-once-20260921
+    paths:
+      - .github/workflows/fcmp-publish-r01-once.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pdt-fcmp-002-publish-r01-once
+  cancel-in-progress: false
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BASE_URL: https://autodigitalpublisher.vercel.app
+      WRITE_TOKEN: ${{ secrets.ETSY_DRAFT_WRITE_TOKEN }}
+    steps:
+      - name: Exact preflight, single POST, post-readback
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$WRITE_TOKEN" || { echo "BLOCKED: missing ETSY_DRAFT_WRITE_TOKEN"; exit 1; }
+
+          node <<'NODE'
+          const BASE = process.env.BASE_URL;
+          const token = process.env.WRITE_TOKEN;
+          const expectedTags = [
+            "recipe cost sheet","food cost calculator","food cost template","menu pricing",
+            "recipe costing","cafe cost sheet","cost per serving","cafe spreadsheet",
+            "food cost excel","menu price sheet","catering pricing","food business tool",
+            "restaurant excel"
+          ];
+          const expectedImages = [
+            8551809678,8551809826,8551809992,8599679141,8599679297,
+            8551810370,8599679521,8599679715,8551810810,8551810950
+          ];
+
+          function assert(cond, code) {
+            if (!cond) throw new Error(code);
+          }
+          async function getJson(path) {
+            const r = await fetch(BASE + path, { cache: "no-store" });
+            const text = await r.text();
+            let body = {};
+            try { body = text ? JSON.parse(text) : {}; } catch {}
+            if (!r.ok) throw new Error("GET_" + path + "_HTTP_" + r.status);
+            return body;
+          }
+
+          const seller = await getJson("/api/etsy/seller-state");
+          assert(seller.status === "PASS", "SELLER_STATE_NOT_PASS");
+          assert(seller.shopId === 23582741, "SHOP_ID_MISMATCH");
+          assert(seller.total === 2, "TOTAL_LISTINGS_DRIFT");
+          assert(seller.counts?.active === 1, "ACTIVE_COUNT_DRIFT");
+          assert(seller.counts?.draft === 1, "DRAFT_COUNT_DRIFT");
+          assert(seller.counts?.inactive === 0, "INACTIVE_COUNT_DRIFT");
+          assert(seller.counts?.sold_out === 0, "SOLD_OUT_COUNT_DRIFT");
+          assert(seller.counts?.expired === 0, "EXPIRED_COUNT_DRIFT");
+          const protectedListing = seller.listings?.find(x => x.listingId === 4578945050);
+          const draftListing = seller.listings?.find(x => x.listingId === 4579068925);
+          assert(protectedListing?.state === "active", "PRODUCT1_NOT_ACTIVE");
+          assert(draftListing?.state === "draft", "TARGET_NOT_DRAFT");
+
+          const detail = await getJson("/api/etsy/listings/4579068925/detail");
+          assert(detail.status === "PASS" && detail.identityVerified === true, "DETAIL_NOT_PASS");
+          const l = detail.listing;
+          assert(l?.listing_id === 4579068925, "LISTING_ID_MISMATCH");
+          assert(l?.shop_id === 23582741, "DETAIL_SHOP_MISMATCH");
+          assert(l?.state === "draft", "DETAIL_STATE_NOT_DRAFT");
+          assert(l?.price?.amount === 999 && l?.price?.divisor === 100 && l?.price?.currency_code === "USD", "PRICE_DRIFT");
+          assert(l?.taxonomy_id === 12476, "TAXONOMY_DRIFT");
+          assert(l?.quantity === 999, "QUANTITY_DRIFT");
+          assert(Array.isArray(l?.tags) && JSON.stringify(l.tags) === JSON.stringify(expectedTags), "TAGS_DRIFT");
+          assert(detail.gallery?.count === 10, "GALLERY_COUNT_DRIFT");
+          assert(
+            JSON.stringify(detail.gallery.images.map(x => x.listing_image_id)) === JSON.stringify(expectedImages),
+            "GALLERY_ORDER_DRIFT"
+          );
+          assert(detail.digitalBuyerFiles?.count === 1, "BUYER_FILE_COUNT_DRIFT");
+          const file = detail.digitalBuyerFiles.files?.[0];
+          assert(file?.filename === "PDT-FCMP-002_Recipe_Cost_Menu_Pricing_Calculator_V1.xlsx", "BUYER_FILE_NAME_DRIFT");
+          assert(file?.size_bytes === 18603, "BUYER_FILE_SIZE_DRIFT");
+
+          console.log("PREWRITE_PROTECTED_STATE_PASS");
+
+          const payload = {
+            authorizationText: "AUTHORIZE PDT-FCMP-002-V1-ETSY-PUBLISH-R01-20260921 EXACT SCOPE ONLY",
+            operationId: "PDT-FCMP-002-V1-ETSY-PUBLISH-R01",
+            productId: "PDT-FCMP-002",
+            shopId: 23582741,
+            draftListingId: 4579068925,
+            candidateFingerprint: "cffe7d00620d3a57bd1c8f4f460afc2257671e5a39e8e74209a8cc123e1740cc",
+            listingFingerprint: "272d97930332816515a8350ad8b99cd13b63ac1a8826d2033f2605f3f64f4b42"
+          };
+
+          const r = await fetch(BASE + "/api/internal/etsy/post-reset-v2/pdt-fcmp-002/publish-r01", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-autodigitalpublisher-write-token": token
+            },
+            body: JSON.stringify(payload)
+          });
+          const text = await r.text();
+          let result = {};
+          try { result = text ? JSON.parse(text) : {}; } catch { result = { raw: text }; }
+          console.log("PUBLISH_HTTP", r.status);
+          console.log("PUBLISH_STATUS", result.status ?? "UNKNOWN");
+          console.log("ETSY_WRITE_COUNT", result.ETSY_WRITE_COUNT ?? "UNKNOWN");
+
+          if (!r.ok) throw new Error("PUBLISH_HTTP_" + r.status + "_" + (result.error ?? "UNKNOWN"));
+          assert(["PUBLISHED","REPLAY","RECONCILED"].includes(result.status), "NONTERMINAL_PUBLISH_" + (result.status ?? "UNKNOWN"));
+
+          const postSeller = await getJson("/api/etsy/seller-state");
+          assert(postSeller.counts?.active === 2, "POST_ACTIVE_COUNT_NOT_2");
+          assert(postSeller.counts?.draft === 0, "POST_DRAFT_COUNT_NOT_0");
+          assert(postSeller.total === 2, "POST_TOTAL_NOT_2");
+          assert(postSeller.listings?.find(x => x.listingId === 4578945050)?.state === "active", "POST_PRODUCT1_CHANGED");
+          assert(postSeller.listings?.find(x => x.listingId === 4579068925)?.state === "active", "POST_TARGET_NOT_ACTIVE");
+
+          const postDetail = await getJson("/api/etsy/listings/4579068925/detail");
+          assert(postDetail.listing?.state === "active", "POST_DETAIL_NOT_ACTIVE");
+          assert(postDetail.gallery?.count === 10, "POST_GALLERY_DRIFT");
+          assert(postDetail.digitalBuyerFiles?.count === 1, "POST_BUYER_FILE_DRIFT");
+
+          console.log("POST_RELEASE_QC_PASS");
+          NODE
