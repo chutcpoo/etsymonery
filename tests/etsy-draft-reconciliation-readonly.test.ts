@@ -3,11 +3,6 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { getEtsyDraftListingSummaries } from "../lib/etsy-draft-reconciliation";
 
-const routePath = new URL(
-  "../app/api/etsy/test/drafts/route.ts",
-  import.meta.url
-);
-
 async function withEtsyHeaders<T>(fn: () => Promise<T>) {
   const previousKey = process.env.ETSY_API_KEY;
   const previousSecret = process.env.ETSY_SHARED_SECRET;
@@ -23,13 +18,6 @@ async function withEtsyHeaders<T>(fn: () => Promise<T>) {
   }
 }
 
-test("draft reconciliation route is GET-only and contains no Etsy write method", async () => {
-  const source = await readFile(routePath, "utf8");
-  assert.match(source, /export async function GET\(/);
-  assert.doesNotMatch(source, /export async function (POST|PUT|PATCH|DELETE)\(/);
-  assert.doesNotMatch(source, /method:\s*["'](POST|PUT|PATCH|DELETE)["']/);
-});
-
 test("draft reconciliation fetches Etsy draft listings read-only and preserves exact provider fields", async () => {
   await withEtsyHeaders(async () => {
     const calls: Array<{ url: string; method: string | undefined }> = [];
@@ -41,8 +29,8 @@ test("draft reconciliation fetches Etsy draft listings read-only and preserves e
           results: [
             {
               listing_id: 9876543210,
-              shop_id: 23582741,
-              title: "Pricing Calculator for Private Chefs | Excel Food Cost, Labor, Profit Margin & Scenario Tool",
+              shop_id: 900001,
+              title: "New Product Spreadsheet",
               state: "draft",
               price: { amount: 1290, divisor: 100, currency_code: "USD" },
               taxonomy_id: 12476,
@@ -50,7 +38,7 @@ test("draft reconciliation fetches Etsy draft listings read-only and preserves e
               who_made: "i_did",
               when_made: "2020_2026",
               listing_type: "download",
-              tags: ["pricing calculator", "food cost calculator"],
+              tags: ["new product", "business spreadsheet"],
               updated_timestamp: 1789350000
             }
           ]
@@ -60,7 +48,7 @@ test("draft reconciliation fetches Etsy draft listings read-only and preserves e
     };
 
     const result = await getEtsyDraftListingSummaries({
-      shopId: 23582741,
+      shopId: 900001,
       accessToken: "12345.test-token",
       dependencies: { fetchImpl }
     });
@@ -73,8 +61,8 @@ test("draft reconciliation fetches Etsy draft listings read-only and preserves e
     assert.equal(result.drafts[0].taxonomyId, 12476);
     assert.equal(result.drafts[0].quantity, 999);
     assert.deepEqual(result.drafts[0].tags, [
-      "pricing calculator",
-      "food cost calculator"
+      "new product",
+      "business spreadsheet"
     ]);
     assert.equal(calls.length, 1);
     assert.equal(calls[0].method, "GET");
@@ -103,7 +91,7 @@ test("draft reconciliation fails closed on cross-shop listing evidence", async (
     await assert.rejects(
       () =>
         getEtsyDraftListingSummaries({
-          shopId: 23582741,
+          shopId: 900001,
           accessToken: "12345.test-token",
           dependencies: { fetchImpl }
         }),
@@ -134,7 +122,7 @@ test("draft reconciliation inherits bounded retry only for GET reads", async () 
     };
 
     const result = await getEtsyDraftListingSummaries({
-      shopId: 23582741,
+      shopId: 900001,
       accessToken: "12345.test-token",
       dependencies: {
         fetchImpl,

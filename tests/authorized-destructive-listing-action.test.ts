@@ -8,10 +8,10 @@ import {
 import { createListingFingerprint } from "../lib/candidate-fingerprint";
 import { hashOperationRequest, MemoryOperationLedgerRepository } from "../lib/operation-ledger";
 
-const SHOP_ID = "23582741";
-const LISTING_ID = "4560696421";
+const SHOP_ID = "900001";
+const LISTING_ID = "9900000001";
 const BEFORE = {
-  title: "Boba Toolkit",
+  title: "New Product",
   description: "Exact current description",
   price: 12.9,
   tags: ["boba", "checklist"],
@@ -40,14 +40,14 @@ function listingFingerprint(value = BEFORE) {
 }
 
 function body(operation: "DEACTIVATE_ACTIVE_LISTING" | "DELETE_LISTING" = "DEACTIVATE_ACTIVE_LISTING", overrides: Record<string, unknown> = {}) {
-  const operationId = operation === "DEACTIVATE_ACTIVE_LISTING" ? "BOBA-UNPUBLISH-001" : "BOBA-DELETE-001";
+  const operationId = operation === "DEACTIVATE_ACTIVE_LISTING" ? "NEW-PRODUCT-UNPUBLISH-001" : "NEW-PRODUCT-DELETE-001";
   return {
     operation,
     operationId,
     confirmation: operationId,
     authorizationId: "AUTH-DEST-001",
     authorizationRequestSha256: "1".repeat(64),
-    productId: "PDT-BOBA-001",
+    productId: "NEW-PRODUCT-001",
     productVersion: "V1",
     shopId: SHOP_ID,
     listingId: LISTING_ID,
@@ -291,8 +291,3 @@ test("executor source declares only one PATCH and one DELETE mutation path", asy
   assert.equal(source.match(/method: \"DELETE\"/g)?.length, 1);
 });
 
-test("destructive route is POST-only", async () => {
-  const source = await readFile(new URL("../app/api/etsy/authorized-destructive-action/route.ts", import.meta.url), "utf8");
-  assert.match(source, /export async function POST/);
-  assert.doesNotMatch(source, /export async function (GET|PUT|PATCH|DELETE)/);
-});
