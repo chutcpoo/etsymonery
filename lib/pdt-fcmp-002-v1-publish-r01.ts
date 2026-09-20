@@ -52,7 +52,7 @@ export const PDT_FCMP_002_V1_PUBLISH_R01_SHOP_ID = 23582741 as const;
 
 const WRITE_HEADER = "x-autodigitalpublisher-write-token";
 const PUBLISH_R01_ONE_TIME_TOKEN_SHA256 =
-  "685008d1b2665d3c590767ae3e8331f512306cb9f63039723cba1165dc11331d";
+  "0c41f39074d919ac29b893e846909c9ab4823653a8fe386fc055e37715a4119c";
 const ALLOWED_FIELDS = new Set([
   "authorizationText",
   "operationId",
