@@ -629,3 +629,134 @@ test("authorization contract contains no publish permission and binds exact asse
   assert.equal(contract.deploymentCommit, COMMIT);
   assert.equal(contract.authorizationText, PDT_IPT_001_V2_AUTHORIZATION_TEXT);
 });
+
+
+test("seller-state POST is protected by the new V2 token even though it is read-only", async () => {
+  await withEnv(
+    async () => {
+      let calls = 0;
+      const request = new Request("https://example.test/internal", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "verify_protected_state" })
+      });
+      const response = await handlePdtIpt001V2Post(request, {
+        fetchImpl: async () => {
+          calls += 1;
+          throw new Error("SHOULD_NOT_RUN");
+        },
+        getAccessToken: async () => "token"
+      });
+      const payload = (await response.json()) as Record<string, unknown>;
+      assert.equal(response.status, 503);
+      assert.equal(payload.error, "PDT_IPT_V2_WRITE_TOKEN_NOT_CONFIGURED");
+      assert.equal(payload.ETSY_WRITE_COUNT, 0);
+      assert.equal(calls, 0);
+    },
+    { ETSY_POST_RESET_V2_WRITE_TOKEN: undefined }
+  );
+});
+
+test("image count/order and buyer-file count drift fail before Etsy access", async () => {
+  await withEnv(async () => {
+    const protectedState = "b".repeat(64);
+    const variants: FormData[] = [];
+
+    const missingImage = buildExecutionForm(protectedState);
+    missingImage.delete("image10");
+    variants.push(missingImage);
+
+    const wrongOrder = buildExecutionForm(protectedState);
+    wrongOrder.set("image01", exactFile(PDT_IPT_001_V2_GALLERY[1]));
+    variants.push(wrongOrder);
+
+    const missingBuyerFile = buildExecutionForm(protectedState);
+    missingBuyerFile.delete("buyerFile02");
+    variants.push(missingBuyerFile);
+
+    for (const form of variants) {
+      let calls = 0;
+      const response = await handlePdtIpt001V2Post(executeRequest(form), {
+        fetchImpl: async () => {
+          calls += 1;
+          throw new Error("SHOULD_NOT_RUN");
+        },
+        getAccessToken: async () => "token",
+        repository: new MemoryOperationLedgerRepository(),
+        verifyAsset: () => true
+      });
+      const payload = (await response.json()) as Record<string, unknown>;
+      assert.equal(response.status, 400);
+      assert.match(
+        String(payload.error),
+        /(MISSING_ASSET|ASSET_FILENAME_MISMATCH)/
+      );
+      assert.equal(payload.ETSY_WRITE_COUNT, 0);
+      assert.equal(calls, 0);
+    }
+  });
+});
+
+test("created-draft metadata mismatch becomes reconciliation-required instead of continuing to assets", async () => {
+  await withEnv(async () => {
+    const listingId = 9900000999;
+    let created = false;
+    let createAttempts = 0;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = new URL(String(input));
+      const method = (init?.method ?? "GET").toUpperCase();
+      if (
+        url.pathname === "/v3/application/shops/23582741/listings" &&
+        method === "GET"
+      ) {
+        const state = url.searchParams.get("state");
+        if (state === "draft" && created) {
+          return Response.json({
+            count: 1,
+            results: [{ ...listingRecord(listingId), title: "WRONG TITLE" }]
+          });
+        }
+        return Response.json({ count: 0, results: [] });
+      }
+      if (
+        url.pathname === "/v3/application/shops/23582741/listings" &&
+        method === "POST"
+      ) {
+        createAttempts += 1;
+        created = true;
+        return Response.json({ listing_id: listingId }, { status: 201 });
+      }
+      if (
+        url.pathname === "/v3/application/listings/" + String(listingId) &&
+        method === "GET"
+      ) {
+        return Response.json({ ...listingRecord(listingId), title: "WRONG TITLE" });
+      }
+      throw new Error("UNEXPECTED_" + method + "_" + url.pathname);
+    };
+
+    const psvResponse = await verifyPdtIpt001V2ProtectedState({
+      fetchImpl,
+      getAccessToken: async () => "token"
+    });
+    const psv = (await psvResponse.json()) as {
+      protectedStateFingerprint: string;
+    };
+
+    const response = await handlePdtIpt001V2Post(
+      executeRequest(buildExecutionForm(psv.protectedStateFingerprint)),
+      {
+        fetchImpl,
+        getAccessToken: async () => "token",
+        repository: new MemoryOperationLedgerRepository(),
+        verifyAsset: () => true,
+        now: () => "2026-09-20T09:20:00.000Z"
+      }
+    );
+    const payload = (await response.json()) as Record<string, unknown>;
+    assert.equal(response.status, 202);
+    assert.equal(payload.status, "RECONCILIATION_REQUIRED");
+    assert.equal(payload.ETSY_WRITE_COUNT, 1);
+    assert.equal(createAttempts, 1);
+  });
+});
