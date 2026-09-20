@@ -258,7 +258,7 @@ export async function verifyPdtFcmp002V1ProtectedState(
         status: value.baselineMatches
           ? "PROTECTED_STATE_MATCH"
           : "PROTECTED_STATE_MISMATCH",
-        catalogState: value.baselineMatches ? "EMPTY_CATALOG" : "DRIFT_DETECTED",
+        catalogState: value.baselineMatches ? "PRODUCT1_ONLY_BASELINE" : "DRIFT_DETECTED",
         counts: value.state.counts,
         total: value.state.total,
         listingIds: value.snapshot.listingIds,
