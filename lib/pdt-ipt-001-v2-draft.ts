@@ -42,7 +42,6 @@ import {
 } from "./pdt-ipt-001-v2-manifest";
 
 const WRITE_HEADER = "x-autodigitalpublisher-write-token";
-const GATE14_ONE_TIME_TOKEN_SHA256 = "6518fcae4b8039d7135e179850a487771a808626dd77733866db567d10484ce6";
 const SHA256 = /^[a-f0-9]{64}$/;
 const COMMIT_SHA = /^[a-f0-9]{40}$/;
 const IMAGE_FIELDS = PDT_IPT_001_V2_GALLERY.map((asset) => ({
@@ -126,10 +125,7 @@ function runtimeCommit() {
 }
 
 function writesEnabled() {
-  return (
-    process.env.ETSY_POST_RESET_V2_WRITES_ENABLED === "true" ||
-    (process.env.VERCEL_GIT_COMMIT_MESSAGE ?? "").includes("[GATE14_EXECUTE]")
-  );
+  return process.env.ETSY_POST_RESET_V2_WRITES_ENABLED === "true";
 }
 
 function productionRuntime() {
@@ -138,25 +134,25 @@ function productionRuntime() {
 
 function authorizationError(request: Request) {
   const expected = process.env.ETSY_POST_RESET_V2_WRITE_TOKEN?.trim() ?? "";
-  const supplied = request.headers.get(WRITE_HEADER)?.trim() ?? "";
-  const envMatch = Boolean(expected && supplied && secureEqual(supplied, expected));
-  const suppliedHash = supplied
-    ? createHash("sha256").update(supplied, "utf8").digest("hex")
-    : "";
-  const oneTimeMatch = Boolean(
-    suppliedHash &&
-      secureEqual(suppliedHash, GATE14_ONE_TIME_TOKEN_SHA256)
-  );
-  if (!envMatch && !oneTimeMatch) {
+  if (!expected) {
     return NextResponse.json(
       {
         status: "BLOCKED_FAIL_CLOSED",
-        error: supplied
-          ? "PDT_IPT_V2_WRITE_UNAUTHORIZED"
-          : "PDT_IPT_V2_WRITE_TOKEN_NOT_CONFIGURED",
+        error: "PDT_IPT_V2_WRITE_TOKEN_NOT_CONFIGURED",
         ETSY_WRITE_COUNT: 0
       },
-      { status: supplied ? 401 : 503 }
+      { status: 503 }
+    );
+  }
+  const supplied = request.headers.get(WRITE_HEADER)?.trim() ?? "";
+  if (!supplied || !secureEqual(supplied, expected)) {
+    return NextResponse.json(
+      {
+        status: "BLOCKED_FAIL_CLOSED",
+        error: "PDT_IPT_V2_WRITE_UNAUTHORIZED",
+        ETSY_WRITE_COUNT: 0
+      },
+      { status: 401 }
     );
   }
   return null;
