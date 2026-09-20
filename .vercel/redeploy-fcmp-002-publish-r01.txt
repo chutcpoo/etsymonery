@@ -1,3 +1,4 @@
-PDT-FCMP-002 Publish R01 redeploy trigger
-Source commit: 956a064b6cff83db337f18e33d62d2ecfd701349
-No product or Etsy state changes.
+PDT-FCMP-002 Publish R01 production redeploy trigger
+Source commit: 2261d6b8083edb0922db47bcfbfbba3674a4de36
+Purpose: deploy current exact publish executor to Vercel Production.
+No product data change. No Etsy mutation in this commit.
