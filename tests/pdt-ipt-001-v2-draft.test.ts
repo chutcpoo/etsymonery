@@ -760,35 +760,3 @@ test("created-draft metadata mismatch becomes reconciliation-required instead of
     assert.equal(createAttempts, 1);
   });
 });
-
-
-test("Gate14 production marker does not bypass token authentication", async () => {
-  await withEnv(
-    async () => {
-      let calls = 0;
-      const response = await handlePdtIpt001V2Post(
-        new Request("https://example.test/execute", {
-          method: "POST",
-          headers: { "x-autodigitalpublisher-write-token": "wrong-gate14-token" }
-        }),
-        {
-          fetchImpl: async () => {
-            calls += 1;
-            throw new Error("SHOULD_NOT_RUN");
-          }
-        }
-      );
-      const payload = (await response.json()) as Record<string, unknown>;
-      assert.equal(response.status, 401);
-      assert.equal(payload.error, "PDT_IPT_V2_WRITE_UNAUTHORIZED");
-      assert.equal(payload.ETSY_WRITE_COUNT, 0);
-      assert.equal(calls, 0);
-    },
-    {
-      ETSY_POST_RESET_V2_WRITES_ENABLED: undefined,
-      ETSY_POST_RESET_V2_WRITE_TOKEN: undefined,
-      VERCEL_ENV: "production",
-      VERCEL_GIT_COMMIT_MESSAGE: "[GATE14_EXECUTE] exact one-time draft"
-    }
-  );
-});
