@@ -468,10 +468,21 @@ class PdtIpt001V2DraftProvider implements ReconciledWriteProvider {
     const payload = await parseJson(response);
     const id = isRec(payload) ? positiveId(payload.listing_id) : null;
     if (!id) throw new ProviderAmbiguousResultError();
+    const detail = await fetchListing(this.fetchImpl, this.token, Number(id));
+    const identity = verifyEtsyReadBackIdentity(
+      PDT_IPT_001_V2_LISTING_FINGERPRINT,
+      toObservation(detail)
+    );
+    if (identity.status !== "MATCH" || detail.state !== "draft") {
+      throw new ProviderAmbiguousResultError();
+    }
     return {
       providerResourceId: id,
       kind: "CREATE_DRAFT",
-      metadata: { state: "draft" }
+      metadata: {
+        state: "draft",
+        listingFingerprint: identity.actualFingerprint
+      }
     };
   }
 
@@ -656,6 +667,8 @@ export async function handlePdtIpt001V2Post(
 ) {
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
   if (contentType.includes("application/json")) {
+    const readAuthError = authorizationError(request);
+    if (readAuthError) return readAuthError;
     let value: unknown;
     try {
       value = await request.json();
