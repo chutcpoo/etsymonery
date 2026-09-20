@@ -1,25 +1,24 @@
 /**
- * Derived, read-only channel identifier projection from the canonical Catalog.
+ * Post-reset Etsy channel projection.
  *
- * AUTHORITY: DIGITAL_PRODUCT_CATALOG_MASTER.xlsx on Google Drive.
- * This file is NOT Product Truth and must never be used to override the Catalog.
- * It intentionally contains only Product_ID <-> Etsy Listing_ID identifiers needed
- * for runtime reconciliation. Refresh it only from the exact canonical Drive object.
+ * The pre-reset Etsy catalog was deleted on 2026-09-20. This module is
+ * intentionally empty until a NEW listing created after that reset is
+ * independently verified and promoted into the live channel index.
  */
 export const CANONICAL_CATALOG_SOURCE = {
-  driveId: "1XoIRHCVGGG81ddMhLfyP4TBE9mCgbOft",
-  title: "DIGITAL_PRODUCT_CATALOG_MASTER.xlsx",
-  snapshotModifiedAt: "2026-09-05T14:17:18.431Z",
-  authority: "IDENTIFIER_PROJECTION_ONLY"
+  driveId: "POST_RESET_NO_LEGACY_CATALOG_SOURCE",
+  title: "POST_RESET_EMPTY_CATALOG",
+  snapshotModifiedAt: "2026-09-20T08:19:30Z",
+  authority: "POST_RESET_ONLY"
 } as const;
 
-export const ETSY_CHANNEL_INDEX = [
-  { productId: "PDT-HBOP-001", listingId: 4566738686 },
-  { productId: "PDT-BOBA-001", listingId: 4560696421 },
-  { productId: "PD-REST-003", listingId: 4561819638 },
-  { productId: "PD-COFFEE-002", listingId: 4561793463 },
-  { productId: "PD-CLEAN-004", listingId: 4561795303 },
-  { productId: "PD-STOCK-005", listingId: 4561821192 },
-  { productId: "PDT-PCSO-001", listingId: 4569445414 },
-  { productId: "PDT-POGO-001", listingId: 4568730165 }
-] as const;
+export type EtsyChannelIndexEntry = {
+  productId: string;
+  listingId: number;
+};
+
+/**
+ * Only post-reset, live, independently verified Etsy listings may appear here.
+ * Current state: zero live products.
+ */
+export const ETSY_CHANNEL_INDEX: readonly EtsyChannelIndexEntry[] = [];
