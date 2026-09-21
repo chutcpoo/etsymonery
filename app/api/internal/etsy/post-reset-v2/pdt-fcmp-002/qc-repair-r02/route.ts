@@ -16,6 +16,13 @@ const TARGET_LISTING_ID = 4579068925;
 const PROTECTED_LISTING_ID = 4578945050;
 const GATE = "[GATE_FCMP_QC_REPAIR_R02_EXECUTE]";
 const NONCE_SHA256 = "c53547d08886b911c72a91b144970d9f786d049451f386c13c6c8d7558dbaac2";
+const AUTHORIZATION_TEXT =
+  "AUTHORIZE PDT-FCMP-002-V1-ETSY-QC-REPAIR-R02-DRIVE-ONLY-20260921 EXACT SCOPE ONLY" as const;
+const BASELINE_IMAGE_IDS = Object.freeze([
+  8551809678, 8551809826, 8551809992, 8599679141, 8599679297,
+  8551810370, 8599679521, 8599679715, 8551810810, 8551810950
+] as const);
+const BASELINE_BUYER_FILE_ID = 1517668972461 as const;
 
 const NEW_DESCRIPTION = PDT_FCMP_002_V1_LISTING_IDENTITY.description.replace(
   "know your true cost per serving and the price you should charge.",
@@ -192,6 +199,14 @@ function galleryMatches(images: Rec[]) {
   });
 }
 
+function baselineGalleryMatches(images: Rec[]) {
+  if (!galleryMatches(images)) return false;
+  const ordered = [...images].sort((a,b)=>(intField(a,"rank") ?? 0)-(intField(b,"rank") ?? 0));
+  return ordered.every((row, index) =>
+    intField(row,"listing_image_id") === BASELINE_IMAGE_IDS[index]
+  );
+}
+
 function baselineMatches(state: Awaited<ReturnType<typeof readAll>>) {
   const protectedListing = state.seller.listings.find(x => x.listingId === PROTECTED_LISTING_ID);
   const target = state.seller.listings.find(x => x.listingId === TARGET_LISTING_ID);
@@ -203,8 +218,9 @@ function baselineMatches(state: Awaited<ReturnType<typeof readAll>>) {
     protectedListing?.state === "active" &&
     target?.state === "active" &&
     listingMatches(state.listing, PDT_FCMP_002_V1_LISTING_IDENTITY.description, "active") &&
-    galleryMatches(state.images) &&
+    baselineGalleryMatches(state.images) &&
     state.files.length === 1 &&
+    intField(state.files[0], "listing_file_id") === BASELINE_BUYER_FILE_ID &&
     textField(state.files[0], "filename") === CURRENT_ETSY_BUYER_FILENAME &&
     Number(state.files[0].size_bytes) === 18603
   );
@@ -344,6 +360,7 @@ export async function GET(request: Request) {
         buyerFile: { driveId: BUYER_FILE.driveId, fileName: BUYER_FILE.fileName, size: BUYER_FILE.size, sha256: BUYER_FILE.sha256 },
         leaveActiveOnlyAfterFullPersistenceQC: true
       },
+      authorizationRequired: AUTHORIZATION_TEXT,
       authorizationSource: "FRESH_EXACT_AUTHORIZATION_REQUIRED",
       productionMutationExecuted: false,
       ETSY_WRITE_COUNT: 0
@@ -355,6 +372,10 @@ export async function GET(request: Request) {
   try {
     if (!gateEnabled()) {
       return NextResponse.json({ status:"BLOCKED_FAIL_CLOSED", error:"REPAIR_GATE_DISABLED", ETSY_WRITE_COUNT:0 }, { status:403 });
+    }
+    const authorizationText = url.searchParams.get("authorizationText")?.normalize("NFC").trim() ?? "";
+    if (!secureEqual(authorizationText, AUTHORIZATION_TEXT)) {
+      return NextResponse.json({ status:"BLOCKED_FAIL_CLOSED", error:"REPAIR_AUTHORIZATION_INVALID", ETSY_WRITE_COUNT:0 }, { status:401 });
     }
     const nonce = url.searchParams.get("nonce")?.trim() ?? "";
     if (!nonce || !nonceOk(nonce)) {
