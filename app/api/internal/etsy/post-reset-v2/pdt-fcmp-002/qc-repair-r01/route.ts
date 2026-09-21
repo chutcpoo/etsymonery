@@ -247,6 +247,69 @@ async function deleteBuyerFile(token: string, fileId: number) {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  if (url.searchParams.get("action") === "diagnose") {
+    try {
+      const token = await getValidEtsyAccessToken();
+      const state = await readAll(token);
+      const expected = PDT_FCMP_002_V1_LISTING_IDENTITY;
+      const orderedImages = [...state.images].sort(
+        (a,b)=>(intField(a,"rank") ?? 0)-(intField(b,"rank") ?? 0)
+      );
+      const file = state.files[0] ?? {};
+      return NextResponse.json({
+        status: "DIAGNOSTIC_READ_ONLY",
+        sellerCounts: state.seller.counts,
+        total: state.seller.total,
+        targetSellerState: state.seller.listings.find(x => x.listingId === TARGET_LISTING_ID)?.state ?? null,
+        protectedSellerState: state.seller.listings.find(x => x.listingId === PROTECTED_LISTING_ID)?.state ?? null,
+        listing: {
+          titleMatches: textField(state.listing, "title") === expected.title,
+          descriptionMatchesOld: textField(state.listing, "description") === expected.description,
+          priceMatches: exactPriceUsd(state.listing.price),
+          quantity: Number(state.listing.quantity),
+          quantityMatches: Number(state.listing.quantity) === expected.quantity,
+          whoMade: textField(state.listing, "who_made"),
+          whoMadeMatches: textField(state.listing, "who_made") === expected.who_made,
+          whenMade: textField(state.listing, "when_made"),
+          whenMadeMatches: textField(state.listing, "when_made") === expected.when_made,
+          taxonomyId: Number(state.listing.taxonomy_id),
+          taxonomyMatches: Number(state.listing.taxonomy_id) === expected.taxonomy_id,
+          listingType: textField(state.listing, "listing_type"),
+          type: textField(state.listing, "type"),
+          typeMatches: [textField(state.listing, "listing_type"), textField(state.listing, "type")].includes(expected.type),
+          state: textField(state.listing, "state"),
+          tags: Array.isArray(state.listing.tags) ? state.listing.tags : [],
+          tagsMatchOrdered: sameStringArray(state.listing.tags, expected.tags)
+        },
+        gallery: {
+          count: state.images.length,
+          exactAltAndRankMatch: galleryMatches(state.images),
+          rows: orderedImages.map(row => ({
+            listingImageId: intField(row,"listing_image_id"),
+            rank: intField(row,"rank"),
+            altText: textField(row,"alt_text"),
+            fullWidth: Number(row.full_width),
+            fullHeight: Number(row.full_height)
+          }))
+        },
+        buyerFile: {
+          count: state.files.length,
+          listingFileId: intField(file,"listing_file_id"),
+          rank: intField(file,"rank"),
+          filename: textField(file,"filename"),
+          sizeBytes: Number(file.size_bytes)
+        },
+        baselineMatches: baselineMatches(state),
+        ETSY_WRITE_COUNT: 0
+      }, { headers: { "cache-control": "no-store" } });
+    } catch (error) {
+      return NextResponse.json({
+        status:"DIAGNOSTIC_BLOCKED",
+        error:error instanceof Error ? error.message : "UNKNOWN",
+        ETSY_WRITE_COUNT:0
+      }, { status:409, headers: { "cache-control":"no-store" } });
+    }
+  }
   if (url.searchParams.get("action") !== "execute_relay") {
     return NextResponse.json({
       status: "PLAN_ONLY",
