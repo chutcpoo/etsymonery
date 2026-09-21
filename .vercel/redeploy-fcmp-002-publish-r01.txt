@@ -2,3 +2,4 @@ PDT-FCMP-002 Publish R01 production redeploy trigger
 Source commit: 2261d6b8083edb0922db47bcfbfbba3674a4de36
 Purpose: deploy current exact publish executor to Vercel Production.
 No product data change. No Etsy mutation in this commit.
+Final activation cycle: 2026-09-21 R02. Gate is enabled only by the deployment commit message; no product data changes.
