@@ -15,7 +15,7 @@ const SHOP_ID = 23582741;
 const TARGET_LISTING_ID = 4579068925;
 const PROTECTED_LISTING_ID = 4578945050;
 const GATE = "[GATE_FCMP_QC_REPAIR_EXECUTE]";
-const NONCE_SHA256 = "e988cfb02195e0e63beef6b2427b9b85130463c35da450176ae6944d42e5b680";
+const NONCE_SHA256 = "3735a94b3d325f9b79d2e737bc1713c94c17c065518f9c543755e9ee1aad19b9";
 
 const NEW_DESCRIPTION = PDT_FCMP_002_V1_LISTING_IDENTITY.description.replace(
   "know your true cost per serving and the price you should charge.",
@@ -30,6 +30,9 @@ const ASSETS = Object.freeze([
   { param: "asset09", rank: 9, fileName: "PDT-FCMP-002_09_receive.png", size: 50606, sha256: "d61cf205a21d36b80f5014bc6c069711b2a48ff2c54b08fe06b45b0499b1be05" },
   { param: "asset10", rank: 10, fileName: "PDT-FCMP-002_10_boundaries.png", size: 59908, sha256: "77f98dfb50b10c1af3151e663751e3ef2fa2a7ae87dce98285efeda84ce2d65c" }
 ] as const);
+
+const CURRENT_ETSY_BUYER_FILENAME =
+  "PDT-FCMP-002_Recipe_Cost_Menu_Pricing_Calculator_V1.xlsx" as const;
 
 const BUYER_FILE = Object.freeze({
   param: "buyerFile",
@@ -64,6 +67,19 @@ function intField(row: Rec, key: string) {
 function textField(row: Rec, key: string) {
   const value = row[key];
   return typeof value === "string" ? value.normalize("NFC").trim() : "";
+}
+
+function comparableText(value: string) {
+  let out = value.normalize("NFC").trim();
+  for (let i = 0; i < 2; i += 1) {
+    out = out
+      .replace(/&quot;|&#34;|&#x22;/gi, '"')
+      .replace(/&apos;|&#39;|&#x27;/gi, "'")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&amp;/gi, "&");
+  }
+  return out;
 }
 
 function secureEqual(left: string, right: string) {
@@ -134,7 +150,7 @@ function listingMatches(listing: Rec, description: string, state: string) {
   const e = PDT_FCMP_002_V1_LISTING_IDENTITY;
   return (
     textField(listing, "title") === e.title &&
-    textField(listing, "description") === description &&
+    comparableText(textField(listing, "description")) === comparableText(description) &&
     exactPriceUsd(listing.price) &&
     Number(listing.quantity) === e.quantity &&
     textField(listing, "who_made") === e.who_made &&
@@ -184,7 +200,7 @@ function baselineMatches(state: Awaited<ReturnType<typeof readAll>>) {
     listingMatches(state.listing, PDT_FCMP_002_V1_LISTING_IDENTITY.description, "active") &&
     galleryMatches(state.images) &&
     state.files.length === 1 &&
-    textField(state.files[0], "filename") === BUYER_FILE.fileName &&
+    textField(state.files[0], "filename") === CURRENT_ETSY_BUYER_FILENAME &&
     Number(state.files[0].size_bytes) === 18603
   );
 }
