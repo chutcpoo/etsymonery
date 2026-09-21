@@ -93,7 +93,7 @@ function comparable(v:string){let o=v.normalize("NFC").replace(/\r\n?/g,"\n").tr
 function sameStrings(v:unknown,e:readonly string[]){return Array.isArray(v)&&v.length===e.length&&v.every((x,i)=>typeof x==="string"&&x.normalize("NFC").trim()===e[i]);}
 function secureEqual(a:string,b:string){const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);}
 function nonceOk(v:string){return secureEqual(createHash("sha256").update(v,"utf8").digest("hex"),NONCE_SHA256);}
-function gateEnabled(){return process.env.VERCEL_ENV==="production"&&(process.env.VERCEL_GIT_COMMIT_MESSAGE??"").includes(GATE);}
+function gateEnabled(){return false;}
 function exactPrice(v:unknown){if(!isRec(v))return false;const a=Number(v.amount),d=Number(v.divisor);return Number.isFinite(a)&&Number.isFinite(d)&&d>0&&Number((a/d).toFixed(2))===11.99&&textField(v,"currency_code").toUpperCase()==="USD";}
 async function parseJson(r:Response){const t=await r.text();if(!t)return{};try{return JSON.parse(t) as unknown;}catch{return{};}}
 async function getRecord(token:string,url:string,code:string){const r=await fetch(url,{method:"GET",headers:etsyApiHeaders(token),cache:"no-store"});if(!r.ok)throw new Error(code+"_HTTP_"+r.status);const v=await parseJson(r);if(!isRec(v))throw new Error(code+"_INVALID");return v;}
