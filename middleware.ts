@@ -8,6 +8,8 @@ const POST_RESET_V2_PDT_FCMP_PUBLISH_R01_ROUTE =
   "/api/internal/etsy/post-reset-v2/pdt-fcmp-002/publish-r01";
 const POST_RESET_V2_PDT_FCMP_QC_REPAIR_R01_ROUTE =
   "/api/internal/etsy/post-reset-v2/pdt-fcmp-002/qc-repair-r01";
+const POST_RESET_V2_PDT_BIPC_DRAFT_R01_ROUTE =
+  "/api/internal/etsy/post-reset-v2/pdt-bipc-003/draft-r01";
 
 const BLOCKED_PUBLIC_PREFIXES = [
   "/api/etsy/active-listing-update",
@@ -48,7 +50,8 @@ export function middleware(request: NextRequest) {
     pathname === POST_RESET_V2_PDT_FCMP_ROUTE ||
     pathname === POST_RESET_V2_PDT_FCMP_RECOVERY_ROUTE ||
     pathname === POST_RESET_V2_PDT_FCMP_PUBLISH_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_FCMP_QC_REPAIR_R01_ROUTE
+    pathname === POST_RESET_V2_PDT_FCMP_QC_REPAIR_R01_ROUTE ||
+    pathname === POST_RESET_V2_PDT_BIPC_DRAFT_R01_ROUTE
   ) {
     return NextResponse.next();
   }
