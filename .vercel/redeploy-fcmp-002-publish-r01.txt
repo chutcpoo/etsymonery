@@ -5,3 +5,4 @@ No product data change. No Etsy mutation in this commit.
 Final activation cycle: 2026-09-21 R02. Gate is enabled only by the deployment commit message; no product data changes.
 Direct production gate activation: exact R01 one-time relay only.
 Cleanup: publish authorization consumed and listing 4579068925 reconciled ACTIVE; disable commit-message gate on next production deploy.
+Publish activation closed for repair cycle 2026-09-21; keep Etsy draft-only until repaired assets pass Final QC.
