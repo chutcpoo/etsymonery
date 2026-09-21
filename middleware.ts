@@ -10,6 +10,8 @@ const POST_RESET_V2_PDT_FCMP_QC_REPAIR_R01_ROUTE =
   "/api/internal/etsy/post-reset-v2/pdt-fcmp-002/qc-repair-r01";
 const POST_RESET_V2_PDT_FCMP_MEDIA_POLICY_R02_ROUTE =
   "/api/internal/etsy/post-reset-v2/pdt-fcmp-002/media-policy-r02";
+const POST_RESET_V2_PDT_IPT_MEDIA_POLICY_R01_ROUTE =
+  "/api/internal/etsy/post-reset-v2/pdt-ipt-001/media-policy-r01";
 const POST_RESET_V2_PDT_BIPC_DRAFT_R01_ROUTE =
   "/api/internal/etsy/post-reset-v2/pdt-bipc-003/draft-r01";
 
@@ -54,6 +56,7 @@ export function middleware(request: NextRequest) {
     pathname === POST_RESET_V2_PDT_FCMP_PUBLISH_R01_ROUTE ||
     pathname === POST_RESET_V2_PDT_FCMP_QC_REPAIR_R01_ROUTE ||
     pathname === POST_RESET_V2_PDT_FCMP_MEDIA_POLICY_R02_ROUTE ||
+    pathname === POST_RESET_V2_PDT_IPT_MEDIA_POLICY_R01_ROUTE ||
     pathname === POST_RESET_V2_PDT_BIPC_DRAFT_R01_ROUTE
   ) {
     return NextResponse.next();
