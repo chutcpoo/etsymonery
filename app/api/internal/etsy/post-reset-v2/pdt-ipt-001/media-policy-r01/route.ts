@@ -164,7 +164,21 @@ function gateEnabled(){ return process.env.VERCEL_ENV==="production" && (process
 function multipartHeaders(token:string){ const h=etsyApiHeaders(token); delete h["content-type"]; return h; }
 function allowedUrl(raw:string){ const u=new URL(raw); if(u.protocol!=="https:") throw new Error("ASSET_URL_PROTOCOL"); if(!/^sdmntpr[a-z0-9-]*\.oaiusercontent\.com$/i.test(u.hostname)) throw new Error("ASSET_URL_HOST"); return u.toString(); }
 async function parseJson(r:Response){ const t=await r.text(); if(!t) return {}; try{return JSON.parse(t) as unknown;}catch{return{};} }
-async function getRecord(token:string,url:string,code:string){ const r=await fetch(url,{method:"GET",headers:etsyApiHeaders(token),cache:"no-store"}); if(!r.ok) throw new Error(code+"_HTTP_"+r.status); const v=await parseJson(r); if(!isRec(v)) throw new Error(code+"_INVALID"); return v; }
+async function getRecord(token:string,url:string,code:string){
+  const waits=[0,1500,3000,5000,8000];
+  let lastStatus=0;
+  for(const ms of waits){
+    if(ms>0) await new Promise(r=>setTimeout(r,ms));
+    const r=await fetch(url,{method:"GET",headers:etsyApiHeaders(token),cache:"no-store"});
+    lastStatus=r.status;
+    if(r.status===429) continue;
+    if(!r.ok) throw new Error(code+"_HTTP_"+r.status);
+    const v=await parseJson(r);
+    if(!isRec(v)) throw new Error(code+"_INVALID");
+    return v;
+  }
+  throw new Error(code+"_HTTP_"+lastStatus);
+}
 function records(v:unknown,code:string){ if(!isRec(v)||!Array.isArray(v.results)) throw new Error(code); return v.results.filter(isRec); }
 function sameStrings(v:unknown,e:readonly string[]){ return Array.isArray(v)&&v.length===e.length&&v.every((x,i)=>typeof x==="string"&&x.normalize("NFC").trim()===e[i]); }
 function exactPrice(price:unknown){ if(!isRec(price)) return false; const a=Number(price.amount),d=Number(price.divisor); return Number.isFinite(a)&&Number.isFinite(d)&&d>0&&Number((a/d).toFixed(2))===7.99&&textField(price,"currency_code").toUpperCase()==="USD"; }
