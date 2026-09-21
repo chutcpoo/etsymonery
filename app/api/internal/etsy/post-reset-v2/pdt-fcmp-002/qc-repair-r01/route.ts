@@ -210,7 +210,7 @@ async function deleteImage(token: string, imageId: number) {
 async function uploadImage(token: string, rank: number, fileName: string, bytes: Buffer) {
   const expected = PDT_FCMP_002_V1_GALLERY[rank - 1];
   const body = new FormData();
-  body.append("image", new File([bytes], fileName, { type: "image/png" }), fileName);
+  body.append("image", new File([new Uint8Array(bytes)], fileName, { type: "image/png" }), fileName);
   body.append("rank", String(rank));
   body.append("alt_text", expected.altText ?? "");
   const response = await fetch(
@@ -224,7 +224,7 @@ async function uploadImage(token: string, rank: number, fileName: string, bytes:
 
 async function uploadBuyerFile(token: string, bytes: Buffer) {
   const body = new FormData();
-  body.append("file", new File([bytes], BUYER_FILE.fileName, { type: BUYER_FILE.mimeType }), BUYER_FILE.fileName);
+  body.append("file", new File([new Uint8Array(bytes)], BUYER_FILE.fileName, { type: BUYER_FILE.mimeType }), BUYER_FILE.fileName);
   body.append("name", BUYER_FILE.fileName);
   body.append("rank", "1");
   const response = await fetch(
