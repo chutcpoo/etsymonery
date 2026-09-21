@@ -163,8 +163,9 @@ function nonceOk(value: string) {
   return secureEqual(actual, NONCE_SHA256);
 }
 function gateEnabled() {
-  return process.env.VERCEL_ENV === "production" &&
-    (process.env.VERCEL_GIT_COMMIT_MESSAGE ?? "").includes(GATE);
+  // Draft R01 authorization was consumed on listing 4579470012.
+  // Keep the historical route for read-only reconciliation only.
+  return false;
 }
 function multipartHeaders(token: string) {
   const headers = etsyApiHeaders(token);
@@ -353,6 +354,33 @@ async function verifyPersistence(token: string, listingId: number) {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  if (url.searchParams.get("action") === "reconcile_readonly") {
+    try {
+      const listingId = Number(url.searchParams.get("listingId"));
+      if (!Number.isSafeInteger(listingId) || listingId <= 0) {
+        return NextResponse.json({status:"RECONCILE_BLOCKED",error:"LISTING_ID_INVALID",ETSY_WRITE_COUNT:0},{status:400});
+      }
+      const token = await getValidEtsyAccessToken();
+      const verified = await verifyPersistence(token, listingId);
+      return NextResponse.json({
+        status:"DRAFT_PERSISTENCE_RECONCILED",
+        mode:"READ_ONLY",
+        draftListingId:listingId,
+        candidateFingerprint:CANDIDATE_FINGERPRINT,
+        listingFingerprint:LISTING_FINGERPRINT,
+        publishPerformed:false,
+        verified,
+        ETSY_WRITE_COUNT:0
+      },{headers:{"cache-control":"no-store"}});
+    } catch (error) {
+      return NextResponse.json({
+        status:"RECONCILE_MISMATCH",
+        error:error instanceof Error ? error.message : "UNKNOWN",
+        publishPerformed:false,
+        ETSY_WRITE_COUNT:0
+      },{status:409,headers:{"cache-control":"no-store"}});
+    }
+  }
   if (url.searchParams.get("action") !== "execute_relay") {
     try {
       const token=await getValidEtsyAccessToken();
