@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "../../../../../../../lib/etsy";
+import { fetchEtsyReadWithRetry } from "../../../../../../../lib/etsy-http";
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 import { getEtsySellerStateSnapshot } from "../../../../../../../lib/etsy-seller-state-reconciliation";
 import {
@@ -19,7 +20,7 @@ const SHOP_ID=23582741;
 const TARGET_LISTING_ID=4579470012;
 const AUTHORIZATION_TEXT="AUTHORIZE PDT-BIPC-003-V1-ETSY-VIDEO-R01-20260921 EXACT SCOPE ONLY" as const;
 const GATE="[GATE_BIPC_VIDEO_R01_EXECUTE]";
-const NONCE_SHA256="e26ff4e1370790ba7dc0b03a1598630bdc71eb05f5770528fa653a5abdca7d46";
+const NONCE_SHA256="f73959fd8772f3ed96dec41422245b9aa39524496cae538029de8d46d03bcfe5";
 const VIDEO={
   param:"video01",
   fileName:"PDT-BIPC-003_ETSY_VIDEO_01_10S.mp4",
@@ -42,7 +43,7 @@ function gateEnabled(){return process.env.VERCEL_ENV==="production"&&(process.en
 function multipartHeaders(token:string){const h=etsyApiHeaders(token);delete h["content-type"];return h;}
 function allowedAssetUrl(raw:string){const u=new URL(raw);if(u.protocol!=="https:")throw new Error("ASSET_URL_PROTOCOL");if(!/^sdmntpr[a-z0-9-]*\.oaiusercontent\.com$/i.test(u.hostname))throw new Error("ASSET_URL_HOST");return u.toString();}
 async function parseJson(r:Response){const t=await r.text();if(!t)return{};try{return JSON.parse(t) as unknown;}catch{return{};}}
-async function getRecord(token:string,url:string,code:string){const r=await fetch(url,{method:"GET",headers:etsyApiHeaders(token),cache:"no-store"});if(!r.ok)throw new Error(code+"_HTTP_"+r.status);const v=await parseJson(r);if(!isRec(v))throw new Error(code+"_INVALID");return v;}
+async function getRecord(token:string,url:string,code:string){const r=await fetchEtsyReadWithRetry(fetch,url,{method:"GET",headers:etsyApiHeaders(token),cache:"no-store"});if(!r.ok)throw new Error(code+"_HTTP_"+r.status);const v=await parseJson(r);if(!isRec(v))throw new Error(code+"_INVALID");return v;}
 function records(v:unknown,code:string){if(!isRec(v)||!Array.isArray(v.results))throw new Error(code);return v.results.filter(isRec);}
 async function fetchAsset(url:string){const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error("VIDEO_FETCH_HTTP_"+r.status);const bytes=Buffer.from(await r.arrayBuffer());if(bytes.length!==VIDEO.size)throw new Error("VIDEO_SIZE_MISMATCH");const h=createHash("sha256").update(bytes).digest("hex");if(!secureEqual(h,VIDEO.sha256))throw new Error("VIDEO_SHA256_MISMATCH");return bytes;}
 
