@@ -17,6 +17,7 @@ import {
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
+// Production retry marker R02-01; no behavior change.
 
 const SHOP_ID=23582741;
 const TARGET_LISTING_ID=4579470012;
