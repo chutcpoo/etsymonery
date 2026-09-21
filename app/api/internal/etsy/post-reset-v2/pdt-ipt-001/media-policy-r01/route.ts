@@ -14,7 +14,7 @@ const GATE = "[GATE_IPT_MEDIA_POLICY_R01_EXECUTE]";
 const AUTHORIZATION_TEXT =
   "AUTHORIZE PDT-IPT-001-ETSY-MEDIA-POLICY-R01-20260921 EXACT SCOPE ONLY" as const;
 const NONCE_SHA256 =
-  "8aab7a6fd989eb63fed85906eda89b0eaf9582998102271e8d4207b4e20dcd63";
+  "57281c99ab3f3a0b3b0fffbdf247abe8e9ca41f539ca1c10c4e8190682da56df";
 
 const EXPECTED_TITLE =
   "Invoice Payment Tracker Excel | Accounts Receivable Aging & Follow-Up Spreadsheet for Small Business" as const;
