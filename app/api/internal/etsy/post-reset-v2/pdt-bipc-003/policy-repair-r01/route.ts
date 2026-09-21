@@ -173,8 +173,6 @@ export async function GET(request:Request){
         status:"PDT_BIPC_003_POLICY_REPAIR_R01_PASS",
         targetListingId:TARGET_LISTING_ID,
         state:"draft",
-        aiDisclosurePresent:true,
-        finalDescriptionMatches:true,
         titleUnchanged:true,
         tagsUnchanged:true,
         priceUnchanged:true,
