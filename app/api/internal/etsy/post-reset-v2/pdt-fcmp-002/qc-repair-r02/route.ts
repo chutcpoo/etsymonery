@@ -75,7 +75,7 @@ function textField(row: Rec, key: string) {
 }
 
 function comparableText(value: string) {
-  let out = value.normalize("NFC").replace(/\\r\\n?/g, "\\n").trim();
+  let out = value.normalize("NFC").replace(/\r\n?/g, "\n").trim();
   for (let i = 0; i < 2; i += 1) {
     out = out
       .replace(/&quot;|&#34;|&#x22;/gi, '"')
@@ -339,7 +339,8 @@ export async function GET(request: Request) {
       protectedListingId: PROTECTED_LISTING_ID,
       repair: {
         listingFields: ["description"],
-        imageRanks: ASSETS.map(x => x.rank),\n        driveAssets: ASSETS.map(x => ({ rank: x.rank, driveId: x.driveId, fileName: x.fileName, size: x.size, sha256: x.sha256 })),
+        imageRanks: ASSETS.map(x => x.rank),
+        driveAssets: ASSETS.map(x => ({ rank: x.rank, driveId: x.driveId, fileName: x.fileName, size: x.size, sha256: x.sha256 })),
         buyerFile: { driveId: BUYER_FILE.driveId, fileName: BUYER_FILE.fileName, size: BUYER_FILE.size, sha256: BUYER_FILE.sha256 },
         leaveActiveOnlyAfterFullPersistenceQC: true
       },
