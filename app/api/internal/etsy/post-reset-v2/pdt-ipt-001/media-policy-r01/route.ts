@@ -223,7 +223,7 @@ function baselineMatches(s:Awaited<ReturnType<typeof readAll>>){ return immutabl
 function finalMatches(s:Awaited<ReturnType<typeof readAll>>){ return immutableMatches(s)&&comparableText(textField(s.listing,"description"))===comparableText(FINAL_DESCRIPTION)&&s.videos.length===1&&textField(s.videos[0],"video_state")==="active"; }
 
 async function patchDescription(token:string){
-  const r=await fetch("https://api.etsy.com/v3/application/listings/"+TARGET_LISTING_ID,{method:"PATCH",headers:{...etsyApiHeaders(token),"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({description:FINAL_DESCRIPTION}),cache:"no-store"});
+  const r=await fetch("https://api.etsy.com/v3/application/shops/"+SHOP_ID+"/listings/"+TARGET_LISTING_ID,{method:"PATCH",headers:{...etsyApiHeaders(token),"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({description:FINAL_DESCRIPTION}),cache:"no-store"});
   if(!r.ok) throw new Error("DESCRIPTION_PATCH_HTTP_"+r.status);
 }
 async function uploadVideo(token:string,bytes:Buffer){
