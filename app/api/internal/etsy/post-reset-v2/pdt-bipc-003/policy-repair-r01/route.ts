@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "../../../../../../../lib/etsy";
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
@@ -9,6 +10,8 @@ export const dynamic = "force-dynamic";
 const SHOP_ID=23582741;
 const TARGET_LISTING_ID=4579470012;
 const AUTHORIZATION_TEXT="AUTHORIZE PDT-BIPC-003-V1-ETSY-POLICY-REPAIR-R01-20260921 EXACT SCOPE ONLY" as const;
+const GATE="[GATE_BIPC_POLICY_REPAIR_R01_EXECUTE]";
+const NONCE_SHA256="80a5c454b9bb1f86f765d3df1518a64c983f432574078fe535bf9704b6664253";
 
 const EXPECTED_TITLE="Bar Inventory Spreadsheet | Liquor Stock & Pour Cost Tracker" as const;
 const EXPECTED_TAGS=Object.freeze([
@@ -88,10 +91,18 @@ function textField(r:Rec,k:string){const v=r[k];return typeof v==="string"?v.nor
 function intField(r:Rec,k:string){const v=r[k];return typeof v==="number"&&Number.isSafeInteger(v)?v:null;}
 function comparable(v:string){let o=v.normalize("NFC").replace(/\r\n?/g,"\n").trim();for(let i=0;i<2;i++)o=o.replace(/&quot;|&#34;|&#x22;/gi,'"').replace(/&apos;|&#39;|&#x27;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&amp;/gi,"&");return o;}
 function sameStrings(v:unknown,e:readonly string[]){return Array.isArray(v)&&v.length===e.length&&v.every((x,i)=>typeof x==="string"&&x.normalize("NFC").trim()===e[i]);}
+function secureEqual(a:string,b:string){const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);}
+function nonceOk(v:string){return secureEqual(createHash("sha256").update(v,"utf8").digest("hex"),NONCE_SHA256);}
+function gateEnabled(){return process.env.VERCEL_ENV==="production"&&(process.env.VERCEL_GIT_COMMIT_MESSAGE??"").includes(GATE);}
 function exactPrice(v:unknown){if(!isRec(v))return false;const a=Number(v.amount),d=Number(v.divisor);return Number.isFinite(a)&&Number.isFinite(d)&&d>0&&Number((a/d).toFixed(2))===11.99&&textField(v,"currency_code").toUpperCase()==="USD";}
 async function parseJson(r:Response){const t=await r.text();if(!t)return{};try{return JSON.parse(t) as unknown;}catch{return{};}}
 async function getRecord(token:string,url:string,code:string){const r=await fetch(url,{method:"GET",headers:etsyApiHeaders(token),cache:"no-store"});if(!r.ok)throw new Error(code+"_HTTP_"+r.status);const v=await parseJson(r);if(!isRec(v))throw new Error(code+"_INVALID");return v;}
 function records(v:unknown,code:string){if(!isRec(v)||!Array.isArray(v.results))throw new Error(code);return v.results.filter(isRec);}
+
+async function patchDescription(token:string){
+  const r=await fetch("https://api.etsy.com/v3/application/shops/"+SHOP_ID+"/listings/"+TARGET_LISTING_ID,{method:"PATCH",headers:{...etsyApiHeaders(token),"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({description:FINAL_DESCRIPTION}),cache:"no-store"});
+  if(!r.ok)throw new Error("DESCRIPTION_PATCH_HTTP_"+r.status);
+}
 
 async function diagnose(){
   const token=await getValidEtsyAccessToken();
@@ -135,6 +146,47 @@ async function diagnose(){
 
 export async function GET(request:Request){
   const url=new URL(request.url);
+  if(url.searchParams.get("action")==="execute"){
+    let writes=0;
+    try{
+      if(!gateEnabled()) return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"BIPC_POLICY_REPAIR_GATE_DISABLED",ETSY_WRITE_COUNT:0},{status:403});
+      const auth=url.searchParams.get("authorizationText")?.normalize("NFC").trim()??"";
+      if(!secureEqual(auth,AUTHORIZATION_TEXT)) return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"AUTHORIZATION_INVALID",ETSY_WRITE_COUNT:0},{status:401});
+      const nonce=url.searchParams.get("nonce")?.trim()??"";
+      if(!nonce||!nonceOk(nonce)) return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"NONCE_INVALID",ETSY_WRITE_COUNT:0},{status:401});
+
+      const before=await diagnose();
+      if(!before.immutableMatches||!before.currentDescriptionMatchesBase||before.aiDisclosurePresent||before.finalDescriptionMatches){
+        return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"FRESH_BASELINE_MISMATCH",...before,ETSY_WRITE_COUNT:0},{status:409,headers:{"cache-control":"no-store"}});
+      }
+
+      const token=await getValidEtsyAccessToken();
+      await patchDescription(token);
+      writes=1;
+
+      const after=await diagnose();
+      if(!after.immutableMatches||!after.aiDisclosurePresent||!after.finalDescriptionMatches){
+        return NextResponse.json({status:"RECONCILIATION_REQUIRED",error:"FINAL_VERIFY_FAILED",...after,ETSY_WRITE_COUNT:1},{status:202,headers:{"cache-control":"no-store"}});
+      }
+
+      return NextResponse.json({
+        status:"PDT_BIPC_003_POLICY_REPAIR_R01_PASS",
+        targetListingId:TARGET_LISTING_ID,
+        state:"draft",
+        titleUnchanged:true,
+        tagsUnchanged:true,
+        priceUnchanged:true,
+        galleryUnchanged:true,
+        buyerFilesUnchanged:true,
+        protectedListingsUnchanged:true,
+        authorizationConsumed:true,
+        ...after,
+        ETSY_WRITE_COUNT:1
+      },{headers:{"cache-control":"no-store"}});
+    }catch(e){
+      return NextResponse.json({status:writes>0?"RECONCILIATION_REQUIRED":"BLOCKED_FAIL_CLOSED",error:e instanceof Error?e.message:"UNKNOWN",ETSY_WRITE_COUNT:writes},{status:writes>0?202:400,headers:{"cache-control":"no-store"}});
+    }
+  }
   if(url.searchParams.get("action")==="diagnose"){
     try{
       const d=await diagnose();
@@ -150,7 +202,8 @@ export async function GET(request:Request){
     exactScope:{description:"APPEND_AI_DISCLOSURE_ONLY",title:"VERIFY_ONLY",tags:"VERIFY_ONLY",price:"VERIFY_ONLY",gallery:"VERIFY_ONLY",buyerFiles:"VERIFY_ONLY",state:"KEEP_DRAFT"},
     authorizationRequired:AUTHORIZATION_TEXT,
     featureGateDefault:"OFF",
-    mutationEnabled:false,
+    gateEnabled:gateEnabled(),
+    mutationEnabled:gateEnabled(),
     publishAuthorized:false,
     ETSY_WRITE_COUNT:0
   },{headers:{"cache-control":"no-store"}});
