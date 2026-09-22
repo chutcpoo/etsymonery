@@ -48,6 +48,12 @@ const FILES=[
 type Rec=Record<string,unknown>;
 const isRec=(v:unknown):v is Rec=>typeof v==="object"&&v!==null&&!Array.isArray(v);
 const txt=(r:Rec,k:string)=>typeof r[k]==="string"?(r[k] as string).normalize("NFC").trim():"";
+const decodeEntities=(value:string)=>value
+ .replace(/&#39;|&#x27;|&apos;/g,"'")
+ .replace(/&quot;|&#34;/g,'"')
+ .replace(/&amp;/g,"&")
+ .replace(/&lt;/g,"<")
+ .replace(/&gt;/g,">");
 const int=(r:Rec,k:string)=>{const n=Number(r[k]);return Number.isSafeInteger(n)?n:null;};
 const eq=(a:string,b:string)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
 const runtimeCommit=()=>process.env.VERCEL_GIT_COMMIT_SHA?.trim().toLowerCase()??"";
@@ -61,7 +67,7 @@ async function collection(token:string,kind:"images"|"files"){const url=kind==="
 function priceUsd(l:Rec){const p=l.price;if(!isRec(p))return NaN;return Number(p.amount)/Number(p.divisor);}
 function tagsMatch(v:unknown){return Array.isArray(v)&&v.length===TAGS.length&&v.every((x,i)=>typeof x==="string"&&x.normalize("NFC").trim()===TAGS[i]);}
 function coreMatch(l:Rec,price:number){
- return txt(l,"state")==="draft"&&txt(l,"title")===TITLE&&txt(l,"description")===DESCRIPTION&&
+ return txt(l,"state")==="draft"&&txt(l,"title")===TITLE&&decodeEntities(txt(l,"description"))===DESCRIPTION&&
  Number(priceUsd(l).toFixed(2))===price&&Number(l.quantity)===999&&Number(l.taxonomy_id)===12476&&
  txt(l,"who_made")==="i_did"&&txt(l,"when_made")==="2020_2026"&&
  (txt(l,"listing_type")||txt(l,"type")||"download")==="download"&&tagsMatch(l.tags);
