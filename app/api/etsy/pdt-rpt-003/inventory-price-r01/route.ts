@@ -19,7 +19,7 @@ type Rec=Record<string,unknown>;
 const isRec=(v:unknown):v is Rec=>typeof v==="object"&&v!==null&&!Array.isArray(v);
 const txt=(v:unknown)=>typeof v==="string"?v.normalize("NFC").trim():"";
 const eq=(a:string,b:string)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
-const commit=()=>process.env.VERCEL_GIT_COMMIT_SHA?.trim().toLowerCase()??"";
+const commit=()=>process.env.VERCEL_GIT_COMMIT_SHA?.trim().toLowerCase()??"";\nconst gate=()=>false;
 
 async function asJson(r:Response):Promise<unknown>{const t=await r.text();if(!t)return{};try{return JSON.parse(t) as unknown;}catch{return{};}}
 async function getRec(token:string,url:string,code:string){const r=await fetch(url,{headers:etsyApiHeaders(token),cache:"no-store"});if(!r.ok)throw new Error(code+"_HTTP_"+r.status);const v=await asJson(r);if(!isRec(v))throw new Error(code+"_INVALID");return v;}
