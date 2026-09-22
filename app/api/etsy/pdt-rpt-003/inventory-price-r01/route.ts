@@ -99,6 +99,7 @@ export async function GET(request:Request){
  }
  let writes=0;
  try{
+  if(!gate())throw new Error("RPT_INVENTORY_PRICE_GATE_DISABLED");
   if(process.env.VERCEL_ENV!=="production")throw new Error("PRODUCTION_REQUIRED");
   if(!eq(u.searchParams.get("authorizationText")?.normalize("NFC").trim()??"",AUTH))throw new Error("AUTH_INVALID");
   if(!eq(u.searchParams.get("nonce")?.trim()??"",NONCE))throw new Error("NONCE_INVALID");
