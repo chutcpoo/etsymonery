@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "../../../../../lib/etsy";
 import { getValidEtsyAccessToken } from "../../../../../lib/etsy-auth";
