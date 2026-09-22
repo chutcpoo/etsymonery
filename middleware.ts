@@ -22,6 +22,8 @@ const POST_RESET_V2_PDT_BIPC_VIDEO_R01_ROUTE =
   "/api/internal/etsy/post-reset-v2/pdt-bipc-003/video-r01";
 const POST_RESET_V2_PDT_CBEO_DRAFT_CREATE_R01_ROUTE =
   "/api/internal/etsy/post-reset-v2/pdt-cbeo-004/draft-create-r01";
+const POST_RESET_V2_PDT_CBEO_BUYERFILES_R01_ROUTE =
+  "/api/internal/etsy/post-reset-v2/pdt-cbeo-004/buyerfiles-r01";
 
 const BLOCKED_PUBLIC_PREFIXES = [
   "/api/etsy/active-listing-update",
@@ -69,7 +71,8 @@ export function middleware(request: NextRequest) {
     pathname === POST_RESET_V2_PDT_BIPC_POLICY_REPAIR_R01_ROUTE ||
     pathname === POST_RESET_V2_PDT_BIPC_PUBLISH_R02_ROUTE ||
     pathname === POST_RESET_V2_PDT_BIPC_VIDEO_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_CBEO_DRAFT_CREATE_R01_ROUTE
+    pathname === POST_RESET_V2_PDT_CBEO_DRAFT_CREATE_R01_ROUTE ||
+    pathname === POST_RESET_V2_PDT_CBEO_BUYERFILES_R01_ROUTE
   ) {
     return NextResponse.next();
   }
