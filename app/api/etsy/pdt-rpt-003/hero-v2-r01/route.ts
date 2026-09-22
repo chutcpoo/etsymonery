@@ -261,6 +261,7 @@ async function renderHero(sourceUrl: string) {
       {
         style: {
           position: "absolute",
+          display: "flex",
           right: "110px",
           top: "125px",
           width: "150px",
@@ -309,6 +310,8 @@ async function renderHero(sourceUrl: string) {
       {
         style: {
           position: "absolute",
+          display: "flex",
+          alignItems: "center",
           left: "120px",
           top: "455px",
           fontSize: "72px",
