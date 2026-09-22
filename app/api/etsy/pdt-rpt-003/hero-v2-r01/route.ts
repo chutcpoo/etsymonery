@@ -237,7 +237,7 @@ async function renderHero(sourceUrl: string) {
         {
           style: {
             fontSize: "164px",
-            fontWeight: 800,
+            fontWeight: 900,
             color: "#16324F"
           }
         },
@@ -248,7 +248,7 @@ async function renderHero(sourceUrl: string) {
         {
           style: {
             fontSize: "164px",
-            fontWeight: 800,
+            fontWeight: 900,
             color: "#2B6F70",
             marginLeft: "420px"
           }
@@ -321,7 +321,7 @@ async function renderHero(sourceUrl: string) {
         }
       },
       "Income ",
-      h("span", { style: { color: "#D89B3C" } }, "•"),
+      h("span", { style: { color: "#D89B3C", marginLeft: "14px", marginRight: "14px" } }, "•"),
       " Expenses ",
       h("span", { style: { color: "#D89B3C" } }, "•"),
       " Rent Roll ",
@@ -358,7 +358,7 @@ async function renderHero(sourceUrl: string) {
           alignItems: "center",
           justifyContent: "center",
           fontSize: "54px",
-          fontWeight: 800,
+          fontWeight: 900,
           color: "#16324F"
         }
       },
@@ -397,7 +397,7 @@ async function renderHero(sourceUrl: string) {
         width: "1636px",
         height: "890px",
         objectFit: "cover",
-        objectPosition: "center 46%"
+        objectPosition: "center 30%"
       }
     })),
     h("div", {
