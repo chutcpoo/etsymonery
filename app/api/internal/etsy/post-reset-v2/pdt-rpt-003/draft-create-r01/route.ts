@@ -142,7 +142,7 @@ function runtimeCommit() {
 }
 
 function gateEnabled() {
-  return true;
+  return false;
 }
 
 function toObservation(value: Rec): EtsyReadBackObservation {
