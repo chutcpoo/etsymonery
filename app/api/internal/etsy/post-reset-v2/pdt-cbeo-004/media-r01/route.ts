@@ -185,6 +185,11 @@ function runtimeCommit() {
   return process.env.VERCEL_GIT_COMMIT_SHA?.trim().toLowerCase() ?? "";
 }
 
+function gateEnabled() {
+  // Media R01 was consumed on 2026-09-22. Keep PLAN/readback available only.
+  return false;
+}
+
 async function parseJson(response: Response) {
   const body = await response.text();
   if (!body) return {};
@@ -499,6 +504,10 @@ export async function GET(request: Request) {
 
   let writeAttempts = 0;
   try {
+    if (!gateEnabled()) {
+      throw new Error("CBEO_MEDIA_GATE_DISABLED");
+    }
+
     if (process.env.VERCEL_ENV !== "production") {
       throw new Error("CBEO_MEDIA_PRODUCTION_RUNTIME_REQUIRED");
     }
