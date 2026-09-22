@@ -57,7 +57,7 @@ const decodeEntities=(value:string)=>value
 const int=(r:Rec,k:string)=>{const n=Number(r[k]);return Number.isSafeInteger(n)?n:null;};
 const eq=(a:string,b:string)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
 const runtimeCommit=()=>process.env.VERCEL_GIT_COMMIT_SHA?.trim().toLowerCase()??"";
-const gate=()=>true;
+const gate=()=>false;
 
 async function parseJson(r:Response){const t=await r.text();if(!t)return{};try{return JSON.parse(t) as unknown;}catch{return{};}}
 async function getRec(token:string,url:string,code:string){const r=await fetch(url,{headers:etsyApiHeaders(token),cache:"no-store"});if(!r.ok)throw new Error(code+"_HTTP_"+r.status);const v=await parseJson(r);if(!isRec(v))throw new Error(code+"_INVALID");return v;}

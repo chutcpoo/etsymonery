@@ -62,7 +62,7 @@ const txt=(r:Rec,k:string)=>typeof r[k]==="string"?(r[k] as string).normalize("N
 const int=(r:Rec,k:string)=>{const n=Number(r[k]);return Number.isSafeInteger(n)?n:null;};
 const eq=(a:string,b:string)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
 const commit=()=>process.env.VERCEL_GIT_COMMIT_SHA?.trim().toLowerCase()??"";
-const gate=()=>true;
+const gate=()=>false;
 function obs(r:Rec):EtsyReadBackObservation{return{title:r.title,description:r.description,price:r.price as EtsyReadBackObservation["price"],tags:r.tags,quantity:r.quantity,who_made:r.who_made,when_made:r.when_made,taxonomy_id:r.taxonomy_id,type:r.listing_type??r.type??"download",state:r.state};}
 async function json(r:Response){const t=await r.text();if(!t)return{};try{return JSON.parse(t) as unknown;}catch{return{};}}
 async function rec(token:string,url:string,code:string){const r=await fetch(url,{headers:etsyApiHeaders(token),cache:"no-store"});if(!r.ok)throw new Error(code+"_HTTP_"+r.status);const v=await json(r);if(!isRec(v))throw new Error(code+"_INVALID");return v;}
