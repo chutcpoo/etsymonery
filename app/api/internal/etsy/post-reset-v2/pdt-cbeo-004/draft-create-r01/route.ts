@@ -171,6 +171,12 @@ function runtimeCommit() {
   return process.env.VERCEL_GIT_COMMIT_SHA?.trim().toLowerCase() ?? "";
 }
 
+function gateEnabled() {
+  // R01 was consumed by the one Etsy draft-create attempt on 2026-09-22.
+  // Keep PLAN/readback available, but fail closed for any further execute request.
+  return false;
+}
+
 function toObservation(value: Rec): EtsyReadBackObservation {
   return {
     title: value.title,
@@ -476,6 +482,10 @@ export async function GET(request: Request) {
   let parentRequestHash = "";
 
   try {
+    if (!gateEnabled()) {
+      throw new Error("CBEO_DRAFT_GATE_DISABLED");
+    }
+
     if (process.env.VERCEL_ENV !== "production") {
       throw new Error("CBEO_PRODUCTION_RUNTIME_REQUIRED");
     }
