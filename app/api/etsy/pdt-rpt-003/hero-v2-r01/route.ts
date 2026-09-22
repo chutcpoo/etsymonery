@@ -679,7 +679,7 @@ export async function GET(request: Request) {
         status: "HERO_V2_REPLACE_PASS",
         listingId: LISTING_ID,
         oldHeroImageId: oldHeroId,
-        newHeroImageId,
+        newHeroImageId: newImageId,
         galleryCount: 10,
         buyerFileCount: 2,
         state: "draft",
