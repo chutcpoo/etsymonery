@@ -264,7 +264,8 @@ async function renderHero(sourceUrl: string) {
           right: "110px",
           top: "125px",
           width: "150px",
-          height: "150px"
+          height: "150px",
+          display: "flex"
         }
       },
       h("div", {
@@ -314,7 +315,9 @@ async function renderHero(sourceUrl: string) {
           fontSize: "72px",
           fontWeight: 750,
           color: "#16324F",
-          letterSpacing: "-1px"
+          letterSpacing: "-1px",
+          display: "flex",
+          alignItems: "center"
         }
       },
       "Income ",
