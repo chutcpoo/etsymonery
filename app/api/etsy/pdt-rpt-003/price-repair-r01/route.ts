@@ -52,6 +52,11 @@ const int=(r:Rec,k:string)=>{const n=Number(r[k]);return Number.isSafeInteger(n)
 const eq=(a:string,b:string)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
 const runtimeCommit=()=>process.env.VERCEL_GIT_COMMIT_SHA?.trim().toLowerCase()??"";
 const gate=()=>true;
+function comparable(v:string){
+ let o=v.normalize("NFC").replace(/\\r\\n?/g,"\\n").trim();
+ for(let i=0;i<2;i++)o=o.replace(/&quot;|&#34;|&#x22;/gi,'"').replace(/&apos;|&#39;|&#x27;/gi,"'").replace(/&lt;/gi,"<").replace(/&gt;/gi,">").replace(/&amp;/gi,"&");
+ return o;
+}
 
 async function parseJson(r:Response){const t=await r.text();if(!t)return{};try{return JSON.parse(t) as unknown;}catch{return{};}}
 async function getRec(token:string,url:string,code:string){const r=await fetch(url,{headers:etsyApiHeaders(token),cache:"no-store"});if(!r.ok)throw new Error(code+"_HTTP_"+r.status);const v=await parseJson(r);if(!isRec(v))throw new Error(code+"_INVALID");return v;}
@@ -61,7 +66,7 @@ async function collection(token:string,kind:"images"|"files"){const url=kind==="
 function priceUsd(l:Rec){const p=l.price;if(!isRec(p))return NaN;return Number(p.amount)/Number(p.divisor);}
 function tagsMatch(v:unknown){return Array.isArray(v)&&v.length===TAGS.length&&v.every((x,i)=>typeof x==="string"&&x.normalize("NFC").trim()===TAGS[i]);}
 function coreMatch(l:Rec,price:number){
- return txt(l,"state")==="draft"&&txt(l,"title")===TITLE&&txt(l,"description")===DESCRIPTION&&
+ return txt(l,"state")==="draft"&&txt(l,"title")===TITLE&&comparable(txt(l,"description"))===comparable(DESCRIPTION)&&
  Number(priceUsd(l).toFixed(2))===price&&Number(l.quantity)===999&&Number(l.taxonomy_id)===12476&&
  txt(l,"who_made")==="i_did"&&txt(l,"when_made")==="2020_2026"&&
  (txt(l,"listing_type")||txt(l,"type")||"download")==="download"&&tagsMatch(l.tags);
