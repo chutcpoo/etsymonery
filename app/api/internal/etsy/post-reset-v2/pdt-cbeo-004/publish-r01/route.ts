@@ -207,7 +207,7 @@ function records(value: unknown, code: string) {
 
 function protectedStateFingerprint(input: {
   targetState: "draft" | "active";
-  sellerCounts: Record<string, number>;
+  sellerCounts: { active: number; inactive: number; sold_out: number; draft: number; expired: number };
   total: number;
   imageIds: number[];
   fileIds: number[];
