@@ -184,7 +184,7 @@ function baselineSafe(
 ) {
   if (state.total !== state.listings.length) return false;
   return !state.listings.some(
-    (item) => item.title.normalize("NFC").trim() === LISTING.title
+    (item) => (item.title ?? "").normalize("NFC").trim() === LISTING.title
   );
 }
 
