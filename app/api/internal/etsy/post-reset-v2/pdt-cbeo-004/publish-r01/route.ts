@@ -100,7 +100,7 @@ function sameStrings(v:unknown,e:readonly string[]){return Array.isArray(v)&&v.l
 function secureEqual(a:string,b:string){const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);}
 function nonceOk(v:string){return secureEqual(createHash("sha256").update(v,"utf8").digest("hex"),NONCE_SHA256);}
 function runtimeCommit(){return process.env.VERCEL_GIT_COMMIT_SHA?.trim().toLowerCase()??"";}
-function gateEnabled(){return true;}
+function gateEnabled(){return false;}
 function exactPrice(v:unknown){if(!isRec(v))return false;return Number(v.amount)===999&&Number(v.divisor)===100&&textField(v,"currency_code").toUpperCase()==="USD";}
 async function parseJson(r:Response){const t=await r.text();if(!t)return{};try{return JSON.parse(t) as unknown;}catch{return{};}}
 async function getRecord(token:string,url:string,code:string){
