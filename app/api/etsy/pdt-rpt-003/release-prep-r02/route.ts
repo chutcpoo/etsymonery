@@ -9,7 +9,10 @@ import {
 import { getValidEtsyAccessToken } from "../../../../../lib/etsy-auth";
 import { getEtsySellerStateSnapshot } from "../../../../../lib/etsy-seller-state-reconciliation";
 import { NeonOperationLedgerRepository } from "../../../../../lib/operation-ledger";
-import { PDT_RPT_003_R02 as R02 } from "../../../../../lib/pdt-rpt-003-r02";
+import {
+  PDT_RPT_003_R02 as R02,
+  createPdtRpt003R02MetadataPatch
+} from "../../../../../lib/pdt-rpt-003-r02";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -215,17 +218,10 @@ function multipartHeaders(token: string) {
   return h;
 }
 async function patchCore(token: string) {
-  const body = new URLSearchParams({
-    title: R02.title,
-    description: R02.description,
-    price: R02.priceUsd.toFixed(2),
-    quantity: String(R02.quantity),
-    taxonomy_id: String(R02.taxonomyId),
-    who_made: R02.whoMade,
-    when_made: R02.whenMade,
-    type: R02.type,
-    tags: R02.tags.join(",")
-  });
+  // R02 baseline already proves price, quantity, taxonomy, maker/date and digital
+  // type are exact. PATCH only fields that actually change so Etsy does not
+  // re-validate unrelated coupled fields such as who_made/when_made/is_supply.
+  const body = createPdtRpt003R02MetadataPatch();
   const r = await fetch(
     "https://api.etsy.com/v3/application/shops/" + R02.shopId + "/listings/" + R02.listingId,
     { method: "PATCH", headers: { ...etsyApiHeaders(token), "content-type": "application/x-www-form-urlencoded" }, body, cache: "no-store" }
