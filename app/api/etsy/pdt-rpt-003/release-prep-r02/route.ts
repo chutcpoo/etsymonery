@@ -131,13 +131,13 @@ function imagesFinal(rows: Rec[]) {
     Number(r.rank) === i + 1 &&
     Number(r.full_width) === 2000 &&
     Number(r.full_height) === 2000 &&
-    text(r.alt_text) === R02.images[i].alt
+    decodeEntities(text(r.alt_text)) === R02.images[i].alt
   );
 }
 function gallerySetExact(rows: Rec[]) {
   if (rows.length !== R02.images.length) return false;
   const expected = new Set<string>(R02.images.map(x => x.alt));
-  const actual = rows.map(r => text(r.alt_text));
+  const actual = rows.map(r => decodeEntities(text(r.alt_text)));
   return new Set(actual).size === R02.images.length &&
     actual.every(alt => expected.has(alt)) &&
     rows.every(r =>
@@ -201,7 +201,7 @@ function fingerprint(s: Awaited<ReturnType<typeof snapshot>>) {
     },
     images: [...s.images]
       .sort((a, b) => Number(a.rank ?? 0) - Number(b.rank ?? 0))
-      .map(r => ({ id: int(r.listing_image_id), rank: Number(r.rank), alt: text(r.alt_text), w: Number(r.full_width), h: Number(r.full_height) })),
+      .map(r => ({ id: int(r.listing_image_id), rank: Number(r.rank), alt: decodeEntities(text(r.alt_text)), w: Number(r.full_width), h: Number(r.full_height) })),
     files: [...s.files]
       .sort((a, b) => Number(a.rank ?? 0) - Number(b.rank ?? 0))
       .map(r => ({ id: int(r.listing_file_id), rank: Number(r.rank), name: text(r.filename), size: Number(r.size_bytes) })),
@@ -334,7 +334,7 @@ async function plan() {
       .map(r => ({
         listingImageId: int(r.listing_image_id),
         rank: Number(r.rank),
-        alt: text(r.alt_text)
+        alt: decodeEntities(text(r.alt_text))
       })),
     galleryRecoveryAuthorizationRequired: R02.galleryRecoveryAuthorization,
     galleryRecoveryNonce: R02.galleryRecoveryNonce,
@@ -417,7 +417,7 @@ export async function GET(request: Request) {
       const idByAlt = new Map<string, number>();
       for (const row of before.images) {
         const id = int(row.listing_image_id);
-        const alt = text(row.alt_text);
+        const alt = decodeEntities(text(row.alt_text));
         if (!id || !alt || idByAlt.has(alt)) {
           throw new Error("RECOVERY_IMAGE_IDENTITY_INVALID");
         }
