@@ -11,7 +11,8 @@ import { getEtsySellerStateSnapshot } from "../../../../../lib/etsy-seller-state
 import { NeonOperationLedgerRepository } from "../../../../../lib/operation-ledger";
 import {
   PDT_RPT_003_R02 as R02,
-  createPdtRpt003R02MetadataPatch
+  createPdtRpt003R02MetadataPatch,
+  pdtRpt003R02GalleryRecoverySequence
 } from "../../../../../lib/pdt-rpt-003-r02";
 
 export const runtime = "nodejs";
