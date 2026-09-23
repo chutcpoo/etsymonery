@@ -1,4 +1,4 @@
-import { getEtsyCredentials } from "./etsy";
+import { getEtsyCredentials, getMissingEtsyScopes } from "./etsy";
 import {
   loadEtsyTokens,
   saveEtsyTokens,
@@ -69,11 +69,24 @@ async function refreshEtsyTokens(stored: EtsyStoredTokens) {
   return token.access_token;
 }
 
-export async function getValidEtsyAccessToken() {
+export async function getValidEtsyAccessToken(
+  requiredScopes: readonly string[] = []
+) {
   const stored = await loadEtsyTokens();
 
   if (!stored) {
     throw new Error("ETSY_OAUTH_NOT_CONNECTED");
+  }
+
+  if (requiredScopes.length > 0) {
+    if (!stored.scope?.trim()) {
+      throw new Error("ETSY_SCOPE_METADATA_MISSING");
+    }
+
+    const missingScopes = getMissingEtsyScopes(stored.scope, requiredScopes);
+    if (missingScopes.length > 0) {
+      throw new Error(`ETSY_SCOPE_MISSING:${missingScopes.join(",")}`);
+    }
   }
 
   const refreshBufferMs = 5 * 60 * 1000;
