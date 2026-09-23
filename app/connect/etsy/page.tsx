@@ -1,8 +1,13 @@
 import {
   ETSY_SCOPES,
-  getEtsyCredentials
+  ETSY_SELLER_READ_SCOPES,
+  ETSY_SELLER_WRITE_SCOPES,
+  getEtsyCredentials,
+  getMissingEtsyScopes,
+  parseEtsyGrantedScopes
 } from "../../../lib/etsy";
 import {
+  getStoredEtsyGrantMetadata,
   hasStoredEtsyTokens,
   isTokenStoreConfigured
 } from "../../../lib/token-store";
@@ -15,6 +20,17 @@ export default async function EtsyConnectPage() {
     ? await hasStoredEtsyTokens()
     : false;
   const credentials = getEtsyCredentials();
+  const grant = persistenceConfigured ? await getStoredEtsyGrantMetadata() : null;
+  const grantedScopes = parseEtsyGrantedScopes(grant?.scope);
+  const scopeMetadataPresent = Boolean(grant?.scope?.trim());
+  const sellerReadGrantReady =
+    connected &&
+    scopeMetadataPresent &&
+    getMissingEtsyScopes(grant?.scope, ETSY_SELLER_READ_SCOPES).length === 0;
+  const sellerWriteGrantReady =
+    connected &&
+    scopeMetadataPresent &&
+    getMissingEtsyScopes(grant?.scope, ETSY_SELLER_WRITE_SCOPES).length === 0;
 
   return (
     <main className="shell">
@@ -45,8 +61,13 @@ export default async function EtsyConnectPage() {
             {connected ? "Etsy authorization active" : "Etsy authorization pending"}
           </h2>
           <p>
-            Requested scopes: {ETSY_SCOPES.join(", ")}. OAuth tokens are stored
-            server-side with application-layer encryption. Marketplace writes are production-capable but remain secure-gated: exact candidate/QC/protected-state/authorization evidence is required before execution.
+            Requested scopes: {ETSY_SCOPES.join(", ")}. Granted scopes:{" "}
+            {scopeMetadataPresent ? grantedScopes.join(", ") : "UNKNOWN"}. Seller
+            Draft read grant: {sellerReadGrantReady ? "READY" : "BLOCKED"}. Seller
+            Draft write grant: {sellerWriteGrantReady ? "READY" : "BLOCKED"}.
+            OAuth tokens are stored server-side with application-layer encryption.
+            Marketplace writes remain secure-gated: exact candidate/QC/protected-state/
+            authorization evidence is required before execution.
           </p>
         </div>
 
