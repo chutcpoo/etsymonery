@@ -12,6 +12,8 @@ export const PDT_RPT_003_R02 = {
   prepNonce: "PDT-RPT-003-R02-PREP-NONCE-A7C4D912",
   activateAuthorization: "AUTHORIZE PDT-RPT-003-V1-ETSY-ACTIVATE-R02-20260923 EXACT SCOPE ONLY",
   activateNonce: "PDT-RPT-003-R02-ACTIVATE-NONCE-C4B9E713",
+  galleryRecoveryAuthorization: "AUTHORIZE PDT-RPT-003-V1-ETSY-R02-GALLERY-RECOVERY-R01-20260923 EXACT SCOPE ONLY",
+  galleryRecoveryNonce: "PDT-RPT-003-R02-GALLERY-RECOVERY-R01-NONCE-E6A31F42",
   oldTitle: "Rental Property Tracker Excel | Landlord Income Expense | Airbnb Spreadsheet Dashboard",
   title: "Rental Property Tracker Excel | Landlord Income & Expense Spreadsheet | Long-Term + Short-Term Rentals",
   tags: [
@@ -173,4 +175,11 @@ export function createPdtRpt003R02MetadataPatch() {
   body.set("description", PDT_RPT_003_R02.description);
   body.set("tags", PDT_RPT_003_R02.tags.join(","));
   return body;
+}
+
+
+export function pdtRpt003R02GalleryRecoverySequence() {
+  return PDT_RPT_003_R02.images
+    .map((image, index) => ({ desiredRank: index + 1, alt: image.alt }))
+    .reverse();
 }
