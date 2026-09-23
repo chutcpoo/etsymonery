@@ -100,7 +100,7 @@ function imagesFinal(rows: Rec[]) {
     Number(r.rank) === i + 1 &&
     Number(r.full_width) === 2000 &&
     Number(r.full_height) === 2000 &&
-    text(r.alt_text) === R02.images[i].alt
+    decodeEntities(text(r.alt_text)) === R02.images[i].alt
   );
 }
 function videoActive(rows: Rec[]) {
@@ -150,7 +150,7 @@ function fingerprint(s: Awaited<ReturnType<typeof snapshot>>) {
     },
     images: [...s.images]
       .sort((a, b) => Number(a.rank ?? 0) - Number(b.rank ?? 0))
-      .map(r => ({ id: Number(r.listing_image_id), rank: Number(r.rank), alt: text(r.alt_text), w: Number(r.full_width), h: Number(r.full_height) })),
+      .map(r => ({ id: Number(r.listing_image_id), rank: Number(r.rank), alt: decodeEntities(text(r.alt_text)), w: Number(r.full_width), h: Number(r.full_height) })),
     files: [...s.files]
       .sort((a, b) => Number(a.rank ?? 0) - Number(b.rank ?? 0))
       .map(r => ({ id: Number(r.listing_file_id), rank: Number(r.rank), name: text(r.filename), size: Number(r.size_bytes) })),
