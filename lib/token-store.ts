@@ -138,6 +138,47 @@ export async function hasStoredEtsyTokens() {
   return rows.length > 0;
 }
 
+export async function getStoredEtsyGrantMetadata() {
+  if (!isTokenStoreConfigured()) return null;
+
+  const sql = getSql();
+  const rows = await sql`
+    SELECT
+      scope,
+      token_type,
+      user_id,
+      shop_id,
+      expires_at,
+      updated_at
+    FROM oauth_tokens
+    WHERE provider = ${PROVIDER}
+      AND account_key = ${ACCOUNT_KEY}
+    LIMIT 1
+  `;
+
+  const row = rows[0] as
+    | {
+        scope: string | null;
+        token_type: string | null;
+        user_id: string | number | null;
+        shop_id: string | number | null;
+        expires_at: string | Date;
+        updated_at: string | Date;
+      }
+    | undefined;
+
+  if (!row) return null;
+
+  return {
+    scope: row.scope ?? undefined,
+    tokenType: row.token_type ?? undefined,
+    userId: row.user_id == null ? undefined : Number(row.user_id),
+    shopId: row.shop_id == null ? undefined : Number(row.shop_id),
+    expiresAt: new Date(row.expires_at),
+    updatedAt: new Date(row.updated_at)
+  };
+}
+
 export async function updateEtsyIdentity(userId: number, shopId: number) {
   const sql = getSql();
 
