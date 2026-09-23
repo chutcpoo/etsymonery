@@ -14,6 +14,8 @@ export const PDT_RPT_003_R02 = {
   activateNonce: "PDT-RPT-003-R02-ACTIVATE-NONCE-C4B9E713",
   galleryRecoveryAuthorization: "AUTHORIZE PDT-RPT-003-V1-ETSY-R02-GALLERY-RECOVERY-R01-20260923 EXACT SCOPE ONLY",
   galleryRecoveryNonce: "PDT-RPT-003-R02-GALLERY-RECOVERY-R01-NONCE-E6A31F42",
+  galleryRecoveryR02Authorization: "AUTHORIZE PDT-RPT-003-V1-ETSY-R02-GALLERY-RECOVERY-R02-20260923 EXACT SCOPE ONLY",
+  galleryRecoveryR02Nonce: "PDT-RPT-003-R02-GALLERY-RECOVERY-R02-NONCE-7D9C42A1",
   oldTitle: "Rental Property Tracker Excel | Landlord Income Expense | Airbnb Spreadsheet Dashboard",
   title: "Rental Property Tracker Excel | Landlord Income & Expense Spreadsheet | Long-Term + Short-Term Rentals",
   tags: [
