@@ -1,7 +1,7 @@
 # AUTODIGITALPUBLISHER ACTIVE MANIFEST
 
 STATUS: ACTIVE / PRODUCTION BASELINE / EXECUTABLE
-VERSION: V1.6 COMMERCE INTELLIGENCE P0
+VERSION: V1.7 OAUTH GRANT SCOPE GATE
 AUTHORITY: THIS FILE ONLY
 
 ## Mission
@@ -33,6 +33,7 @@ QC_PASSED INPUT ONLY
 - Etsy candidates require validated title/tags/taxonomy/quantity/maker/date fields and a frozen Production Build.
 - Etsy candidate identity and Etsy listing-metadata identity are separate SHA-256 fingerprints.
 - Etsy non-production Draft writes require all of: valid Etsy OAuth, `ETSY_DRAFT_WRITES_ENABLED=true`, configured `ETSY_DRAFT_WRITE_TOKEN`, and the matching `x-autodigitalpublisher-write-token` request header.
+- OAuth status must distinguish requested scopes from the exact scopes stored with the current grant. Any Seller Draft write must fail closed before mutation when scope metadata is absent or `listings_w` is not present; read-only evidence remains independently available.
 - `ETSY_DRAFT_WRITES_ENABLED` defaults to false.
 - `PUBLISH_WRITES_ENABLED` defaults to false and does not by itself create a live-state operation.
 - The only implemented active-listing update is the exact B01 operation for Etsy Listing `4560696421`; it requires the write token, write flag, canonical request-hash allowlist, active-state fingerprint checks, and an atomic operation-ledger claim.
@@ -50,6 +51,7 @@ QC_PASSED INPUT ONLY
 ACTIVE:
 - Dashboard and Publish Plan API
 - Etsy OAuth 2.0 + PKCE, encrypted persistent token storage and refresh lifecycle
+- Stored OAuth grant-scope verification with requested-vs-granted status and fail-closed Seller Draft write gating
 - Shop Identity Test and Read-only Listing Test
 - Etsy Sales Control Center and local Shop Stats evidence capture/export
 - Read-only transaction-count evidence via `transactions_r`

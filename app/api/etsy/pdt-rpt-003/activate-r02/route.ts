@@ -1,6 +1,9 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { etsyApiHeaders } from "../../../../../lib/etsy";
+import {
+  ETSY_SELLER_WRITE_SCOPES,
+  etsyApiHeaders
+} from "../../../../../lib/etsy";
 import { getValidEtsyAccessToken } from "../../../../../lib/etsy-auth";
 import { getEtsySellerStateSnapshot } from "../../../../../lib/etsy-seller-state-reconciliation";
 import { PDT_RPT_003_R02 as R02 } from "../../../../../lib/pdt-rpt-003-r02";
@@ -221,7 +224,7 @@ export async function GET(request: Request) {
     const suppliedFp = u.searchParams.get("protectedStateFingerprint")?.trim().toLowerCase() ?? "";
     if (!/^[a-f0-9]{64}$/.test(suppliedFp)) throw new Error("PROTECTED_FP_INVALID");
 
-    const token = await getValidEtsyAccessToken();
+    const token = await getValidEtsyAccessToken(ETSY_SELLER_WRITE_SCOPES);
     const before = await snapshot(token);
 
     if (liveReady(before)) {
