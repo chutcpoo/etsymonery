@@ -11,7 +11,8 @@ import { getEtsySellerStateSnapshot } from "../../../../../lib/etsy-seller-state
 import { NeonOperationLedgerRepository } from "../../../../../lib/operation-ledger";
 import {
   PDT_RPT_003_R02 as R02,
-  createPdtRpt003R02MetadataPatch
+  createPdtRpt003R02MetadataPatch,
+  pdtRpt003R02GalleryRecoverySequence
 } from "../../../../../lib/pdt-rpt-003-r02";
 
 export const runtime = "nodejs";
@@ -133,6 +134,18 @@ function imagesFinal(rows: Rec[]) {
     text(r.alt_text) === R02.images[i].alt
   );
 }
+function gallerySetExact(rows: Rec[]) {
+  if (rows.length !== R02.images.length) return false;
+  const expected = new Set<string>(R02.images.map(x => x.alt));
+  const actual = rows.map(r => text(r.alt_text));
+  return new Set(actual).size === R02.images.length &&
+    actual.every(alt => expected.has(alt)) &&
+    rows.every(r =>
+      int(r.listing_image_id) !== null &&
+      Number(r.full_width) === 2000 &&
+      Number(r.full_height) === 2000
+    );
+}
 function videoPresent(rows: Rec[]) {
   return rows.length === 1 &&
     Number(rows[0].width) === R02.video.width &&
@@ -163,6 +176,14 @@ function finalReady(s: Awaited<ReturnType<typeof snapshot>>) {
     imagesFinal(s.images) &&
     filesFinal(s.files) &&
     videoPresent(s.videos) &&
+    sellerDraftSafe(s.seller);
+}
+function galleryRecoveryReady(s: Awaited<ReturnType<typeof snapshot>>) {
+  return coreFinal(s.l) &&
+    gallerySetExact(s.images) &&
+    !imagesFinal(s.images) &&
+    filesFinal(s.files) &&
+    videoActive(s.videos) &&
     sellerDraftSafe(s.seller);
 }
 function fingerprint(s: Awaited<ReturnType<typeof snapshot>>) {
@@ -248,6 +269,32 @@ async function deleteAsset(token: string, kind: "images" | "files", id: number) 
   }
   if (!r.ok && r.status !== 204) throw new Error("DELETE_REJECTED_HTTP_" + r.status);
 }
+async function reattachImageAtFront(token: string, imageId: number, alt: string) {
+  const body = new FormData();
+  body.append("listing_image_id", String(imageId));
+  body.append("rank", "1");
+  body.append("alt_text", alt);
+  const r = await fetch(
+    "https://api.etsy.com/v3/application/shops/" + R02.shopId +
+      "/listings/" + R02.listingId + "/images",
+    { method: "POST", headers: multipartHeaders(token), body, cache: "no-store" }
+  );
+  const payload = await json(r);
+  if (!r.ok) {
+    throw new Error(
+      "IMAGE_REATTACH_HTTP_" + r.status + ":" +
+      JSON.stringify(payload).slice(0, 200)
+    );
+  }
+}
+async function waitForGalleryFinal(token: string) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const rows = await collection(token, "images");
+    if (imagesFinal(rows)) return rows;
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  return collection(token, "images");
+}
 async function uploadVideo(token: string, bytes: Buffer) {
   const body = new FormData();
   body.append("video", new File([new Uint8Array(bytes)], R02.video.name, { type: "video/mp4" }), R02.video.name);
@@ -281,6 +328,16 @@ async function plan() {
     state: text(s.l.state),
     baselineMatches: initialBaseline(s),
     alreadyPrepared: finalReady(s),
+    galleryRecoveryReady: galleryRecoveryReady(s),
+    currentGallery: [...s.images]
+      .sort((a, b) => Number(a.rank ?? 0) - Number(b.rank ?? 0))
+      .map(r => ({
+        listingImageId: int(r.listing_image_id),
+        rank: Number(r.rank),
+        alt: text(r.alt_text)
+      })),
+    galleryRecoveryAuthorizationRequired: R02.galleryRecoveryAuthorization,
+    galleryRecoveryNonce: R02.galleryRecoveryNonce,
     currentTitle: text(s.l.title),
     currentPriceUsd: Number(money(s.l.price).toFixed(2)),
     galleryCount: s.images.length,
@@ -299,7 +356,136 @@ async function plan() {
 
 export async function GET(request: Request) {
   const u = new URL(request.url);
-  if (u.searchParams.get("action") !== "execute") {
+  const action = u.searchParams.get("action");
+
+  if (action === "recover-gallery") {
+    let recoveryWrites = 0;
+    try {
+      if (process.env.VERCEL_ENV !== "production") {
+        throw new Error("PRODUCTION_REQUIRED");
+      }
+      if (!eq(
+        u.searchParams.get("authorizationText")?.normalize("NFC").trim() ?? "",
+        R02.galleryRecoveryAuthorization
+      )) {
+        throw new Error("AUTH_INVALID");
+      }
+      if (!eq(
+        u.searchParams.get("nonce")?.trim() ?? "",
+        R02.galleryRecoveryNonce
+      )) {
+        throw new Error("NONCE_INVALID");
+      }
+
+      const commit = u.searchParams.get("commit")?.trim().toLowerCase() ?? "";
+      const deployed = runtimeCommit();
+      if (
+        !/^[a-f0-9]{40}$/.test(commit) ||
+        !/^[a-f0-9]{40}$/.test(deployed) ||
+        !eq(commit, deployed)
+      ) {
+        throw new Error("GIT_VERCEL_COMMIT_MISMATCH");
+      }
+
+      const suppliedFp =
+        u.searchParams.get("protectedStateFingerprint")?.trim().toLowerCase() ?? "";
+      if (!/^[a-f0-9]{64}$/.test(suppliedFp)) {
+        throw new Error("PROTECTED_FP_INVALID");
+      }
+
+      const token = await getValidEtsyAccessToken(ETSY_SELLER_WRITE_SCOPES);
+      const before = await snapshot(token);
+
+      if (finalReady(before) && videoActive(before.videos)) {
+        return NextResponse.json({
+          status: "ALREADY_RECOVERED_PASS",
+          listingId: R02.listingId,
+          state: "draft",
+          publishPerformed: false,
+          protectedStateFingerprint: fingerprint(before),
+          ETSY_WRITE_COUNT: 0
+        }, { headers: { "cache-control": "no-store" } });
+      }
+
+      if (!galleryRecoveryReady(before)) {
+        throw new Error("RECOVERY_BASELINE_MISMATCH");
+      }
+      if (!eq(fingerprint(before), suppliedFp)) {
+        throw new Error("PROTECTED_STATE_DRIFT");
+      }
+
+      const idByAlt = new Map<string, number>();
+      for (const row of before.images) {
+        const id = int(row.listing_image_id);
+        const alt = text(row.alt_text);
+        if (!id || !alt || idByAlt.has(alt)) {
+          throw new Error("RECOVERY_IMAGE_IDENTITY_INVALID");
+        }
+        idByAlt.set(alt, id);
+      }
+
+      for (const row of [...before.images].sort(
+        (a, b) => Number(b.rank ?? 0) - Number(a.rank ?? 0)
+      )) {
+        const id = int(row.listing_image_id);
+        if (!id) throw new Error("RECOVERY_IMAGE_ID_INVALID");
+        await deleteAsset(token, "images", id);
+        recoveryWrites += 1;
+      }
+
+      const afterDelete = await collection(token, "images");
+      if (afterDelete.length !== 0) {
+        throw new Error("RECOVERY_DELETE_READBACK_MISMATCH");
+      }
+
+      for (const item of pdtRpt003R02GalleryRecoverySequence()) {
+        const id = idByAlt.get(item.alt);
+        if (!id) throw new Error("RECOVERY_SOURCE_IMAGE_MISSING");
+        await reattachImageAtFront(token, id, item.alt);
+        recoveryWrites += 1;
+      }
+
+      const gallery = await waitForGalleryFinal(token);
+      if (!imagesFinal(gallery)) {
+        throw new Error("RECOVERY_FINAL_GALLERY_MISMATCH");
+      }
+
+      const after = await snapshot(token);
+      if (!finalReady(after) || !videoActive(after.videos)) {
+        throw new Error("RECOVERY_FINAL_STATE_MISMATCH");
+      }
+
+      return NextResponse.json({
+        status: "R02_GALLERY_RECOVERY_R01_PASS",
+        listingId: R02.listingId,
+        state: "draft",
+        galleryCount: after.images.length,
+        buyerFileCount: after.files.length,
+        buyerFileName: text(after.files[0]?.filename),
+        videoState: after.videos.map(v => text(v.video_state)),
+        protectedStateFingerprint: fingerprint(after),
+        publishPerformed: false,
+        activationAuthorizationRequired: R02.activateAuthorization,
+        ETSY_WRITE_COUNT: recoveryWrites
+      }, { headers: { "cache-control": "no-store" } });
+    } catch (e) {
+      return NextResponse.json({
+        status: recoveryWrites > 0
+          ? "RECONCILIATION_REQUIRED"
+          : "BLOCKED_FAIL_CLOSED",
+        error: e instanceof Error ? e.message : "UNKNOWN",
+        listingId: R02.listingId,
+        state: "draft",
+        publishPerformed: false,
+        ETSY_WRITE_COUNT: recoveryWrites
+      }, {
+        status: recoveryWrites > 0 ? 202 : 409,
+        headers: { "cache-control": "no-store" }
+      });
+    }
+  }
+
+  if (action !== "execute") {
     try {
       return NextResponse.json(await plan(), { headers: { "cache-control": "no-store" } });
     } catch (e) {
