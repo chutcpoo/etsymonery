@@ -165,3 +165,12 @@ export const PDT_RPT_003_R02 = {
     }
   ]
 } as const;
+
+
+export function createPdtRpt003R02MetadataPatch() {
+  const body = new URLSearchParams();
+  body.set("title", PDT_RPT_003_R02.title);
+  body.set("description", PDT_RPT_003_R02.description);
+  body.set("tags", PDT_RPT_003_R02.tags.join(","));
+  return body;
+}
