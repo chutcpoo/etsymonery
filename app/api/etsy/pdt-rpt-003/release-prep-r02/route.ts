@@ -136,7 +136,7 @@ function imagesFinal(rows: Rec[]) {
 }
 function gallerySetExact(rows: Rec[]) {
   if (rows.length !== R02.images.length) return false;
-  const expected = new Set(R02.images.map(x => x.alt));
+  const expected = new Set<string>(R02.images.map(x => x.alt));
   const actual = rows.map(r => text(r.alt_text));
   return new Set(actual).size === R02.images.length &&
     actual.every(alt => expected.has(alt)) &&
