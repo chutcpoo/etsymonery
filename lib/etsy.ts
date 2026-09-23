@@ -18,6 +18,32 @@ export const ETSY_SCOPES = [
   "transactions_w"
 ] as const;
 
+export const ETSY_SELLER_READ_SCOPES = ["listings_r"] as const;
+export const ETSY_SELLER_WRITE_SCOPES = ["listings_r", "listings_w"] as const;
+
+export function parseEtsyGrantedScopes(
+  scope: string | readonly string[] | null | undefined
+) {
+  const values =
+    typeof scope === "string" ? scope.split(/[\s,]+/) : scope ?? [];
+
+  return [
+    ...new Set(
+      values
+        .map((value) => value.normalize("NFC").trim())
+        .filter(Boolean)
+    )
+  ];
+}
+
+export function getMissingEtsyScopes(
+  grantedScope: string | readonly string[] | null | undefined,
+  requiredScopes: readonly string[]
+) {
+  const granted = new Set(parseEtsyGrantedScopes(grantedScope));
+  return requiredScopes.filter((scope) => !granted.has(scope));
+}
+
 function base64Url(input: Buffer) {
   return input
     .toString("base64")
