@@ -165,7 +165,8 @@ export function summarizeCommerceEvidence(input: CommerceSummaryInput) {
 
   for (const receipt of input.receipts) {
     const receiptId = receipt.receipt_id;
-    const isPaid = receipt.was_paid === true || receipt.status === "paid" || receipt.status === "completed";
+    const receiptStatus = receipt.status?.trim().toLowerCase();
+    const isPaid = receipt.was_paid === true || receiptStatus === "paid" || receiptStatus === "completed";
     if (isPaid) paidOrderCount += 1;
 
     for (const transaction of receipt.transactions ?? []) {

@@ -100,6 +100,46 @@ test("summarizes orders payments reviews and listing signals without buyer PII",
   assert.equal(serialized.includes("first_line"), false);
 });
 
+test("counts Etsy Completed status as paid case-insensitively", () => {
+  const summary = summarizeCommerceEvidence({
+    receipts: [
+      {
+        receipt_id: 4157450043,
+        status: "Completed",
+        transactions: [
+          {
+            listing_id: 4561819638,
+            title: "Restaurant Daily Operations Checklist",
+            quantity: 1
+          }
+        ]
+      }
+    ],
+    paymentsByReceipt: {
+      "4157450043": {
+        status: "VERIFIED",
+        payments: [
+          {
+            receipt_id: 4157450043,
+            amount_gross: { amount: 756, divisor: 100, currency_code: "USD" },
+            amount_fees: { amount: 75, divisor: 100, currency_code: "USD" },
+            amount_net: { amount: 618, divisor: 100, currency_code: "USD" }
+          }
+        ]
+      }
+    },
+    ledgerEntries: [],
+    reviews: []
+  });
+
+  assert.equal(summary.orderCount, 1);
+  assert.equal(summary.paidOrderCount, 1);
+  assert.equal(summary.paymentVerifiedOrderCount, 1);
+  assert.deepEqual(summary.money.gross, [{ currency: "USD", amount: 7.56 }]);
+  assert.deepEqual(summary.money.fees, [{ currency: "USD", amount: 0.75 }]);
+  assert.deepEqual(summary.money.net, [{ currency: "USD", amount: 6.18 }]);
+});
+
 test("keeps ledger integers as minor units instead of inventing a divisor", () => {
   const summary = summarizeCommerceEvidence({
     receipts: [],
