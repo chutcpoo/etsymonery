@@ -13,14 +13,16 @@ test("HBOP V2 alt-text manifest freezes exact remaining scope", () => {
   assert.equal(R01.taxonomyId, 12476);
 });
 
-test("HBOP V2 R01 route is dry-run only and exposes no Etsy mutation method", async () => {
+test("HBOP V2 R01 route exposes one exact guarded alt-text executor", async () => {
   const source = await readFile(
     new URL("../app/api/internal/etsy/post-reset-v2/pdt-hbop-001/alt-text-r01/route.ts", import.meta.url),
     "utf8"
   );
   assert.match(source, /DRY_RUN_PASS/);
-  assert.match(source, /ETSY_WRITE_COUNT:\s*0/);
-  assert.doesNotMatch(source, /export async function POST/);
-  assert.doesNotMatch(source, /export async function PATCH/);
-  assert.doesNotMatch(source, /method:\s*["'](?:POST|PATCH|PUT|DELETE)["']/);
+  assert.match(source, /AUTHORIZATION_TEXT/);
+  assert.match(source, /baselineSha256/);
+  assert.match(source, /plannedRanks\.join\(","\) !== "2,3,4,5,6,7,8,9,10"/);
+  assert.match(source, /method: "POST"/);
+  assert.match(source, /ETSY_WRITE_COUNT: providerWrites/);
+  assert.match(source, /publishPerformed: false/);
 });
