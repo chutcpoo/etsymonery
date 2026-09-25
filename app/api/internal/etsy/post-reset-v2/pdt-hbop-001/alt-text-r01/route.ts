@@ -101,7 +101,8 @@ export async function GET() {
       moneyExact(listing.price) &&
       num(listing.quantity) === R01.quantity &&
       num(listing.taxonomy_id) === R01.taxonomyId &&
-      JSON.stringify(tags) === JSON.stringify(R01.tags);
+      tags.length === R01.tags.length &&
+      R01.tags.every(tag => tags.includes(tag));
 
     const imagesOk =
       images.length === 10 &&
@@ -135,7 +136,10 @@ export async function GET() {
       }, { status: 409, headers: { "cache-control": "no-store" } });
     }
 
-    const currentAlt = images.map(x => txt(x.alt_text));
+    const currentAlt = images.map(x => {
+      const value = txt(x.alt_text);
+      return value === "NOT_AVAILABLE" ? "" : value;
+    });
     const plannedRanks = currentAlt
       .map((alt, i) => alt === R01.altTexts[i] ? null : i + 1)
       .filter((x): x is number => x !== null);
