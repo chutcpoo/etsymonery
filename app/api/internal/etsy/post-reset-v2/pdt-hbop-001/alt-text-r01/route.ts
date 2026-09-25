@@ -168,12 +168,11 @@ export async function GET(request: Request) {
     if (!/^[a-f0-9]{64}$/.test(expectedSha) || !secureEqual(expectedSha, protectedStateSha256)) return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"BASELINE_SHA_MISMATCH",protectedStateSha256,ETSY_WRITE_COUNT:0},{status:409});
     if (!checks.ok || !expectedCurrentAltState || plannedRanks.join(",") !== "2,3,4,5,6,7,8,9,10") return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"PROTECTED_STATE_MISMATCH",checks,plannedRanks,ETSY_WRITE_COUNT:0},{status:409});
 
-    const fresh = await readState();
-    const freshChecks = validateProtected(fresh);
-    const freshSha = protectedFingerprint(fresh.listing, fresh.images, fresh.files, fresh.videos);
-    const freshAlt = fresh.images.map(x => { const value = txt(x.alt_text); return value === "NOT_AVAILABLE" ? "" : value; });
-    const freshBaselineAlt = freshAlt[0] === R01.altTexts[0] && freshAlt.slice(1,9).every(x => x === "") && freshAlt[9] === R01.altTexts[0];
-    if (!freshChecks.ok || !freshBaselineAlt || !secureEqual(freshSha, expectedSha)) return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"FRESH_PROTECTED_STATE_MISMATCH",freshProtectedStateSha256:freshSha,ETSY_WRITE_COUNT:0},{status:409});
+    // The state above is the fresh pre-write snapshot for this request. Re-reading the
+    // same four Etsy resources here can trip Etsy's rate limit before any mutation.
+    // Keep the exact SHA/protected-state/alt-baseline gates, but do not duplicate them.
+    const fresh = state;
+    const freshSha = protectedStateSha256;
 
     for (let rank = 2; rank <= 10; rank += 1) {
       const image = fresh.images[rank - 1];
