@@ -12,6 +12,12 @@ type Rec = Record<string, unknown>;
 const isRec = (v: unknown): v is Rec => typeof v === "object" && v !== null && !Array.isArray(v);
 const txt = (v: unknown) => typeof v === "string" ? v.normalize("NFC").trim() : "";
 const num = (v: unknown) => Number(v);
+const decodeEntities = (v: string) => v
+  .replaceAll("&#39;", "'")
+  .replaceAll("&quot;", '"')
+  .replaceAll("&amp;", "&")
+  .replaceAll("&lt;", "<")
+  .replaceAll("&gt;", ">");
 
 async function readJson(url: string, token: string) {
   const r = await fetch(url, { headers: etsyApiHeaders(token), cache: "no-store" });
@@ -97,7 +103,7 @@ export async function GET() {
       num(listing.listing_id) === R01.listingId &&
       num(listing.shop_id) === R01.shopId &&
       txt(listing.state) === "draft" &&
-      txt(listing.title) === R01.title &&
+      decodeEntities(txt(listing.title)) === R01.title &&
       moneyExact(listing.price) &&
       num(listing.quantity) === R01.quantity &&
       num(listing.taxonomy_id) === R01.taxonomyId &&
