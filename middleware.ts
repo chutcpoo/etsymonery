@@ -34,6 +34,8 @@ const POST_RESET_V2_PDT_RPT_DRAFT_CREATE_R01_ROUTE =
   "/api/internal/etsy/post-reset-v2/pdt-rpt-003/draft-create-r01";
 const POST_RESET_V2_PDT_HBOP_ALT_TEXT_R01_ROUTE =
   "/api/internal/etsy/post-reset-v2/pdt-hbop-001/alt-text-r01";
+const POST_RESET_V2_PDT_HBOP_PUBLISH_R01_ROUTE =
+  "/api/internal/etsy/post-reset-v2/pdt-hbop-001/publish-r01";
 
 const BLOCKED_PUBLIC_PREFIXES = [
   "/api/etsy/active-listing-update",
@@ -87,7 +89,8 @@ export function middleware(request: NextRequest) {
     pathname === POST_RESET_V2_PDT_CBEO_PUBLISH_R01_ROUTE ||
     pathname === POST_RESET_V2_PDT_FWCT_MARKET_RESEARCH_R01_ROUTE ||
     pathname === POST_RESET_V2_PDT_RPT_DRAFT_CREATE_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_HBOP_ALT_TEXT_R01_ROUTE
+    pathname === POST_RESET_V2_PDT_HBOP_ALT_TEXT_R01_ROUTE ||
+    pathname === POST_RESET_V2_PDT_HBOP_PUBLISH_R01_ROUTE
   ) {
     return NextResponse.next();
   }
