@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
-import { ETSY_SELLER_READ_SCOPES, etsyApiHeaders } from "../../../../../lib/etsy";
-import { getValidEtsyAccessToken } from "../../../../../lib/etsy-auth";
-import { getStoredEtsyShopId } from "../../../../../lib/token-store";
-import { PDT_HBOP_001_V2_ALT_TEXT_R01 as R01 } from "../../../../../lib/pdt-hbop-001-v2-alt-text-r01";
+import { ETSY_SELLER_READ_SCOPES, etsyApiHeaders } from "../../../../../../../lib/etsy";
+import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
+import { getStoredEtsyShopId } from "../../../../../../../lib/token-store";
+import { PDT_HBOP_001_V2_ALT_TEXT_R01 as R01 } from "../../../../../../../lib/pdt-hbop-001-v2-alt-text-r01";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
