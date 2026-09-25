@@ -15,7 +15,7 @@ test("HBOP V2 alt-text manifest freezes exact remaining scope", () => {
 
 test("HBOP V2 R01 route is dry-run only and exposes no Etsy mutation method", async () => {
   const source = await readFile(
-    new URL("../app/api/etsy/pdt-hbop-001-v2/alt-text-r01/route.ts", import.meta.url),
+    new URL("../app/api/internal/etsy/post-reset-v2/pdt-hbop-001/alt-text-r01/route.ts", import.meta.url),
     "utf8"
   );
   assert.match(source, /DRY_RUN_PASS/);
