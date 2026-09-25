@@ -139,10 +139,10 @@ export async function GET(request: Request) {
     const currentAlt = state.images.map(x => { const value = txt(x.alt_text); return value === "NOT_AVAILABLE" ? "" : value; });
     const plannedRanks = currentAlt.map((alt, i) => alt === R01.altTexts[i] ? null : i + 1).filter((x): x is number => x !== null);
     const protectedStateSha256 = protectedFingerprint(state.listing, state.images, state.files, state.videos);
-    const expectedCurrentAltState = currentAlt[0] === R01.altTexts[0] && currentAlt.slice(1, 9).every(x => x === "") && currentAlt[9] === R01.altTexts[0];
+    const expectedCurrentAltState = currentAlt[0] === R01.altTexts[0] && currentAlt[1] === R01.altTexts[1] && currentAlt.slice(2, 9).every(x => x === "") && currentAlt[9] === R01.altTexts[0];
 
     if (action !== "execute") {
-      const pass = checks.ok && expectedCurrentAltState && plannedRanks.join(",") === "2,3,4,5,6,7,8,9,10";
+      const pass = checks.ok && expectedCurrentAltState && plannedRanks.join(",") === "3,4,5,6,7,8,9,10";
       return NextResponse.json({
         status: pass ? "DRY_RUN_PASS" : "DRY_RUN_BLOCKED",
         mode: "AUTHENTICATED_ETSY_READ_ONLY",
@@ -174,7 +174,7 @@ export async function GET(request: Request) {
     const fresh = state;
     const freshSha = protectedStateSha256;
 
-    for (let rank = 2; rank <= 10; rank += 1) {
+    for (let rank = 3; rank <= 10; rank += 1) {
       const image = fresh.images[rank - 1];
       const imageId = num(image.listing_image_id);
       const body = new FormData();
@@ -185,6 +185,7 @@ export async function GET(request: Request) {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error("ALT_TEXT_WRITE_HTTP_" + response.status + ":RANK_" + rank + ":" + JSON.stringify(payload).slice(0,180));
       providerWrites += 1;
+      if (rank < 10) await new Promise(resolve => setTimeout(resolve, 1200));
     }
 
     const finalState = await readState();
