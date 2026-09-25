@@ -99,16 +99,17 @@ export async function GET() {
     const videos = [...videosRaw];
 
     const tags = Array.isArray(listing.tags) ? listing.tags.map(txt) : [];
-    const metadataOk =
-      num(listing.listing_id) === R01.listingId &&
-      num(listing.shop_id) === R01.shopId &&
-      txt(listing.state) === "draft" &&
-      decodeEntities(txt(listing.title)) === R01.title &&
-      moneyExact(listing.price) &&
-      num(listing.quantity) === R01.quantity &&
-      num(listing.taxonomy_id) === R01.taxonomyId &&
-      tags.length === R01.tags.length &&
-      R01.tags.every(tag => tags.includes(tag));
+    const metadataChecks = {
+      listingId: num(listing.listing_id) === R01.listingId,
+      shopId: num(listing.shop_id) === R01.shopId,
+      state: txt(listing.state) === "draft",
+      title: decodeEntities(txt(listing.title)) === R01.title,
+      price: moneyExact(listing.price),
+      quantity: num(listing.quantity) === R01.quantity,
+      taxonomyId: num(listing.taxonomy_id) === R01.taxonomyId,
+      tags: tags.length === R01.tags.length && R01.tags.every(tag => tags.includes(tag))
+    };
+    const metadataOk = Object.values(metadataChecks).every(Boolean);
 
     const imagesOk =
       images.length === 10 &&
@@ -137,6 +138,7 @@ export async function GET() {
         taskId: R01.taskId,
         listingId: R01.listingId,
         checks: { metadataOk, imagesOk, filesOk, videosOk },
+        metadataChecks,
         publishPerformed: false,
         ETSY_WRITE_COUNT: 0
       }, { status: 409, headers: { "cache-control": "no-store" } });
