@@ -21,7 +21,7 @@ test("HBOP V2 R01 route exposes one exact guarded alt-text executor", async () =
   assert.match(source, /DRY_RUN_PASS/);
   assert.match(source, /AUTHORIZATION_TEXT/);
   assert.match(source, /baselineSha256/);
-  assert.match(source, /plannedRanks\.join\(","\) !== "2,3,4,5,6,7,8,9,10"/);
+  assert.match(source, /plannedRanks\.join\(","\) !== "3,4,5,6,7,8,9,10"/);
   assert.match(source, /method: "POST"/);
   assert.match(source, /ETSY_WRITE_COUNT: providerWrites/);
   assert.match(source, /publishPerformed: false/);
