@@ -8,7 +8,7 @@ import { PDT_HBOP_001_V2_ALT_TEXT_R01 as R01 } from "../../../../../../../lib/pd
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const AUTHORIZATION_TEXT = "AUTHORIZE PDT-HBOP-001-V2-ETSY-ALT-TEXT-R01-20260925 LISTING-4581821318 IMAGES-02-10 EXACT SCOPE ONLY" as const;
+const AUTHORIZATION_TEXT = "AUTHORIZE PDT-HBOP-001-V2-ETSY-ALT-TEXT-RECOVERY-R02-20260925 LISTING-4581821318 IMAGES-03-10 EXACT SCOPE ONLY" as const;
 const GATE = "[GATE_HBOP_ALT_TEXT_R01_CLOSED]";
 
 type Rec = Record<string, unknown>;
@@ -166,7 +166,7 @@ export async function GET(request: Request) {
     if (!secureEqual(authorizationText, AUTHORIZATION_TEXT)) return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"AUTHORIZATION_INVALID",ETSY_WRITE_COUNT:0},{status:401});
     const expectedSha = url.searchParams.get("baselineSha256")?.trim().toLowerCase() ?? "";
     if (!/^[a-f0-9]{64}$/.test(expectedSha) || !secureEqual(expectedSha, protectedStateSha256)) return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"BASELINE_SHA_MISMATCH",protectedStateSha256,ETSY_WRITE_COUNT:0},{status:409});
-    if (!checks.ok || !expectedCurrentAltState || plannedRanks.join(",") !== "2,3,4,5,6,7,8,9,10") return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"PROTECTED_STATE_MISMATCH",checks,plannedRanks,ETSY_WRITE_COUNT:0},{status:409});
+    if (!checks.ok || !expectedCurrentAltState || plannedRanks.join(",") !== "3,4,5,6,7,8,9,10") return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"PROTECTED_STATE_MISMATCH",checks,plannedRanks,ETSY_WRITE_COUNT:0},{status:409});
 
     // The state above is the fresh pre-write snapshot for this request. Re-reading the
     // same four Etsy resources here can trip Etsy's rate limit before any mutation.
