@@ -18,6 +18,7 @@ test("PDT-IPT category repair route is exact category-only and fail-closed", asy
   assert.match(source, /ETSY_WRITE_COUNT: 1/);
   assert.match(source, /searchParams\.get\("action"\) === "execute"/);
   assert.match(source, /executeCategoryRepair/);
+  assert.match(source, /const gateEnabled = \(\) => false;/);
 });
 
 test("middleware allows only the dedicated post-reset category repair path", async () => {
