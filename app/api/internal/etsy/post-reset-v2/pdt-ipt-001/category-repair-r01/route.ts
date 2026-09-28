@@ -146,42 +146,10 @@ async function patchTaxonomy(token: string, taxonomyId: number) {
   if (!r.ok) throw new Error("CATEGORY_PATCH_HTTP_" + r.status + ":" + JSON.stringify(payload).slice(0,160));
 }
 
-export async function GET() {
-  try {
-    const shopId = await getStoredEtsyShopId();
-    if (shopId !== SHOP_ID) throw new Error("SHOP_ID_MISMATCH");
-    const token = await getValidEtsyAccessToken(ETSY_SELLER_READ_SCOPES);
-    const s = await readState(token);
-    const target = s.targetMatches[0] ?? null;
-    return NextResponse.json({
-      status: s.ready ? "CATEGORY_REPAIR_PREVIEW_PASS" : "CATEGORY_REPAIR_PREVIEW_BLOCKED",
-      mode: "READ_ONLY",
-      productId: "PDT-IPT-001", listingId: LISTING_ID,
-      currentTaxonomyId: s.normalized.listing.taxonomyId,
-      targetTaxonomy: target,
-      checks: s.checks,
-      baselineSha256: s.baselineSha256,
-      protectedWithoutTaxonomySha256: s.protectedWithoutTaxonomySha256,
-      exactScope: "CATEGORY_ONLY",
-      authorizationRequired: AUTHORIZATION_TEXT,
-      gateEnabled: gateEnabled(),
-      ETSY_WRITE_COUNT: 0
-    }, { status: s.ready ? 200 : 409, headers: { "cache-control": "no-store" } });
-  } catch (e) {
-    return NextResponse.json({
-      status: "CATEGORY_REPAIR_PREVIEW_BLOCKED",
-      error: e instanceof Error ? e.message : "UNKNOWN",
-      ETSY_WRITE_COUNT: 0
-    }, { status: 409, headers: { "cache-control": "no-store" } });
-  }
-}
-
-export async function POST(request: Request) {
+async function executeCategoryRepair(body: Rec) {
   let writes = 0;
   try {
     if (!gateEnabled()) return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"CATEGORY_REPAIR_GATE_DISABLED",ETSY_WRITE_COUNT:0},{status:403});
-    const body = await request.json().catch(() => ({}));
-    if (!isRec(body)) return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"INVALID_BODY",ETSY_WRITE_COUNT:0},{status:400});
     const auth = txt(body.authorizationText);
     const expectedBaseline = txt(body.baselineSha256).toLowerCase();
     if (!secureEqual(auth, AUTHORIZATION_TEXT)) return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"AUTHORIZATION_INVALID",ETSY_WRITE_COUNT:0},{status:401});
@@ -222,4 +190,47 @@ export async function POST(request: Request) {
       ETSY_WRITE_COUNT: writes
     }, { status: writes > 0 ? 202 : 409, headers: { "cache-control": "no-store" } });
   }
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  if (url.searchParams.get("action") === "execute") {
+    return executeCategoryRepair({
+      authorizationText: url.searchParams.get("authorizationText") ?? "",
+      baselineSha256: url.searchParams.get("baselineSha256") ?? ""
+    });
+  }
+  try {
+    const shopId = await getStoredEtsyShopId();
+    if (shopId !== SHOP_ID) throw new Error("SHOP_ID_MISMATCH");
+    const token = await getValidEtsyAccessToken(ETSY_SELLER_READ_SCOPES);
+    const s = await readState(token);
+    const target = s.targetMatches[0] ?? null;
+    return NextResponse.json({
+      status: s.ready ? "CATEGORY_REPAIR_PREVIEW_PASS" : "CATEGORY_REPAIR_PREVIEW_BLOCKED",
+      mode: "READ_ONLY",
+      productId: "PDT-IPT-001", listingId: LISTING_ID,
+      currentTaxonomyId: s.normalized.listing.taxonomyId,
+      targetTaxonomy: target,
+      checks: s.checks,
+      baselineSha256: s.baselineSha256,
+      protectedWithoutTaxonomySha256: s.protectedWithoutTaxonomySha256,
+      exactScope: "CATEGORY_ONLY",
+      authorizationRequired: AUTHORIZATION_TEXT,
+      gateEnabled: gateEnabled(),
+      ETSY_WRITE_COUNT: 0
+    }, { status: s.ready ? 200 : 409, headers: { "cache-control": "no-store" } });
+  } catch (e) {
+    return NextResponse.json({
+      status: "CATEGORY_REPAIR_PREVIEW_BLOCKED",
+      error: e instanceof Error ? e.message : "UNKNOWN",
+      ETSY_WRITE_COUNT: 0
+    }, { status: 409, headers: { "cache-control": "no-store" } });
+  }
+}
+
+export async function POST(request: Request) {
+  const body = await request.json().catch(() => ({}));
+  if (!isRec(body)) return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"INVALID_BODY",ETSY_WRITE_COUNT:0},{status:400});
+  return executeCategoryRepair(body);
 }
