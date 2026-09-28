@@ -31,9 +31,7 @@ const secureEqual = (a: string, b: string) => {
   return x.length === y.length && timingSafeEqual(x, y);
 };
 const sha = (v: unknown) => createHash("sha256").update(JSON.stringify(v), "utf8").digest("hex");
-const gateEnabled = () =>
-  process.env.VERCEL_ENV === "production" &&
-  (process.env.VERCEL_GIT_COMMIT_MESSAGE ?? "").includes(GATE);
+const gateEnabled = () => false;
 
 async function parseJson(response: Response) {
   const text = await response.text();
