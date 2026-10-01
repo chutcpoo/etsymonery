@@ -453,6 +453,7 @@ class AmbiguousVideoUploadError extends Error {}
 async function uploadVideo(token: string, file: File) {
   const body = new FormData();
   body.append("video", file, VIDEO.fileName);
+  body.append("name", VIDEO.fileName);
   const response = await fetch(
     "https://api.etsy.com/v3/application/shops/" +
       String(SHOP_ID) +
