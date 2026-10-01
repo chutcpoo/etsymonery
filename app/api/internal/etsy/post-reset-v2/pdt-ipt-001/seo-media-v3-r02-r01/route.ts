@@ -196,7 +196,7 @@ function runtimeCommit() {
 }
 
 function gateEnabled() {
-  return true;
+  return false;
 }
 
 function exactPrice(price: unknown) {
