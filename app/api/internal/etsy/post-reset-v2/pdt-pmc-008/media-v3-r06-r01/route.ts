@@ -711,7 +711,11 @@ export async function GET(request: Request) {
           );
         }
 
-        const fileArrayBuffer = bytes.buffer.slice(\n          bytes.byteOffset,\n          bytes.byteOffset + bytes.byteLength\n        ) as ArrayBuffer;\n        const file = new File([fileArrayBuffer], expected.fileName, { type: "image/png" });
+        const fileArrayBuffer = bytes.buffer.slice(
+          bytes.byteOffset,
+          bytes.byteOffset + bytes.byteLength
+        ) as ArrayBuffer;
+        const file = new File([fileArrayBuffer], expected.fileName, { type: "image/png" });
         const body = new FormData();
         body.append("authorizationText", AUTHORIZATION_TEXT);
         body.append("protectedStateFingerprint", current.protectedStateFingerprint);
