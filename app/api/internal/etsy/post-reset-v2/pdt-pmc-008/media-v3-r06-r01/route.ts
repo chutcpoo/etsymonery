@@ -624,6 +624,37 @@ function extractZipEntry(zip: Buffer, wantedName: string) {
   throw new Error("PMC_V3_R06_ZIP_ENTRY_MISSING_" + wantedName);
 }
 
+function v3PrefixCount(images: Rec[]) {
+  const ordered = [...images].sort(
+    (a, b) => (intField(a, "rank") ?? 0) - (intField(b, "rank") ?? 0)
+  );
+  if (ordered.length > IMAGES.length) return -1;
+
+  for (let index = 0; index < ordered.length; index += 1) {
+    const actual = ordered[index];
+    const expected = IMAGES[index];
+    if (
+      intField(actual, "rank") !== expected.rank ||
+      textField(actual, "alt_text") !== expected.altText
+    ) {
+      return -1;
+    }
+    const width = Number(actual.full_width);
+    const height = Number(actual.full_height);
+    if (
+      Number.isFinite(width) &&
+      Number.isFinite(height) &&
+      width > 0 &&
+      height > 0 &&
+      (width !== 2000 || height !== 2000)
+    ) {
+      return -1;
+    }
+  }
+
+  return ordered.length;
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
@@ -666,48 +697,68 @@ export async function GET(request: Request) {
         throw new Error("PMC_V3_R06_GET_EXEC_ZIP_SHA_MISMATCH");
       }
 
+      const token = await getValidEtsyAccessToken();
+      let state = await readTarget(token);
+
+      if (!protectedTargetMatches(state)) {
+        throw new Error("PMC_V3_R06_GET_EXEC_PROTECTED_TARGET_MISMATCH");
+      }
+
       const execution: Array<Record<string, unknown>> = [];
-      const target = new URL(request.url);
-      target.search = "";
+      let prefix = v3PrefixCount(state.images);
 
-      for (let iteration = 0; iteration < 10; iteration += 1) {
-        const current = await plan();
+      // Etsy re-ranks existing images after delete/upload. If the gallery is not
+      // already an exact V3 prefix, reset gallery images only and rebuild 01->10.
+      if (prefix < 0) {
+        const ids = state.images
+          .map((row) => intField(row, "listing_image_id"))
+          .filter((id): id is number => typeof id === "number" && id > 0);
 
-        if (!current.targetSafe || !current.sequenceSafe) {
+        if (ids.length !== state.images.length || ids.length > 10) {
+          throw new Error("PMC_V3_R06_GET_EXEC_IMAGE_ID_SET_UNSAFE");
+        }
+
+        for (const id of ids.reverse()) {
+          await deleteImage(token, id);
+          execution.push({ action: "DELETE_IMAGE", listingImageId: id });
+          await sleep(700);
+        }
+
+        await sleep(1200);
+        state = await readTarget(token);
+
+        if (!protectedTargetMatches(state) || state.images.length !== 0) {
           return NextResponse.json(
             {
               status: "RECONCILIATION_REQUIRED",
-              error: "PMC_V3_R06_EXEC_CURRENT_STATE_UNSAFE",
+              error: "PMC_V3_R06_GET_EXEC_RESET_READBACK_FAILED",
+              imageCount: state.images.length,
               execution,
-              current,
+              publishPerformed: false,
               ETSY_WRITE_COUNT: execution.length
             },
             { status: 202, headers: { "cache-control": "no-store" } }
           );
         }
 
-        if (current.complete || current.nextStep === "DONE") break;
+        prefix = 0;
+      }
 
-        const step = current.nextStep;
-        const rank = Number(step.slice(-2));
-        const expected = IMAGES[rank - 1];
-        if (!expected) {
-          throw new Error("PMC_V3_R06_GET_EXEC_EXPECTED_ASSET_MISSING");
-        }
-
+      for (let index = prefix; index < IMAGES.length; index += 1) {
+        const expected = IMAGES[index];
         const entryName = "IMAGES_2000x2000/" + expected.fileName;
         const bytes = extractZipEntry(zip, entryName);
 
         if (bytes.length !== expected.size) {
           throw new Error(
-            "PMC_V3_R06_GET_EXEC_ASSET_SIZE_MISMATCH_" + String(rank)
+            "PMC_V3_R06_GET_EXEC_ASSET_SIZE_MISMATCH_" + String(expected.rank)
           );
         }
 
         const sha = createHash("sha256").update(bytes).digest("hex");
         if (!secureEqual(sha, expected.sha256)) {
           throw new Error(
-            "PMC_V3_R06_GET_EXEC_ASSET_SHA_MISMATCH_" + String(rank)
+            "PMC_V3_R06_GET_EXEC_ASSET_SHA_MISMATCH_" + String(expected.rank)
           );
         }
 
@@ -715,59 +766,72 @@ export async function GET(request: Request) {
           bytes.byteOffset,
           bytes.byteOffset + bytes.byteLength
         ) as ArrayBuffer;
-        const file = new File([fileArrayBuffer], expected.fileName, { type: "image/png" });
-        const body = new FormData();
-        body.append("authorizationText", AUTHORIZATION_TEXT);
-        body.append("protectedStateFingerprint", current.protectedStateFingerprint);
-        body.append("deploymentCommit", current.deploymentCommit);
-        body.append("step", step);
-        body.append("asset", file, expected.fileName);
-
-        const response = await fetch(target.toString(), {
-          method: "POST",
-          headers: { [WRITE_HEADER]: AUTHORIZATION_TEXT },
-          body,
-          cache: "no-store"
+        const file = new File([fileArrayBuffer], expected.fileName, {
+          type: "image/png"
         });
 
-        const responseText = await response.text();
-        let parsed: unknown = {};
+        let receipt;
         try {
-          parsed = responseText ? JSON.parse(responseText) : {};
-        } catch {
-          parsed = { raw: responseText };
-        }
-
-        execution.push({
-          step,
-          rank,
-          httpStatus: response.status,
-          response: parsed
-        });
-
-        if (!response.ok) {
+          receipt = await uploadImage(token, file, expected);
+        } catch (error) {
+          state = await readTarget(token);
           return NextResponse.json(
             {
               status: "RECONCILIATION_REQUIRED",
-              error: "PMC_V3_R06_EXEC_STEP_HTTP_" + String(response.status),
+              error: error instanceof Error ? error.message : "UPLOAD_UNKNOWN",
+              recoveryPoint: "UPLOAD_" + String(expected.rank).padStart(2, "0"),
+              currentV3Prefix: v3PrefixCount(state.images),
               execution,
+              publishPerformed: false,
               ETSY_WRITE_COUNT: execution.length
             },
             { status: 202, headers: { "cache-control": "no-store" } }
           );
         }
 
-        await sleep(1000);
+        execution.push({
+          action: "UPLOAD_IMAGE",
+          rank: expected.rank,
+          listingImageId: receipt.listingImageId
+        });
+
+        await sleep(1400);
+        state = await readTarget(token);
+        const currentPrefix = v3PrefixCount(state.images);
+
+        if (!protectedTargetMatches(state) || currentPrefix !== expected.rank) {
+          return NextResponse.json(
+            {
+              status: "RECONCILIATION_REQUIRED",
+              error: "PMC_V3_R06_GET_EXEC_PREFIX_VERIFY_FAILED",
+              expectedPrefix: expected.rank,
+              actualPrefix: currentPrefix,
+              imageCount: state.images.length,
+              execution,
+              publishPerformed: false,
+              ETSY_WRITE_COUNT: execution.length
+            },
+            { status: 202, headers: { "cache-control": "no-store" } }
+          );
+        }
       }
 
-      const final = await plan();
-      if (!final.complete || !final.targetSafe || !final.sequenceSafe) {
+      const final = await readTarget(token);
+      const finalPrefix = v3PrefixCount(final.images);
+
+      if (
+        !protectedTargetMatches(final) ||
+        finalPrefix !== 10 ||
+        final.images.length !== 10
+      ) {
         return NextResponse.json(
           {
             status: "RECONCILIATION_REQUIRED",
-            error: "PMC_V3_R06_EXEC_FINAL_READBACK_FAILED",
+            error: "PMC_V3_R06_GET_EXEC_FINAL_READBACK_FAILED",
+            finalPrefix,
+            imageCount: final.images.length,
             execution,
-            final,
+            publishPerformed: false,
             ETSY_WRITE_COUNT: execution.length
           },
           { status: 202, headers: { "cache-control": "no-store" } }
@@ -779,11 +843,14 @@ export async function GET(request: Request) {
           status: "PMC_V3_R06_MEDIA_PASS",
           listingId: LISTING_ID,
           state: "draft",
-          imageCount: final.imageCount,
-          activeVideoCount: final.activeVideoCount,
-          buyerFileCount: final.buyerFileCount,
-          completedV3ImagesFromTail: final.completedV3ImagesFromTail,
+          imageCount: final.images.length,
+          activeVideoCount: activeVideoCount(final.videos),
+          buyerFileCount: final.files.length,
+          v3PrefixCount: finalPrefix,
           zipSha256: ZIP_SHA256,
+          protectedListingIdentityUnchanged: true,
+          protectedBuyerFilesUnchanged: true,
+          protectedVideoUnchanged: true,
           publishPerformed: false,
           patternPublicationPerformed: false,
           execution,
@@ -804,6 +871,7 @@ export async function GET(request: Request) {
         status: "PMC_V3_R06_MEDIA_BLOCKED",
         error: error instanceof Error ? error.message : "UNKNOWN",
         listingId: LISTING_ID,
+        publishPerformed: false,
         ETSY_WRITE_COUNT: 0
       },
       { status: 409, headers: { "cache-control": "no-store" } }
