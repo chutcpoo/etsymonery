@@ -56,7 +56,7 @@ const secureEqual = (a:string,b:string) => {
   return x.length===y.length && timingSafeEqual(x,y);
 };
 const runtimeCommit = () => process.env.VERCEL_GIT_COMMIT_SHA?.trim().toLowerCase() ?? "";
-const gateEnabled = () => true;
+const gateEnabled = () => false;
 
 async function parseJson(r:Response){ const t=await r.text(); if(!t)return {}; try{return JSON.parse(t) as unknown;}catch{return {};} }
 function results(v:unknown){ return isRec(v)&&Array.isArray(v.results)?v.results.filter(isRec):null; }
