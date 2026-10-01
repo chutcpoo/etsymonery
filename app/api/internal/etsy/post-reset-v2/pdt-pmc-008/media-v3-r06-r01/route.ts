@@ -711,7 +711,7 @@ export async function GET(request: Request) {
           );
         }
 
-        const file = new File([bytes], expected.fileName, { type: "image/png" });
+        const fileArrayBuffer = bytes.buffer.slice(\n          bytes.byteOffset,\n          bytes.byteOffset + bytes.byteLength\n        ) as ArrayBuffer;\n        const file = new File([fileArrayBuffer], expected.fileName, { type: "image/png" });
         const body = new FormData();
         body.append("authorizationText", AUTHORIZATION_TEXT);
         body.append("protectedStateFingerprint", current.protectedStateFingerprint);
