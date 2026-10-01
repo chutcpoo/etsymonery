@@ -191,7 +191,7 @@ function runtimeCommit() {
 }
 
 function gateEnabled() {
-  return false;
+  return true;
 }
 
 function multipartHeaders(token: string) {
