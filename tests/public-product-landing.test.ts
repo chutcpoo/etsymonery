@@ -5,7 +5,7 @@ import { ETSY_CHANNEL_INDEX } from "../lib/catalog-channel-index";
 import { formatEtsyMoney, normalizeProviderText } from "../lib/public-product";
 
 test("post-reset public channel index reflects the current canonical identifier projection", () => {
-  assert.equal(ETSY_CHANNEL_INDEX.length, 4);
+  assert.equal(ETSY_CHANNEL_INDEX.length, 5);
   assert.deepEqual(
     ETSY_CHANNEL_INDEX.map(({ productId, listingId }) => ({ productId, listingId })),
     [
