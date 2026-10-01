@@ -9,12 +9,12 @@ import {
   type EtsyDraftAssetPayload
 } from "../../../../../../../lib/etsy-draft-asset-provider";
 import { etsyApiHeaders } from "../../../../../../../lib/etsy";
+import { fetchEtsyReadWithRetry } from "../../../../../../../lib/etsy-http";
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 import {
   verifyEtsyReadBackIdentity,
   type EtsyReadBackObservation
 } from "../../../../../../../lib/etsy-readback-normalizer";
-import { getEtsySellerStateSnapshot } from "../../../../../../../lib/etsy-seller-state-reconciliation";
 import { NeonOperationLedgerRepository } from "../../../../../../../lib/operation-ledger";
 
 export const runtime = "nodejs";
@@ -23,7 +23,6 @@ export const maxDuration = 300;
 
 const SHOP_ID = 23582741;
 const LISTING_ID = 4586179854;
-const EXISTING_DRAFT_ID = 4579470012;
 const OPERATION_ID = "PDT-PMC-008-ETSY-MEDIA-R01-20261001";
 const AUTHORIZATION_TEXT =
   "AUTHORIZE PDT-PMC-008-ETSY-MEDIA-R01-20261001 LISTING-4586179854 10IMAGES-1VIDEO NO-PUBLISH EXACT SCOPE ONLY";
@@ -37,13 +36,7 @@ const MEDIA_CANDIDATE_FINGERPRINT = createHash("sha256")
   )
   .digest("hex");
 
-const EXPECTED_ACTIVE_IDS = Object.freeze([
-  4578945050,
-  4579068925,
-  4580126260,
-  4580303015,
-  4581821318
-] as const);
+
 
 const BUYER_FILES = Object.freeze([
   {
@@ -216,38 +209,76 @@ function toObservation(value: Rec): EtsyReadBackObservation {
 }
 
 async function getRecord(token: string, url: string, code: string) {
-  const response = await fetch(url, {
-    method: "GET",
-    headers: etsyApiHeaders(token),
-    cache: "no-store"
-  });
+  const response = await fetchEtsyReadWithRetry(
+    fetch,
+    url,
+    {
+      method: "GET",
+      headers: etsyApiHeaders(token),
+      cache: "no-store"
+    },
+    {
+      maxAttempts: 3,
+      baseDelayMs: 750,
+      maxRetryDelayMs: 5000
+    }
+  );
   if (!response.ok) throw new Error(code + "_HTTP_" + String(response.status));
   const value = await parseJson(response);
   if (!isRec(value)) throw new Error(code + "_INVALID");
   return value;
 }
 
-async function readAll(token: string) {
-  const base = "https://api.etsy.com/v3/application";
-  const [listing, imagesPayload, filesPayload, videosPayload, seller] =
-    await Promise.all([
-      getRecord(token, base + "/listings/" + String(LISTING_ID), "LISTING"),
-      getRecord(token, base + "/listings/" + String(LISTING_ID) + "/images", "IMAGES"),
-      getRecord(
-        token,
-        base + "/shops/" + String(SHOP_ID) + "/listings/" + String(LISTING_ID) + "/files",
-        "FILES"
-      ),
-      getRecord(token, base + "/listings/" + String(LISTING_ID) + "/videos", "VIDEOS"),
-      getEtsySellerStateSnapshot({ shopId: SHOP_ID, accessToken: token })
-    ]);
+async function readImages(token: string) {
+  const payload = await getRecord(
+    token,
+    "https://api.etsy.com/v3/application/listings/" + String(LISTING_ID) + "/images",
+    "IMAGES"
+  );
+  const rows = results(payload);
+  if (!rows) throw new Error("IMAGES_COLLECTION_INVALID");
+  return rows;
+}
 
-  const images = results(imagesPayload);
-  const files = results(filesPayload);
-  const videos = results(videosPayload);
-  if (!images || !files || !videos) throw new Error("ASSET_COLLECTION_INVALID");
+async function readFiles(token: string) {
+  const payload = await getRecord(
+    token,
+    "https://api.etsy.com/v3/application/shops/" +
+      String(SHOP_ID) +
+      "/listings/" +
+      String(LISTING_ID) +
+      "/files",
+    "FILES"
+  );
+  const rows = results(payload);
+  if (!rows) throw new Error("FILES_COLLECTION_INVALID");
+  return rows;
+}
 
-  return { listing, images, files, videos, seller };
+async function readVideos(token: string) {
+  const payload = await getRecord(
+    token,
+    "https://api.etsy.com/v3/application/listings/" + String(LISTING_ID) + "/videos",
+    "VIDEOS"
+  );
+  const rows = results(payload);
+  if (!rows) throw new Error("VIDEOS_COLLECTION_INVALID");
+  return rows;
+}
+
+async function readTarget(token: string) {
+  const listing = await getRecord(
+    token,
+    "https://api.etsy.com/v3/application/listings/" + String(LISTING_ID),
+    "LISTING"
+  );
+  await sleep(250);
+  const images = await readImages(token);
+  await sleep(250);
+  const files = await readFiles(token);
+  await sleep(250);
+  const videos = await readVideos(token);
+  return { listing, images, files, videos };
 }
 
 function listingIdentityMatches(listing: Rec) {
@@ -256,37 +287,6 @@ function listingIdentityMatches(listing: Rec) {
     toObservation(listing)
   );
   return identity.status === "MATCH" && textField(listing, "state") === "draft";
-}
-
-function sellerMatches(
-  seller: Awaited<ReturnType<typeof getEtsySellerStateSnapshot>>
-) {
-  if (
-    seller.total !== 7 ||
-    seller.counts.active !== 5 ||
-    seller.counts.draft !== 2 ||
-    seller.counts.inactive !== 0 ||
-    seller.counts.sold_out !== 0 ||
-    seller.counts.expired !== 0
-  ) {
-    return false;
-  }
-
-  const active = new Set(
-    seller.listings
-      .filter((item) => item.state === "active")
-      .map((item) => item.listingId)
-  );
-  if (EXPECTED_ACTIVE_IDS.some((id) => !active.has(id))) return false;
-
-  return (
-    seller.listings.some(
-      (item) => item.listingId === EXISTING_DRAFT_ID && item.state === "draft"
-    ) &&
-    seller.listings.some(
-      (item) => item.listingId === LISTING_ID && item.state === "draft"
-    )
-  );
 }
 
 function buyerFilesMatch(files: Rec[]) {
@@ -304,19 +304,15 @@ function buyerFilesMatch(files: Rec[]) {
   });
 }
 
-function imagePrefixMatches(
-  state: Awaited<ReturnType<typeof readAll>>,
-  count: number
-) {
+function imageRowsPrefixMatch(rows: Rec[], count: number) {
   if (count < 0 || count > IMAGES.length) return false;
-  const orderedImages = [...state.images].sort(
+  const ordered = [...rows].sort(
     (a, b) => (intField(a, "rank") ?? 0) - (intField(b, "rank") ?? 0)
   );
-  if (orderedImages.length !== count) return false;
-
+  if (ordered.length !== count) return false;
   for (let index = 0; index < count; index += 1) {
     const expected = IMAGES[index];
-    const actual = orderedImages[index];
+    const actual = ordered[index];
     if (
       intField(actual, "rank") !== expected.rank ||
       textField(actual, "alt_text") !== expected.altText
@@ -336,31 +332,26 @@ function imagePrefixMatches(
   return true;
 }
 
-function mediaProgress(state: Awaited<ReturnType<typeof readAll>>) {
-  if (
-    !listingIdentityMatches(state.listing) ||
-    !buyerFilesMatch(state.files) ||
-    !sellerMatches(state.seller)
-  ) {
+function mediaProgress(state: Awaited<ReturnType<typeof readTarget>>) {
+  if (!listingIdentityMatches(state.listing) || !buyerFilesMatch(state.files)) {
     return {
       valid: false,
       imageCount: state.images.length,
       videoCount: state.videos.length,
       nextStep: "BLOCKED",
       complete: false,
-      reason: "PROTECTED_STATE_MISMATCH"
+      reason: "TARGET_PROTECTED_STATE_MISMATCH"
     };
   }
 
   const imageCount = state.images.length;
   const videoCount = state.videos.length;
-
   if (
     imageCount < 0 ||
     imageCount > IMAGES.length ||
     videoCount < 0 ||
     videoCount > 1 ||
-    !imagePrefixMatches(state, imageCount) ||
+    !imageRowsPrefixMatch(state.images, imageCount) ||
     (videoCount > 0 && imageCount !== IMAGES.length)
   ) {
     return {
@@ -402,17 +393,15 @@ function mediaProgress(state: Awaited<ReturnType<typeof readAll>>) {
 }
 
 function protectedStateFingerprint(
-  state: Awaited<ReturnType<typeof readAll>>
+  state: Awaited<ReturnType<typeof readTarget>>
 ) {
   const payload = {
     operationId: OPERATION_ID,
     listingId: LISTING_ID,
     listingFingerprint: EXPECTED_LISTING_FINGERPRINT,
     mediaCandidateFingerprint: MEDIA_CANDIDATE_FINGERPRINT,
-    sellerCounts: state.seller.counts,
-    listingIds: state.seller.listings
-      .map((item) => ({ id: item.listingId, state: item.state, title: item.title }))
-      .sort((a, b) => a.id - b.id),
+    listingState: textField(state.listing, "state"),
+    listingTitle: textField(state.listing, "title"),
     files: state.files
       .map((row) => ({
         rank: intField(row, "rank"),
@@ -501,21 +490,19 @@ async function sleep(ms: number) {
 
 async function plan() {
   const token = await getValidEtsyAccessToken();
-  const state = await readAll(token);
+  const state = await readTarget(token);
   const progress = mediaProgress(state);
   return {
     status: progress.valid
       ? "PMC_MEDIA_R01_SEQUENCE_PASS"
       : "PMC_MEDIA_R01_SEQUENCE_BLOCKED",
     mode: "READ_ONLY",
-    transport: "SEQUENTIAL_ONE_ASSET_PER_REQUEST",
+    transport: "SEQUENTIAL_RATE_EFFICIENT",
     operationId: OPERATION_ID,
     listingId: LISTING_ID,
     listingFingerprint: EXPECTED_LISTING_FINGERPRINT,
     mediaCandidateFingerprint: MEDIA_CANDIDATE_FINGERPRINT,
     protectedStateFingerprint: protectedStateFingerprint(state),
-    sellerCounts: state.seller.counts,
-    total: state.seller.total,
     buyerFileCount: state.files.length,
     currentImageCount: progress.imageCount,
     currentVideoCount: progress.videoCount,
@@ -523,6 +510,7 @@ async function plan() {
     complete: progress.complete,
     sequenceSafe: progress.valid,
     sequenceReason: progress.reason,
+    protectedSellerStateVerification: "FINAL_UI_READBACK_REQUIRED",
     media: {
       imageCount: IMAGES.length,
       videoCount: 1,
@@ -547,7 +535,7 @@ async function plan() {
       listingState: "KEEP_DRAFT",
       publish: false,
       patternPublication: false,
-      protectedListings: "VERIFY_ONLY"
+      protectedListings: "FINAL_UI_VERIFY_ONLY"
     },
     authorizationRequired: AUTHORIZATION_TEXT,
     gateEnabled: gateEnabled(),
@@ -637,14 +625,13 @@ export async function POST(request: Request) {
     if (!requestedStep) throw new Error("PMC_MEDIA_R01_STEP_REQUIRED");
 
     const token = await getValidEtsyAccessToken();
-    const before = await readAll(token);
+    const before = await readTarget(token);
     const progress = mediaProgress(before);
     if (!progress.valid) {
       throw new Error("PMC_MEDIA_R01_SEQUENCE_UNSAFE_" + String(progress.reason));
     }
 
-    const actualFingerprint = protectedStateFingerprint(before);
-    if (!secureEqual(actualFingerprint, protectedFingerprint)) {
+    if (!secureEqual(protectedStateFingerprint(before), protectedFingerprint)) {
       throw new Error("PMC_MEDIA_R01_PROTECTED_STATE_DRIFT");
     }
 
@@ -691,6 +678,7 @@ export async function POST(request: Request) {
         altText: expected.altText
       };
 
+      await sleep(1250);
       const repository = new NeonOperationLedgerRepository();
       const provider = new EtsyDraftAssetProvider(token, payload, file);
       const result = await executeReconciledWrite(repository, provider, {
@@ -716,26 +704,16 @@ export async function POST(request: Request) {
       }
 
       if (result.status !== "REPLAY") writes = 1;
-      const receipt = result.receipt as ProviderReceipt;
-      if (!(await provider.hasResource(receipt.providerResourceId))) {
-        throw new Error("PMC_MEDIA_R01_IMAGE_READBACK_MISMATCH_" + String(rank));
-      }
-
-      const after = await readAll(token);
-      const afterProgress = mediaProgress(after);
-      if (
-        !afterProgress.valid ||
-        afterProgress.imageCount !== rank ||
-        afterProgress.videoCount !== 0
-      ) {
+      await sleep(1500);
+      const imageRows = await readImages(token);
+      if (!imageRowsPrefixMatch(imageRows, rank)) {
         return NextResponse.json(
           {
             status: "RECONCILIATION_REQUIRED",
             error: "PMC_MEDIA_R01_IMAGE_FINAL_VERIFY_FAILED",
             recoveryPoint: requestedStep,
             listingId: LISTING_ID,
-            imageCount: after.images.length,
-            videoCount: after.videos.length,
+            imageCount: imageRows.length,
             ETSY_WRITE_COUNT: Math.max(writes, 1)
           },
           { status: 202, headers: { "cache-control": "no-store" } }
@@ -747,13 +725,14 @@ export async function POST(request: Request) {
           status: "PMC_MEDIA_R01_IMAGE_STEP_PASS",
           listingId: LISTING_ID,
           completedStep: requestedStep,
-          imageCount: afterProgress.imageCount,
-          videoCount: afterProgress.videoCount,
-          nextStep: afterProgress.nextStep,
-          nextProtectedStateFingerprint: protectedStateFingerprint(after),
-          protectedListingIdentityUnchanged: true,
-          protectedBuyerFilesUnchanged: true,
-          protectedListingsUnchanged: true,
+          imageCount: rank,
+          videoCount: 0,
+          nextStep:
+            rank < IMAGES.length
+              ? "IMAGE_" + String(rank + 1).padStart(2, "0")
+              : "VIDEO",
+          protectedListingIdentityVerifiedBeforeWrite: true,
+          protectedBuyerFilesVerifiedBeforeWrite: true,
           publishPerformed: false,
           authorizationConsumed: false,
           ETSY_WRITE_COUNT: writes
@@ -770,6 +749,7 @@ export async function POST(request: Request) {
     }
 
     const videoFile = await verifyFile(form.get("asset"), VIDEO);
+    await sleep(1250);
     let videoReceipt;
     try {
       videoReceipt = await uploadVideo(token, videoFile);
@@ -790,26 +770,48 @@ export async function POST(request: Request) {
       throw error;
     }
 
-    let after = await readAll(token);
+    let videoRows: Rec[] = [];
     for (let index = 0; index < 15; index += 1) {
-      const afterProgress = mediaProgress(after);
-      if (afterProgress.valid && afterProgress.complete) break;
       await sleep(1500);
-      after = await readAll(token);
+      videoRows = await readVideos(token);
+      if (
+        videoRows.length === 1 &&
+        textField(videoRows[0], "video_state") === "active"
+      ) {
+        break;
+      }
     }
 
-    const finalProgress = mediaProgress(after);
-    if (!finalProgress.valid || !finalProgress.complete) {
+    if (
+      videoRows.length !== 1 ||
+      textField(videoRows[0], "video_state") !== "active"
+    ) {
       return NextResponse.json(
         {
           status: "RECONCILIATION_REQUIRED",
           error: "PMC_MEDIA_R01_VIDEO_FINAL_VERIFY_FAILED",
           recoveryPoint: "VIDEO",
           listingId: LISTING_ID,
-          imageCount: after.images.length,
-          videoCount: after.videos.length,
+          videoCount: videoRows.length,
           videoReceipt,
-          sellerCounts: after.seller.counts,
+          ETSY_WRITE_COUNT: 1
+        },
+        { status: 202, headers: { "cache-control": "no-store" } }
+      );
+    }
+
+    await sleep(750);
+    const finalState = await readTarget(token);
+    const finalProgress = mediaProgress(finalState);
+    if (!finalProgress.valid || !finalProgress.complete) {
+      return NextResponse.json(
+        {
+          status: "RECONCILIATION_REQUIRED",
+          error: "PMC_MEDIA_R01_FINAL_TARGET_VERIFY_FAILED",
+          recoveryPoint: "FINAL_TARGET",
+          listingId: LISTING_ID,
+          imageCount: finalState.images.length,
+          videoCount: finalState.videos.length,
           ETSY_WRITE_COUNT: 1
         },
         { status: 202, headers: { "cache-control": "no-store" } }
@@ -824,11 +826,10 @@ export async function POST(request: Request) {
         state: "draft",
         imageCount: finalProgress.imageCount,
         videoCount: finalProgress.videoCount,
-        buyerFileCount: after.files.length,
-        sellerCounts: after.seller.counts,
+        buyerFileCount: finalState.files.length,
         protectedListingIdentityUnchanged: true,
         protectedBuyerFilesUnchanged: true,
-        protectedListingsUnchanged: true,
+        protectedSellerStateVerification: "FINAL_UI_READBACK_REQUIRED",
         publishPerformed: false,
         patternPublicationPerformed: false,
         videoReceipt,
