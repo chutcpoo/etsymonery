@@ -453,7 +453,7 @@ function protectedTargetMatches(state: Awaited<ReturnType<typeof readTarget>>) {
 
 async function deleteImage(token: string, listingImageId: number) {
   const response = await fetch(
-    "https://api.etsy.com/v3/application/shops/" +
+    "https://api.etsy.com/v3/application/shop/" +
       String(SHOP_ID) +
       "/listings/" +
       String(LISTING_ID) +
