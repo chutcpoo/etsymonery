@@ -304,31 +304,17 @@ function buyerFilesMatch(files: Rec[]) {
   });
 }
 
-function baselineMatches(state: Awaited<ReturnType<typeof readAll>>) {
-  return (
-    listingIdentityMatches(state.listing) &&
-    buyerFilesMatch(state.files) &&
-    state.images.length === 0 &&
-    state.videos.length === 0 &&
-    sellerMatches(state.seller)
-  );
-}
-
-function finalMediaMatches(state: Awaited<ReturnType<typeof readAll>>) {
-  if (
-    !listingIdentityMatches(state.listing) ||
-    !buyerFilesMatch(state.files) ||
-    !sellerMatches(state.seller)
-  ) {
-    return false;
-  }
-
+function imagePrefixMatches(
+  state: Awaited<ReturnType<typeof readAll>>,
+  count: number
+) {
+  if (count < 0 || count > IMAGES.length) return false;
   const orderedImages = [...state.images].sort(
     (a, b) => (intField(a, "rank") ?? 0) - (intField(b, "rank") ?? 0)
   );
-  if (orderedImages.length !== IMAGES.length) return false;
+  if (orderedImages.length !== count) return false;
 
-  for (let index = 0; index < IMAGES.length; index += 1) {
+  for (let index = 0; index < count; index += 1) {
     const expected = IMAGES[index];
     const actual = orderedImages[index];
     if (
@@ -347,11 +333,72 @@ function finalMediaMatches(state: Awaited<ReturnType<typeof readAll>>) {
       return false;
     }
   }
+  return true;
+}
 
-  return (
-    state.videos.length === 1 &&
-    textField(state.videos[0], "video_state") === "active"
-  );
+function mediaProgress(state: Awaited<ReturnType<typeof readAll>>) {
+  if (
+    !listingIdentityMatches(state.listing) ||
+    !buyerFilesMatch(state.files) ||
+    !sellerMatches(state.seller)
+  ) {
+    return {
+      valid: false,
+      imageCount: state.images.length,
+      videoCount: state.videos.length,
+      nextStep: "BLOCKED",
+      complete: false,
+      reason: "PROTECTED_STATE_MISMATCH"
+    };
+  }
+
+  const imageCount = state.images.length;
+  const videoCount = state.videos.length;
+
+  if (
+    imageCount < 0 ||
+    imageCount > IMAGES.length ||
+    videoCount < 0 ||
+    videoCount > 1 ||
+    !imagePrefixMatches(state, imageCount) ||
+    (videoCount > 0 && imageCount !== IMAGES.length)
+  ) {
+    return {
+      valid: false,
+      imageCount,
+      videoCount,
+      nextStep: "BLOCKED",
+      complete: false,
+      reason: "MEDIA_SEQUENCE_MISMATCH"
+    };
+  }
+
+  if (videoCount === 1 && textField(state.videos[0], "video_state") !== "active") {
+    return {
+      valid: false,
+      imageCount,
+      videoCount,
+      nextStep: "BLOCKED",
+      complete: false,
+      reason: "VIDEO_NOT_ACTIVE"
+    };
+  }
+
+  const nextStep =
+    imageCount < IMAGES.length
+      ? "IMAGE_" + String(imageCount + 1).padStart(2, "0")
+      : videoCount === 0
+        ? "VIDEO"
+        : "DONE";
+
+  return {
+    valid: true,
+    imageCount,
+    videoCount,
+    nextStep,
+    complete: nextStep === "DONE",
+    reason: null
+  };
 }
 
 function protectedStateFingerprint(
@@ -394,7 +441,9 @@ async function verifyFile(
   value: FormDataEntryValue | null,
   expected: { fileName: string; size: number; sha256: string }
 ) {
-  if (!(value instanceof File)) throw new Error("MEDIA_ASSET_MISSING_" + expected.fileName);
+  if (!(value instanceof File)) {
+    throw new Error("MEDIA_ASSET_MISSING_" + expected.fileName);
+  }
   if (value.name.normalize("NFC").trim() !== expected.fileName) {
     throw new Error("MEDIA_ASSET_NAME_MISMATCH_" + expected.fileName);
   }
@@ -409,6 +458,8 @@ async function verifyFile(
   }
   return value;
 }
+
+class AmbiguousVideoUploadError extends Error {}
 
 async function uploadVideo(token: string, file: File) {
   const body = new FormData();
@@ -427,14 +478,16 @@ async function uploadVideo(token: string, file: File) {
     }
   );
   if (response.status >= 500) {
-    throw new Error("PMC_VIDEO_UPLOAD_AMBIGUOUS_HTTP_" + String(response.status));
+    throw new AmbiguousVideoUploadError(
+      "PMC_VIDEO_UPLOAD_AMBIGUOUS_HTTP_" + String(response.status)
+    );
   }
   if (!response.ok) {
     throw new Error("PMC_VIDEO_UPLOAD_REJECTED_HTTP_" + String(response.status));
   }
   const payload = await parseJson(response);
   if (!isRec(payload) || !intField(payload, "video_id")) {
-    throw new Error("PMC_VIDEO_UPLOAD_RECEIPT_INVALID");
+    throw new AmbiguousVideoUploadError("PMC_VIDEO_UPLOAD_RECEIPT_INVALID");
   }
   return {
     videoId: intField(payload, "video_id"),
@@ -449,10 +502,13 @@ async function sleep(ms: number) {
 async function plan() {
   const token = await getValidEtsyAccessToken();
   const state = await readAll(token);
-  const baselineSafe = baselineMatches(state);
+  const progress = mediaProgress(state);
   return {
-    status: baselineSafe ? "PMC_MEDIA_R01_PREVIEW_PASS" : "PMC_MEDIA_R01_PREVIEW_BLOCKED",
+    status: progress.valid
+      ? "PMC_MEDIA_R01_SEQUENCE_PASS"
+      : "PMC_MEDIA_R01_SEQUENCE_BLOCKED",
     mode: "READ_ONLY",
+    transport: "SEQUENTIAL_ONE_ASSET_PER_REQUEST",
     operationId: OPERATION_ID,
     listingId: LISTING_ID,
     listingFingerprint: EXPECTED_LISTING_FINGERPRINT,
@@ -461,9 +517,12 @@ async function plan() {
     sellerCounts: state.seller.counts,
     total: state.seller.total,
     buyerFileCount: state.files.length,
-    currentImageCount: state.images.length,
-    currentVideoCount: state.videos.length,
-    baselineSafe,
+    currentImageCount: progress.imageCount,
+    currentVideoCount: progress.videoCount,
+    nextStep: progress.nextStep,
+    complete: progress.complete,
+    sequenceSafe: progress.valid,
+    sequenceReason: progress.reason,
     media: {
       imageCount: IMAGES.length,
       videoCount: 1,
@@ -501,13 +560,13 @@ export async function GET() {
   try {
     const payload = await plan();
     return NextResponse.json(payload, {
-      status: payload.baselineSafe ? 200 : 409,
+      status: payload.sequenceSafe ? 200 : 409,
       headers: { "cache-control": "no-store" }
     });
   } catch (error) {
     return NextResponse.json(
       {
-        status: "PMC_MEDIA_R01_PREVIEW_BLOCKED",
+        status: "PMC_MEDIA_R01_SEQUENCE_BLOCKED",
         error: error instanceof Error ? error.message : "UNKNOWN",
         ETSY_WRITE_COUNT: 0
       },
@@ -535,8 +594,8 @@ export async function POST(request: Request) {
       "authorizationText",
       "protectedStateFingerprint",
       "deploymentCommit",
-      ...IMAGES.map((asset) => asset.field),
-      VIDEO.field
+      "step",
+      "asset"
     ]);
     for (const key of form.keys()) {
       if (!allowed.has(key)) {
@@ -571,29 +630,54 @@ export async function POST(request: Request) {
       throw new Error("PMC_MEDIA_R01_PROTECTED_FP_INVALID");
     }
 
-    const stagedImages = new Map<number, File>();
-    for (const asset of IMAGES) {
-      stagedImages.set(
-        asset.rank,
-        await verifyFile(form.get(asset.field), asset)
-      );
-    }
-    const stagedVideo = await verifyFile(form.get(VIDEO.field), VIDEO);
+    const requestedStep =
+      typeof form.get("step") === "string"
+        ? String(form.get("step")).normalize("NFC").trim()
+        : "";
+    if (!requestedStep) throw new Error("PMC_MEDIA_R01_STEP_REQUIRED");
 
     const token = await getValidEtsyAccessToken();
     const before = await readAll(token);
-    if (!baselineMatches(before)) {
-      throw new Error("PMC_MEDIA_R01_BASELINE_MISMATCH");
+    const progress = mediaProgress(before);
+    if (!progress.valid) {
+      throw new Error("PMC_MEDIA_R01_SEQUENCE_UNSAFE_" + String(progress.reason));
     }
-    if (!secureEqual(protectedStateFingerprint(before), protectedFingerprint)) {
+
+    const actualFingerprint = protectedStateFingerprint(before);
+    if (!secureEqual(actualFingerprint, protectedFingerprint)) {
       throw new Error("PMC_MEDIA_R01_PROTECTED_STATE_DRIFT");
     }
 
-    const repository = new NeonOperationLedgerRepository();
+    if (progress.complete) {
+      return NextResponse.json(
+        {
+          status: "PMC_MEDIA_R01_ALREADY_COMPLETE",
+          listingId: LISTING_ID,
+          imageCount: progress.imageCount,
+          videoCount: progress.videoCount,
+          publishPerformed: false,
+          authorizationConsumed: true,
+          ETSY_WRITE_COUNT: 0
+        },
+        { headers: { "cache-control": "no-store" } }
+      );
+    }
 
-    for (const asset of IMAGES) {
-      const file = stagedImages.get(asset.rank);
-      if (!file) throw new Error("PMC_MEDIA_R01_STAGED_IMAGE_MISSING_" + String(asset.rank));
+    if (requestedStep !== progress.nextStep) {
+      throw new Error(
+        "PMC_MEDIA_R01_STEP_MISMATCH_EXPECTED_" +
+          progress.nextStep +
+          "_GOT_" +
+          requestedStep
+      );
+    }
+
+    if (requestedStep.startsWith("IMAGE_")) {
+      const rank = progress.imageCount + 1;
+      const expected = IMAGES[rank - 1];
+      if (!expected) throw new Error("PMC_MEDIA_R01_IMAGE_RANK_INVALID");
+      const file = await verifyFile(form.get("asset"), expected);
+
       const payload: EtsyDraftAssetPayload = {
         operationKind: "UPLOAD_IMAGE",
         candidateId: "PDT-PMC-008-V06",
@@ -601,71 +685,132 @@ export async function POST(request: Request) {
         expectedListingFingerprint: EXPECTED_LISTING_FINGERPRINT,
         shopId: SHOP_ID,
         draftListingId: LISTING_ID,
-        assetSha256: asset.sha256,
-        assetName: asset.fileName,
-        rank: asset.rank,
-        altText: asset.altText
+        assetSha256: expected.sha256,
+        assetName: expected.fileName,
+        rank: expected.rank,
+        altText: expected.altText
       };
+
+      const repository = new NeonOperationLedgerRepository();
       const provider = new EtsyDraftAssetProvider(token, payload, file);
       const result = await executeReconciledWrite(repository, provider, {
         operationId:
           OPERATION_ID +
           ":UPLOAD_IMAGE:" +
-          String(asset.rank).padStart(2, "0"),
+          String(expected.rank).padStart(2, "0"),
         kind: "UPLOAD_IMAGE",
         payload: { ...payload },
         now: new Date().toISOString()
       });
+
       if (result.status === "RECONCILIATION_REQUIRED") {
         return NextResponse.json(
           {
             status: "RECONCILIATION_REQUIRED",
-            recoveryPoint: "UPLOAD_IMAGE_" + String(asset.rank),
+            recoveryPoint: requestedStep,
             listingId: LISTING_ID,
-            ETSY_WRITE_COUNT: writes + 1
+            ETSY_WRITE_COUNT: 1
           },
           { status: 202, headers: { "cache-control": "no-store" } }
         );
       }
-      if (result.status !== "REPLAY") writes += 1;
+
+      if (result.status !== "REPLAY") writes = 1;
       const receipt = result.receipt as ProviderReceipt;
       if (!(await provider.hasResource(receipt.providerResourceId))) {
-        throw new Error("PMC_MEDIA_R01_IMAGE_READBACK_MISMATCH_" + String(asset.rank));
+        throw new Error("PMC_MEDIA_R01_IMAGE_READBACK_MISMATCH_" + String(rank));
       }
+
+      const after = await readAll(token);
+      const afterProgress = mediaProgress(after);
+      if (
+        !afterProgress.valid ||
+        afterProgress.imageCount !== rank ||
+        afterProgress.videoCount !== 0
+      ) {
+        return NextResponse.json(
+          {
+            status: "RECONCILIATION_REQUIRED",
+            error: "PMC_MEDIA_R01_IMAGE_FINAL_VERIFY_FAILED",
+            recoveryPoint: requestedStep,
+            listingId: LISTING_ID,
+            imageCount: after.images.length,
+            videoCount: after.videos.length,
+            ETSY_WRITE_COUNT: Math.max(writes, 1)
+          },
+          { status: 202, headers: { "cache-control": "no-store" } }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          status: "PMC_MEDIA_R01_IMAGE_STEP_PASS",
+          listingId: LISTING_ID,
+          completedStep: requestedStep,
+          imageCount: afterProgress.imageCount,
+          videoCount: afterProgress.videoCount,
+          nextStep: afterProgress.nextStep,
+          nextProtectedStateFingerprint: protectedStateFingerprint(after),
+          protectedListingIdentityUnchanged: true,
+          protectedBuyerFilesUnchanged: true,
+          protectedListingsUnchanged: true,
+          publishPerformed: false,
+          authorizationConsumed: false,
+          ETSY_WRITE_COUNT: writes
+        },
+        { headers: { "cache-control": "no-store" } }
+      );
     }
 
-    const immediatelyBeforeVideo = await readAll(token);
-    if (
-      !listingIdentityMatches(immediatelyBeforeVideo.listing) ||
-      !buyerFilesMatch(immediatelyBeforeVideo.files) ||
-      !sellerMatches(immediatelyBeforeVideo.seller) ||
-      immediatelyBeforeVideo.images.length !== 10 ||
-      immediatelyBeforeVideo.videos.length !== 0
-    ) {
-      throw new Error("PMC_MEDIA_R01_PRE_VIDEO_BASELINE_MISMATCH");
+    if (requestedStep !== "VIDEO") {
+      throw new Error("PMC_MEDIA_R01_UNKNOWN_STEP_" + requestedStep);
+    }
+    if (progress.imageCount !== IMAGES.length || progress.videoCount !== 0) {
+      throw new Error("PMC_MEDIA_R01_VIDEO_PRECONDITION_FAILED");
     }
 
-    const videoReceipt = await uploadVideo(token, stagedVideo);
-    writes += 1;
+    const videoFile = await verifyFile(form.get("asset"), VIDEO);
+    let videoReceipt;
+    try {
+      videoReceipt = await uploadVideo(token, videoFile);
+      writes = 1;
+    } catch (error) {
+      if (error instanceof AmbiguousVideoUploadError) {
+        return NextResponse.json(
+          {
+            status: "RECONCILIATION_REQUIRED",
+            error: error.message,
+            recoveryPoint: "VIDEO",
+            listingId: LISTING_ID,
+            ETSY_WRITE_COUNT: 1
+          },
+          { status: 202, headers: { "cache-control": "no-store" } }
+        );
+      }
+      throw error;
+    }
 
     let after = await readAll(token);
-    for (let index = 0; index < 8; index += 1) {
-      if (finalMediaMatches(after)) break;
-      await sleep(1200);
+    for (let index = 0; index < 15; index += 1) {
+      const afterProgress = mediaProgress(after);
+      if (afterProgress.valid && afterProgress.complete) break;
+      await sleep(1500);
       after = await readAll(token);
     }
 
-    if (!finalMediaMatches(after)) {
+    const finalProgress = mediaProgress(after);
+    if (!finalProgress.valid || !finalProgress.complete) {
       return NextResponse.json(
         {
           status: "RECONCILIATION_REQUIRED",
-          error: "PMC_MEDIA_R01_FINAL_VERIFY_FAILED",
+          error: "PMC_MEDIA_R01_VIDEO_FINAL_VERIFY_FAILED",
+          recoveryPoint: "VIDEO",
           listingId: LISTING_ID,
           imageCount: after.images.length,
           videoCount: after.videos.length,
           videoReceipt,
           sellerCounts: after.seller.counts,
-          ETSY_WRITE_COUNT: writes
+          ETSY_WRITE_COUNT: 1
         },
         { status: 202, headers: { "cache-control": "no-store" } }
       );
@@ -677,8 +822,8 @@ export async function POST(request: Request) {
         operationId: OPERATION_ID,
         listingId: LISTING_ID,
         state: "draft",
-        imageCount: after.images.length,
-        videoCount: after.videos.length,
+        imageCount: finalProgress.imageCount,
+        videoCount: finalProgress.videoCount,
         buyerFileCount: after.files.length,
         sellerCounts: after.seller.counts,
         protectedListingIdentityUnchanged: true,
