@@ -627,6 +627,7 @@ function extractZipEntry(zip: Buffer, wantedName: string) {
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
+
     if (url.searchParams.get("execute") === "all") {
       const authorizationText =
         url.searchParams.get("authorizationText")?.normalize("NFC").trim() ?? "";
@@ -658,6 +659,7 @@ export async function GET(request: Request) {
           "PMC_V3_R06_GET_EXEC_ZIP_FETCH_HTTP_" + String(assetResponse.status)
         );
       }
+
       const zip = Buffer.from(await assetResponse.arrayBuffer());
       const zipSha = createHash("sha256").update(zip).digest("hex");
       if (!secureEqual(zipSha, ZIP_SHA256)) {
@@ -670,6 +672,7 @@ export async function GET(request: Request) {
 
       for (let iteration = 0; iteration < 10; iteration += 1) {
         const current = await plan();
+
         if (!current.targetSafe || !current.sequenceSafe) {
           return NextResponse.json(
             {
@@ -682,21 +685,30 @@ export async function GET(request: Request) {
             { status: 202, headers: { "cache-control": "no-store" } }
           );
         }
+
         if (current.complete || current.nextStep === "DONE") break;
 
         const step = current.nextStep;
         const rank = Number(step.slice(-2));
         const expected = IMAGES[rank - 1];
-        if (!expected) throw new Error("PMC_V3_R06_GET_EXEC_EXPECTED_ASSET_MISSING");
+        if (!expected) {
+          throw new Error("PMC_V3_R06_GET_EXEC_EXPECTED_ASSET_MISSING");
+        }
 
         const entryName = "IMAGES_2000x2000/" + expected.fileName;
         const bytes = extractZipEntry(zip, entryName);
+
         if (bytes.length !== expected.size) {
-          throw new Error("PMC_V3_R06_GET_EXEC_ASSET_SIZE_MISMATCH_" + String(rank));
+          throw new Error(
+            "PMC_V3_R06_GET_EXEC_ASSET_SIZE_MISMATCH_" + String(rank)
+          );
         }
+
         const sha = createHash("sha256").update(bytes).digest("hex");
         if (!secureEqual(sha, expected.sha256)) {
-          throw new Error("PMC_V3_R06_GET_EXEC_ASSET_SHA_MISMATCH_" + String(rank));
+          throw new Error(
+            "PMC_V3_R06_GET_EXEC_ASSET_SHA_MISMATCH_" + String(rank)
+          );
         }
 
         const file = new File([bytes], expected.fileName, { type: "image/png" });
@@ -713,6 +725,7 @@ export async function GET(request: Request) {
           body,
           cache: "no-store"
         });
+
         const responseText = await response.text();
         let parsed: unknown = {};
         try {
@@ -774,68 +787,6 @@ export async function GET(request: Request) {
         },
         { headers: { "cache-control": "no-store" } }
       );
-    }
-
-Fingerprint)) {
-        throw new Error("PMC_V3_R06_GET_EXEC_FP_INVALID");
-      }
-      if (!/^[a-f0-9]{40}$/.test(deploymentCommit)) {
-        throw new Error("PMC_V3_R06_GET_EXEC_COMMIT_INVALID");
-      }
-      if (!/^REPLACE_(0[1-9]|10)$/.test(step)) {
-        throw new Error("PMC_V3_R06_GET_EXEC_STEP_INVALID");
-      }
-      if (!assetUrl.startsWith("https://")) {
-        throw new Error("PMC_V3_R06_GET_EXEC_ASSET_URL_INVALID");
-      }
-
-      const rank = Number(step.slice(-2));
-      const expected = IMAGES[rank - 1];
-      if (!expected) throw new Error("PMC_V3_R06_GET_EXEC_ASSET_EXPECTATION_MISSING");
-
-      const assetResponse = await fetch(assetUrl, {
-        method: "GET",
-        cache: "no-store",
-        redirect: "follow"
-      });
-      if (!assetResponse.ok) {
-        throw new Error(
-          "PMC_V3_R06_GET_EXEC_ASSET_FETCH_HTTP_" + String(assetResponse.status)
-        );
-      }
-      const bytes = Buffer.from(await assetResponse.arrayBuffer());
-      if (bytes.length !== expected.size) {
-        throw new Error("PMC_V3_R06_GET_EXEC_ASSET_SIZE_MISMATCH");
-      }
-      const sha = createHash("sha256").update(bytes).digest("hex");
-      if (!secureEqual(sha, expected.sha256)) {
-        throw new Error("PMC_V3_R06_GET_EXEC_ASSET_SHA_MISMATCH");
-      }
-
-      const file = new File([bytes], expected.fileName, { type: "image/png" });
-      const body = new FormData();
-      body.append("authorizationText", AUTHORIZATION_TEXT);
-      body.append("protectedStateFingerprint", protectedStateFingerprint);
-      body.append("deploymentCommit", deploymentCommit);
-      body.append("step", step);
-      body.append("asset", file, expected.fileName);
-
-      const target = new URL(request.url);
-      target.search = "";
-      const response = await fetch(target.toString(), {
-        method: "POST",
-        headers: { [WRITE_HEADER]: AUTHORIZATION_TEXT },
-        body,
-        cache: "no-store"
-      });
-      const responseText = await response.text();
-      return new Response(responseText, {
-        status: response.status,
-        headers: {
-          "content-type": response.headers.get("content-type") ?? "application/json",
-          "cache-control": "no-store"
-        }
-      });
     }
 
     const payload = await plan();
