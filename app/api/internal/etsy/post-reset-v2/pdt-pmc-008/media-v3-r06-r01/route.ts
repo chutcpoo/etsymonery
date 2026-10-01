@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import { inflateRawSync } from "node:zlib";
 import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "../../../../../../../lib/etsy";
 import { fetchEtsyReadWithRetry } from "../../../../../../../lib/etsy-http";
@@ -560,24 +561,222 @@ async function plan() {
   };
 }
 
+
+function extractZipEntry(zip: Buffer, wantedName: string) {
+  const eocdSignature = 0x06054b50;
+  const centralSignature = 0x02014b50;
+  const localSignature = 0x04034b50;
+  const min = Math.max(0, zip.length - 65557);
+  let eocd = -1;
+
+  for (let offset = zip.length - 22; offset >= min; offset -= 1) {
+    if (zip.readUInt32LE(offset) === eocdSignature) {
+      eocd = offset;
+      break;
+    }
+  }
+  if (eocd < 0) throw new Error("PMC_V3_R06_ZIP_EOCD_MISSING");
+
+  const totalEntries = zip.readUInt16LE(eocd + 10);
+  let cursor = zip.readUInt32LE(eocd + 16);
+
+  for (let index = 0; index < totalEntries; index += 1) {
+    if (zip.readUInt32LE(cursor) !== centralSignature) {
+      throw new Error("PMC_V3_R06_ZIP_CENTRAL_INVALID");
+    }
+
+    const method = zip.readUInt16LE(cursor + 10);
+    const compressedSize = zip.readUInt32LE(cursor + 20);
+    const uncompressedSize = zip.readUInt32LE(cursor + 24);
+    const nameLength = zip.readUInt16LE(cursor + 28);
+    const extraLength = zip.readUInt16LE(cursor + 30);
+    const commentLength = zip.readUInt16LE(cursor + 32);
+    const localOffset = zip.readUInt32LE(cursor + 42);
+    const name = zip
+      .subarray(cursor + 46, cursor + 46 + nameLength)
+      .toString("utf8");
+
+    if (name === wantedName) {
+      if (zip.readUInt32LE(localOffset) !== localSignature) {
+        throw new Error("PMC_V3_R06_ZIP_LOCAL_INVALID");
+      }
+      const localNameLength = zip.readUInt16LE(localOffset + 26);
+      const localExtraLength = zip.readUInt16LE(localOffset + 28);
+      const dataStart = localOffset + 30 + localNameLength + localExtraLength;
+      const compressed = zip.subarray(dataStart, dataStart + compressedSize);
+      let output: Buffer;
+      if (method === 0) {
+        output = Buffer.from(compressed);
+      } else if (method === 8) {
+        output = inflateRawSync(compressed);
+      } else {
+        throw new Error("PMC_V3_R06_ZIP_METHOD_UNSUPPORTED_" + String(method));
+      }
+      if (output.length !== uncompressedSize) {
+        throw new Error("PMC_V3_R06_ZIP_ENTRY_SIZE_MISMATCH");
+      }
+      return output;
+    }
+
+    cursor += 46 + nameLength + extraLength + commentLength;
+  }
+
+  throw new Error("PMC_V3_R06_ZIP_ENTRY_MISSING_" + wantedName);
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
-    if (url.searchParams.get("execute") === "1") {
+    if (url.searchParams.get("execute") === "all") {
       const authorizationText =
         url.searchParams.get("authorizationText")?.normalize("NFC").trim() ?? "";
       if (!authorizationText || !secureEqual(authorizationText, AUTHORIZATION_TEXT)) {
         throw new Error("PMC_V3_R06_GET_EXEC_AUTH_INVALID");
       }
 
-      const protectedStateFingerprint =
-        url.searchParams.get("protectedStateFingerprint")?.trim().toLowerCase() ?? "";
       const deploymentCommit =
         url.searchParams.get("deploymentCommit")?.trim().toLowerCase() ?? "";
-      const step = url.searchParams.get("step")?.normalize("NFC").trim() ?? "";
-      const assetUrl = url.searchParams.get("assetUrl")?.trim() ?? "";
+      if (
+        !/^[a-f0-9]{40}$/.test(deploymentCommit) ||
+        !secureEqual(deploymentCommit, runtimeCommit())
+      ) {
+        throw new Error("PMC_V3_R06_GET_EXEC_COMMIT_INVALID");
+      }
 
-      if (!/^[a-f0-9]{64}$/.test(protectedStateFingerprint)) {
+      const assetUrl = url.searchParams.get("assetUrl")?.trim() ?? "";
+      if (!assetUrl.startsWith("https://")) {
+        throw new Error("PMC_V3_R06_GET_EXEC_ASSET_URL_INVALID");
+      }
+
+      const assetResponse = await fetch(assetUrl, {
+        method: "GET",
+        cache: "no-store",
+        redirect: "follow"
+      });
+      if (!assetResponse.ok) {
+        throw new Error(
+          "PMC_V3_R06_GET_EXEC_ZIP_FETCH_HTTP_" + String(assetResponse.status)
+        );
+      }
+      const zip = Buffer.from(await assetResponse.arrayBuffer());
+      const zipSha = createHash("sha256").update(zip).digest("hex");
+      if (!secureEqual(zipSha, ZIP_SHA256)) {
+        throw new Error("PMC_V3_R06_GET_EXEC_ZIP_SHA_MISMATCH");
+      }
+
+      const execution: Array<Record<string, unknown>> = [];
+      const target = new URL(request.url);
+      target.search = "";
+
+      for (let iteration = 0; iteration < 10; iteration += 1) {
+        const current = await plan();
+        if (!current.targetSafe || !current.sequenceSafe) {
+          return NextResponse.json(
+            {
+              status: "RECONCILIATION_REQUIRED",
+              error: "PMC_V3_R06_EXEC_CURRENT_STATE_UNSAFE",
+              execution,
+              current,
+              ETSY_WRITE_COUNT: execution.length
+            },
+            { status: 202, headers: { "cache-control": "no-store" } }
+          );
+        }
+        if (current.complete || current.nextStep === "DONE") break;
+
+        const step = current.nextStep;
+        const rank = Number(step.slice(-2));
+        const expected = IMAGES[rank - 1];
+        if (!expected) throw new Error("PMC_V3_R06_GET_EXEC_EXPECTED_ASSET_MISSING");
+
+        const entryName = "IMAGES_2000x2000/" + expected.fileName;
+        const bytes = extractZipEntry(zip, entryName);
+        if (bytes.length !== expected.size) {
+          throw new Error("PMC_V3_R06_GET_EXEC_ASSET_SIZE_MISMATCH_" + String(rank));
+        }
+        const sha = createHash("sha256").update(bytes).digest("hex");
+        if (!secureEqual(sha, expected.sha256)) {
+          throw new Error("PMC_V3_R06_GET_EXEC_ASSET_SHA_MISMATCH_" + String(rank));
+        }
+
+        const file = new File([bytes], expected.fileName, { type: "image/png" });
+        const body = new FormData();
+        body.append("authorizationText", AUTHORIZATION_TEXT);
+        body.append("protectedStateFingerprint", current.protectedStateFingerprint);
+        body.append("deploymentCommit", current.deploymentCommit);
+        body.append("step", step);
+        body.append("asset", file, expected.fileName);
+
+        const response = await fetch(target.toString(), {
+          method: "POST",
+          headers: { [WRITE_HEADER]: AUTHORIZATION_TEXT },
+          body,
+          cache: "no-store"
+        });
+        const responseText = await response.text();
+        let parsed: unknown = {};
+        try {
+          parsed = responseText ? JSON.parse(responseText) : {};
+        } catch {
+          parsed = { raw: responseText };
+        }
+
+        execution.push({
+          step,
+          rank,
+          httpStatus: response.status,
+          response: parsed
+        });
+
+        if (!response.ok) {
+          return NextResponse.json(
+            {
+              status: "RECONCILIATION_REQUIRED",
+              error: "PMC_V3_R06_EXEC_STEP_HTTP_" + String(response.status),
+              execution,
+              ETSY_WRITE_COUNT: execution.length
+            },
+            { status: 202, headers: { "cache-control": "no-store" } }
+          );
+        }
+
+        await sleep(1000);
+      }
+
+      const final = await plan();
+      if (!final.complete || !final.targetSafe || !final.sequenceSafe) {
+        return NextResponse.json(
+          {
+            status: "RECONCILIATION_REQUIRED",
+            error: "PMC_V3_R06_EXEC_FINAL_READBACK_FAILED",
+            execution,
+            final,
+            ETSY_WRITE_COUNT: execution.length
+          },
+          { status: 202, headers: { "cache-control": "no-store" } }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          status: "PMC_V3_R06_MEDIA_PASS",
+          listingId: LISTING_ID,
+          state: "draft",
+          imageCount: final.imageCount,
+          activeVideoCount: final.activeVideoCount,
+          buyerFileCount: final.buyerFileCount,
+          completedV3ImagesFromTail: final.completedV3ImagesFromTail,
+          zipSha256: ZIP_SHA256,
+          publishPerformed: false,
+          patternPublicationPerformed: false,
+          execution,
+          ETSY_WRITE_COUNT: execution.length
+        },
+        { headers: { "cache-control": "no-store" } }
+      );
+    }
+
+Fingerprint)) {
         throw new Error("PMC_V3_R06_GET_EXEC_FP_INVALID");
       }
       if (!/^[a-f0-9]{40}$/.test(deploymentCommit)) {
