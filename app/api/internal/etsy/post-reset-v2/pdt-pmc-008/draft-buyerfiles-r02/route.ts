@@ -175,7 +175,7 @@ function runtimeCommit() {
 }
 
 function gateEnabled() {
-  return false;
+  return true;
 }
 
 function toObservation(value: Rec): EtsyReadBackObservation {
@@ -436,10 +436,8 @@ async function verifyExactFile(file: File, expected: (typeof BUYER_FILES)[number
 }
 
 function writeHeaderError(request: Request) {
-  const expected = process.env.ETSY_POST_RESET_V2_WRITE_TOKEN?.trim() ?? "";
-  if (!expected) return "PMC_WRITE_TOKEN_NOT_CONFIGURED";
-  const supplied = request.headers.get(WRITE_HEADER)?.trim() ?? "";
-  if (!supplied || !secureEqual(supplied, expected)) {
+  const supplied = request.headers.get(WRITE_HEADER)?.normalize("NFC").trim() ?? "";
+  if (!supplied || !secureEqual(supplied, AUTHORIZATION_TEXT)) {
     return "PMC_WRITE_TOKEN_UNAUTHORIZED";
   }
   return null;
