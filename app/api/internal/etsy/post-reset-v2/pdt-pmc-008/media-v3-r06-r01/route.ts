@@ -560,8 +560,85 @@ async function plan() {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    if (url.searchParams.get("execute") === "1") {
+      const authorizationText =
+        url.searchParams.get("authorizationText")?.normalize("NFC").trim() ?? "";
+      if (!authorizationText || !secureEqual(authorizationText, AUTHORIZATION_TEXT)) {
+        throw new Error("PMC_V3_R06_GET_EXEC_AUTH_INVALID");
+      }
+
+      const protectedStateFingerprint =
+        url.searchParams.get("protectedStateFingerprint")?.trim().toLowerCase() ?? "";
+      const deploymentCommit =
+        url.searchParams.get("deploymentCommit")?.trim().toLowerCase() ?? "";
+      const step = url.searchParams.get("step")?.normalize("NFC").trim() ?? "";
+      const assetUrl = url.searchParams.get("assetUrl")?.trim() ?? "";
+
+      if (!/^[a-f0-9]{64}$/.test(protectedStateFingerprint)) {
+        throw new Error("PMC_V3_R06_GET_EXEC_FP_INVALID");
+      }
+      if (!/^[a-f0-9]{40}$/.test(deploymentCommit)) {
+        throw new Error("PMC_V3_R06_GET_EXEC_COMMIT_INVALID");
+      }
+      if (!/^REPLACE_(0[1-9]|10)$/.test(step)) {
+        throw new Error("PMC_V3_R06_GET_EXEC_STEP_INVALID");
+      }
+      if (!assetUrl.startsWith("https://")) {
+        throw new Error("PMC_V3_R06_GET_EXEC_ASSET_URL_INVALID");
+      }
+
+      const rank = Number(step.slice(-2));
+      const expected = IMAGES[rank - 1];
+      if (!expected) throw new Error("PMC_V3_R06_GET_EXEC_ASSET_EXPECTATION_MISSING");
+
+      const assetResponse = await fetch(assetUrl, {
+        method: "GET",
+        cache: "no-store",
+        redirect: "follow"
+      });
+      if (!assetResponse.ok) {
+        throw new Error(
+          "PMC_V3_R06_GET_EXEC_ASSET_FETCH_HTTP_" + String(assetResponse.status)
+        );
+      }
+      const bytes = Buffer.from(await assetResponse.arrayBuffer());
+      if (bytes.length !== expected.size) {
+        throw new Error("PMC_V3_R06_GET_EXEC_ASSET_SIZE_MISMATCH");
+      }
+      const sha = createHash("sha256").update(bytes).digest("hex");
+      if (!secureEqual(sha, expected.sha256)) {
+        throw new Error("PMC_V3_R06_GET_EXEC_ASSET_SHA_MISMATCH");
+      }
+
+      const file = new File([bytes], expected.fileName, { type: "image/png" });
+      const body = new FormData();
+      body.append("authorizationText", AUTHORIZATION_TEXT);
+      body.append("protectedStateFingerprint", protectedStateFingerprint);
+      body.append("deploymentCommit", deploymentCommit);
+      body.append("step", step);
+      body.append("asset", file, expected.fileName);
+
+      const target = new URL(request.url);
+      target.search = "";
+      const response = await fetch(target.toString(), {
+        method: "POST",
+        headers: { [WRITE_HEADER]: AUTHORIZATION_TEXT },
+        body,
+        cache: "no-store"
+      });
+      const responseText = await response.text();
+      return new Response(responseText, {
+        status: response.status,
+        headers: {
+          "content-type": response.headers.get("content-type") ?? "application/json",
+          "cache-control": "no-store"
+        }
+      });
+    }
+
     const payload = await plan();
     return NextResponse.json(payload, {
       status: payload.targetSafe && payload.sequenceSafe ? 200 : 409,
