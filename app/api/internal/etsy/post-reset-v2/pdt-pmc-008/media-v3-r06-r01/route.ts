@@ -484,7 +484,12 @@ async function deleteImage(token: string, listingImageId: number) {
   }
 }
 
-async function uploadImage(\n  token: string,\n  file: File,\n  expected: (typeof IMAGES)[number],\n  overwrite = true\n) {
+async function uploadImage(
+  token: string,
+  file: File,
+  expected: (typeof IMAGES)[number],
+  overwrite = true
+) {
   const body = new FormData();
   body.append("image", file, expected.fileName);
   body.append("rank", String(expected.rank));
