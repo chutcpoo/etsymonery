@@ -207,7 +207,7 @@ async function getRecord(token: string, url: string, code: string) {
       cache: "no-store"
     },
     {
-      maxAttempts: 4,
+      maxAttempts: 3,
       baseDelayMs: 750,
       maxRetryDelayMs: 6000
     }
