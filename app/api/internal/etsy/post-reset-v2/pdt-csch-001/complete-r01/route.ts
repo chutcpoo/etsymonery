@@ -39,85 +39,37 @@ function hash(v: Buffer) { return createHash("sha256").update(v).digest("hex"); 
 function secure(a: string, b: string) { const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && timingSafeEqual(x, y); }
 function gate() { return process.env.VERCEL_ENV === "production" && (process.env.VERCEL_GIT_COMMIT_MESSAGE ?? "").includes(GATE); }
 function multipartHeaders(token: string) { const h = etsyApiHeaders(token); delete h["content-type"]; return h; }
+async function sleep(ms: number) { await new Promise(r => setTimeout(r, ms)); }
 async function json(r: Response) { const t = await r.text(); try { return t ? JSON.parse(t) : {}; } catch { return {}; } }
 async function get(token: string, path: string) { const r = await fetch("https://api.etsy.com/v3/application" + path, { headers: etsyApiHeaders(token), cache: "no-store" }); if (!r.ok) throw new Error(`GET_${path}_${r.status}`); return json(r); }
 function rows(v: any) { return Array.isArray(v?.results) ? v.results : []; }
 function priceOk(v: any) { return Number(v?.amount) / Number(v?.divisor) === 5.9 && v?.currency_code === "USD"; }
 function tagsOk(v: any) { return Array.isArray(v) && v.length === TAGS.length && v.every((x: string, i: number) => x === TAGS[i]); }
-
-async function snapshot(token: string) {
-  const [listing, imagesP, filesP, videosP, sectionsP] = await Promise.all([
-    get(token, `/listings/${LISTING_ID}`),
-    get(token, `/listings/${LISTING_ID}/images`),
-    get(token, `/shops/${SHOP_ID}/listings/${LISTING_ID}/files`),
-    get(token, `/listings/${LISTING_ID}/videos`),
-    get(token, `/shops/${SHOP_ID}/sections`)
-  ]);
-  return { listing, images: rows(imagesP), files: rows(filesP), videos: rows(videosP), sections: rows(sectionsP) };
-}
-function coreOk(s: any, allowActive = false) {
-  const l = s.listing; const state = String(l?.state ?? "");
-  return Number(l?.listing_id) === LISTING_ID && Number(l?.shop_id) === SHOP_ID &&
-    (state === "draft" || (allowActive && state === "active")) && String(l?.title ?? "") === TITLE &&
-    String(l?.description ?? "").trim() === DESCRIPTION && priceOk(l?.price) && Number(l?.quantity) === 999 &&
-    Number(l?.taxonomy_id) === 12476 && tagsOk(l?.tags);
-}
-function fileRowsOk(a: any[]) {
-  if (a.length !== FILES.length) return false;
-  const x = [...a].sort((p, q) => Number(p.rank) - Number(q.rank));
-  return x.every((r, i) => Number(r.rank) === i + 1 && String(r.filename) === FILES[i].name && Number(r.size_bytes) === FILES[i].size);
-}
-function imageRowsOk(a: any[]) {
-  if (a.length !== IMAGES.length) return false;
-  const x = [...a].sort((p, q) => Number(p.rank) - Number(q.rank));
-  return x.every((r, i) => Number(r.rank) === i + 1);
-}
+function coreOk(l: any, allowActive = false) { const state = String(l?.state ?? ""); return Number(l?.listing_id) === LISTING_ID && Number(l?.shop_id) === SHOP_ID && (state === "draft" || (allowActive && state === "active")) && String(l?.title ?? "") === TITLE && String(l?.description ?? "").trim() === DESCRIPTION && priceOk(l?.price) && Number(l?.quantity) === 999 && Number(l?.taxonomy_id) === 12476 && tagsOk(l?.tags); }
+function fileRowsOk(a: any[]) { if (a.length !== FILES.length) return false; const x = [...a].sort((p, q) => Number(p.rank) - Number(q.rank)); return x.every((r, i) => Number(r.rank) === i + 1 && String(r.filename) === FILES[i].name && Number(r.size_bytes) === FILES[i].size); }
+function imageRowsOk(a: any[]) { if (a.length !== IMAGES.length) return false; const x = [...a].sort((p, q) => Number(p.rank) - Number(q.rank)); return x.every((r, i) => Number(r.rank) === i + 1); }
 function videoRowsOk(a: any[]) { return a.length === 1 && String(a[0]?.video_state ?? "") === "active"; }
-function summarize(s: any) { return { state: s.listing?.state, images: s.images.length, files: s.files.length, videos: s.videos.map((v: any) => ({ id: v.video_id, state: v.video_state })), sectionTitles: s.sections.map((x: any) => x.title) }; }
-function authError(request: Request) {
-  if (!gate()) return "GATE_DISABLED";
-  if ((request.headers.get("x-operation-id") ?? "") !== AUTHORIZATION_ID) return "OPERATION_ID_INVALID";
-  return "";
-}
-async function assetBytes(file: File, spec: Spec) {
-  if (file.name !== spec.name) throw new Error("ASSET_NAME_MISMATCH");
-  const b = Buffer.from(await file.arrayBuffer());
-  if (b.length !== spec.size) throw new Error("ASSET_SIZE_MISMATCH");
-  if (!secure(hash(b), spec.sha)) throw new Error("ASSET_SHA256_MISMATCH");
-  return b;
-}
-async function uploadBuyerFile(token: string, spec: Spec, rank: number, b: Buffer) {
-  const f = new FormData();
-  f.append("file", new File([new Uint8Array(b)], spec.name, { type: spec.mime }), spec.name);
-  f.append("name", spec.name); f.append("rank", String(rank));
-  const r = await fetch(`https://api.etsy.com/v3/application/shops/${SHOP_ID}/listings/${LISTING_ID}/files`, { method: "POST", headers: multipartHeaders(token), body: f, cache: "no-store" });
-  if (!r.ok) throw new Error(`BUYER_FILE_UPLOAD_HTTP_${r.status}`);
-  return json(r);
-}
-async function uploadImage(token: string, spec: Spec, rank: number, b: Buffer) {
-  const f = new FormData(); f.append("image", new File([new Uint8Array(b)], spec.name, { type: spec.mime }), spec.name); f.append("rank", String(rank));
-  const r = await fetch(`https://api.etsy.com/v3/application/shops/${SHOP_ID}/listings/${LISTING_ID}/images`, { method: "POST", headers: multipartHeaders(token), body: f, cache: "no-store" });
-  if (!r.ok) throw new Error(`IMAGE_UPLOAD_HTTP_${r.status}`);
-  return json(r);
-}
-async function uploadVideo(token: string, spec: Spec, b: Buffer) {
-  const f = new FormData(); f.append("video", new File([new Uint8Array(b)], spec.name, { type: spec.mime }), spec.name);
-  const r = await fetch(`https://api.etsy.com/v3/application/shops/${SHOP_ID}/listings/${LISTING_ID}/videos`, { method: "POST", headers: multipartHeaders(token), body: f, cache: "no-store" });
-  if (!r.ok) throw new Error(`VIDEO_UPLOAD_HTTP_${r.status}`);
-  return json(r);
-}
-async function patchListing(token: string, params: Record<string, string>) {
-  const body = new URLSearchParams(params);
-  const r = await fetch(`https://api.etsy.com/v3/application/shops/${SHOP_ID}/listings/${LISTING_ID}`, { method: "PATCH", headers: { ...etsyApiHeaders(token), "content-type": "application/x-www-form-urlencoded" }, body, cache: "no-store" });
-  if (!r.ok) throw new Error(`LISTING_PATCH_HTTP_${r.status}`);
-  return json(r);
-}
-async function sleep(ms: number) { await new Promise(r => setTimeout(r, ms)); }
+function authError(request: Request) { if (!gate()) return "GATE_DISABLED"; if ((request.headers.get("x-operation-id") ?? "") !== AUTHORIZATION_ID) return "OPERATION_ID_INVALID"; return ""; }
+async function assetBytes(file: File, spec: Spec) { if (file.name !== spec.name) throw new Error("ASSET_NAME_MISMATCH"); const b = Buffer.from(await file.arrayBuffer()); if (b.length !== spec.size) throw new Error("ASSET_SIZE_MISMATCH"); if (!secure(hash(b), spec.sha)) throw new Error("ASSET_SHA256_MISMATCH"); return b; }
+async function listing(token: string) { return get(token, `/listings/${LISTING_ID}`); }
+async function images(token: string) { return rows(await get(token, `/listings/${LISTING_ID}/images`)); }
+async function files(token: string) { return rows(await get(token, `/shops/${SHOP_ID}/listings/${LISTING_ID}/files`)); }
+async function videos(token: string) { return rows(await get(token, `/listings/${LISTING_ID}/videos`)); }
+async function sections(token: string) { return rows(await get(token, `/shops/${SHOP_ID}/sections`)); }
+
+async function uploadBuyerFile(token: string, spec: Spec, rank: number, b: Buffer) { const f = new FormData(); f.append("file", new File([new Uint8Array(b)], spec.name, { type: spec.mime }), spec.name); f.append("name", spec.name); f.append("rank", String(rank)); const r = await fetch(`https://api.etsy.com/v3/application/shops/${SHOP_ID}/listings/${LISTING_ID}/files`, { method: "POST", headers: multipartHeaders(token), body: f, cache: "no-store" }); if (!r.ok) throw new Error(`BUYER_FILE_UPLOAD_HTTP_${r.status}`); return json(r); }
+async function uploadImage(token: string, spec: Spec, rank: number, b: Buffer) { const f = new FormData(); f.append("image", new File([new Uint8Array(b)], spec.name, { type: spec.mime }), spec.name); f.append("rank", String(rank)); const r = await fetch(`https://api.etsy.com/v3/application/shops/${SHOP_ID}/listings/${LISTING_ID}/images`, { method: "POST", headers: multipartHeaders(token), body: f, cache: "no-store" }); if (!r.ok) throw new Error(`IMAGE_UPLOAD_HTTP_${r.status}`); return json(r); }
+async function uploadVideo(token: string, spec: Spec, b: Buffer) { const f = new FormData(); f.append("video", new File([new Uint8Array(b)], spec.name, { type: spec.mime }), spec.name); const r = await fetch(`https://api.etsy.com/v3/application/shops/${SHOP_ID}/listings/${LISTING_ID}/videos`, { method: "POST", headers: multipartHeaders(token), body: f, cache: "no-store" }); if (!r.ok) throw new Error(`VIDEO_UPLOAD_HTTP_${r.status}`); return json(r); }
+async function patchListing(token: string, params: Record<string, string>) { const body = new URLSearchParams(params); const r = await fetch(`https://api.etsy.com/v3/application/shops/${SHOP_ID}/listings/${LISTING_ID}`, { method: "PATCH", headers: { ...etsyApiHeaders(token), "content-type": "application/x-www-form-urlencoded" }, body, cache: "no-store" }); if (!r.ok) throw new Error(`LISTING_PATCH_HTTP_${r.status}`); return json(r); }
 
 export async function GET() {
   try {
-    const token = await getValidEtsyAccessToken(); const s = await snapshot(token);
-    return NextResponse.json({ status: "READ_ONLY", coreOk: coreOk(s, true), assets: { images: imageRowsOk(s.images), files: fileRowsOk(s.files), video: videoRowsOk(s.videos) }, summary: summarize(s), ETSY_WRITE_COUNT: 0 }, { headers: { "cache-control": "no-store" } });
+    const token = await getValidEtsyAccessToken();
+    const l = await listing(token); await sleep(650);
+    const im = await images(token); await sleep(650);
+    const fi = await files(token); await sleep(650);
+    const vi = await videos(token);
+    return NextResponse.json({ status: "READ_ONLY", coreOk: coreOk(l, true), state: l?.state, assets: { images: imageRowsOk(im), imageCount: im.length, files: fileRowsOk(fi), fileCount: fi.length, video: videoRowsOk(vi), videoCount: vi.length }, ETSY_WRITE_COUNT: 0 }, { headers: { "cache-control": "no-store" } });
   } catch (e) { return NextResponse.json({ status: "READ_ONLY_FAILED", error: e instanceof Error ? e.message : "UNKNOWN", ETSY_WRITE_COUNT: 0 }, { status: 409 }); }
 }
 
@@ -126,52 +78,62 @@ export async function POST(request: Request) {
   let writes = 0;
   try {
     const form = await request.formData(); const action = String(form.get("action") ?? ""); const token = await getValidEtsyAccessToken();
-    const before = await snapshot(token);
-    if (action !== "publish" && !coreOk(before, false)) throw new Error("DRAFT_CORE_MISMATCH");
-    if (action === "publish" && !coreOk(before, false)) throw new Error("PUBLISH_BASELINE_MISMATCH");
+    const l = await listing(token);
+    if (!coreOk(l, false)) throw new Error(action === "publish" ? "PUBLISH_BASELINE_MISMATCH" : "DRAFT_CORE_MISMATCH");
+
     if (action === "file") {
+      await sleep(700); const current = await files(token);
       const rank = Number(form.get("rank")); if (!Number.isInteger(rank) || rank < 1 || rank > FILES.length) throw new Error("FILE_RANK_INVALID");
-      const spec = FILES[rank - 1], existing = before.files.find((r: any) => Number(r.rank) === rank);
+      const spec = FILES[rank - 1], existing = current.find((r: any) => Number(r.rank) === rank);
       if (existing) { if (String(existing.filename) === spec.name && Number(existing.size_bytes) === spec.size) return NextResponse.json({ status: "ALREADY_PRESENT", action, rank, ETSY_WRITE_COUNT: 0 }); throw new Error("FILE_RANK_CONFLICT"); }
-      const asset = form.get("asset"); if (!(asset instanceof File)) throw new Error("FILE_ASSET_REQUIRED");
-      const b = await assetBytes(asset, spec); await uploadBuyerFile(token, spec, rank, b); writes = 1;
-      const after = await snapshot(token), row = after.files.find((r: any) => Number(r.rank) === rank);
+      const asset = form.get("asset"); if (!(asset instanceof File)) throw new Error("FILE_ASSET_REQUIRED"); const b = await assetBytes(asset, spec);
+      await sleep(700); await uploadBuyerFile(token, spec, rank, b); writes = 1; await sleep(1200);
+      const after = await files(token), row = after.find((r: any) => Number(r.rank) === rank);
       if (!row || String(row.filename) !== spec.name || Number(row.size_bytes) !== spec.size) throw new Error("FILE_FINAL_VERIFY_FAILED");
-      return NextResponse.json({ status: "PASS", action, rank, fileName: spec.name, summary: summarize(after), ETSY_WRITE_COUNT: writes });
+      return NextResponse.json({ status: "PASS", action, rank, fileName: spec.name, fileCount: after.length, ETSY_WRITE_COUNT: writes });
     }
+
     if (action === "image") {
+      await sleep(700); const current = await images(token);
       const rank = Number(form.get("rank")); if (!Number.isInteger(rank) || rank < 1 || rank > IMAGES.length) throw new Error("IMAGE_RANK_INVALID");
-      const spec = IMAGES[rank - 1], existing = before.images.find((r: any) => Number(r.rank) === rank);
+      const spec = IMAGES[rank - 1], existing = current.find((r: any) => Number(r.rank) === rank);
       if (existing) return NextResponse.json({ status: "ALREADY_PRESENT", action, rank, ETSY_WRITE_COUNT: 0 });
-      const asset = form.get("asset"); if (!(asset instanceof File)) throw new Error("IMAGE_ASSET_REQUIRED");
-      const b = await assetBytes(asset, spec); await uploadImage(token, spec, rank, b); writes = 1;
-      const after = await snapshot(token); if (!after.images.some((r: any) => Number(r.rank) === rank)) throw new Error("IMAGE_FINAL_VERIFY_FAILED");
-      return NextResponse.json({ status: "PASS", action, rank, fileName: spec.name, summary: summarize(after), ETSY_WRITE_COUNT: writes });
+      const asset = form.get("asset"); if (!(asset instanceof File)) throw new Error("IMAGE_ASSET_REQUIRED"); const b = await assetBytes(asset, spec);
+      await sleep(700); await uploadImage(token, spec, rank, b); writes = 1; await sleep(1200);
+      const after = await images(token); if (!after.some((r: any) => Number(r.rank) === rank)) throw new Error("IMAGE_FINAL_VERIFY_FAILED");
+      return NextResponse.json({ status: "PASS", action, rank, fileName: spec.name, imageCount: after.length, ETSY_WRITE_COUNT: writes });
     }
+
     if (action === "video") {
-      if (before.videos.length) { if (videoRowsOk(before.videos)) return NextResponse.json({ status: "ALREADY_PRESENT", action, ETSY_WRITE_COUNT: 0 }); throw new Error("VIDEO_CONFLICT"); }
-      const asset = form.get("asset"); if (!(asset instanceof File)) throw new Error("VIDEO_ASSET_REQUIRED");
-      const b = await assetBytes(asset, VIDEO); await uploadVideo(token, VIDEO, b); writes = 1;
-      let after = await snapshot(token);
-      for (let i = 0; i < 8 && !videoRowsOk(after.videos); i++) { await sleep(1200); after = await snapshot(token); }
-      if (!videoRowsOk(after.videos)) throw new Error("VIDEO_FINAL_VERIFY_FAILED");
-      return NextResponse.json({ status: "PASS", action, summary: summarize(after), ETSY_WRITE_COUNT: writes });
+      await sleep(700); const current = await videos(token);
+      if (current.length) { if (videoRowsOk(current)) return NextResponse.json({ status: "ALREADY_PRESENT", action, ETSY_WRITE_COUNT: 0 }); throw new Error("VIDEO_CONFLICT"); }
+      const asset = form.get("asset"); if (!(asset instanceof File)) throw new Error("VIDEO_ASSET_REQUIRED"); const b = await assetBytes(asset, VIDEO);
+      await sleep(700); await uploadVideo(token, VIDEO, b); writes = 1;
+      let after: any[] = [];
+      for (let i = 0; i < 8; i++) { await sleep(2000); after = await videos(token); if (videoRowsOk(after)) break; }
+      if (!videoRowsOk(after)) throw new Error("VIDEO_FINAL_VERIFY_FAILED");
+      return NextResponse.json({ status: "PASS", action, videoCount: after.length, videoState: after[0]?.video_state, ETSY_WRITE_COUNT: writes });
     }
+
     if (action === "section") {
-      const section = before.sections.find((r: any) => String(r.title ?? "").trim() === "Schedules & Checklists");
+      await sleep(700); const current = await sections(token); const section = current.find((r: any) => String(r.title ?? "").trim() === "Schedules & Checklists");
       if (!section || !Number(section.shop_section_id)) throw new Error("SECTION_NOT_FOUND");
-      await patchListing(token, { shop_section_id: String(section.shop_section_id) }); writes = 1;
-      const after = await snapshot(token);
-      return NextResponse.json({ status: "PASS", action, shopSectionId: Number(section.shop_section_id), shopSectionTitle: "Schedules & Checklists", summary: summarize(after), ETSY_WRITE_COUNT: writes });
+      if (Number(l?.shop_section_id) === Number(section.shop_section_id)) return NextResponse.json({ status: "ALREADY_PRESENT", action, shopSectionId: Number(section.shop_section_id), shopSectionTitle: "Schedules & Checklists", ETSY_WRITE_COUNT: 0 });
+      await sleep(700); await patchListing(token, { shop_section_id: String(section.shop_section_id) }); writes = 1; await sleep(1200);
+      const after = await listing(token); if (after?.shop_section_id != null && Number(after.shop_section_id) !== Number(section.shop_section_id)) throw new Error("SECTION_FINAL_VERIFY_FAILED");
+      return NextResponse.json({ status: "PASS", action, shopSectionId: Number(section.shop_section_id), shopSectionTitle: "Schedules & Checklists", ETSY_WRITE_COUNT: writes });
     }
+
     if (action === "publish") {
-      if (!imageRowsOk(before.images) || !fileRowsOk(before.files) || !videoRowsOk(before.videos)) throw new Error("PUBLISH_ASSET_GATE_FAILED");
-      await patchListing(token, { state: "active" }); writes = 1;
-      let after = await snapshot(token);
-      for (let i = 0; i < 8 && String(after.listing?.state) !== "active"; i++) { await sleep(1000); after = await snapshot(token); }
-      if (!coreOk(after, true) || String(after.listing?.state) !== "active" || !imageRowsOk(after.images) || !fileRowsOk(after.files) || !videoRowsOk(after.videos)) throw new Error("PUBLISH_FINAL_VERIFY_FAILED");
-      return NextResponse.json({ status: "PUBLISHED_PASS", action, listingId: LISTING_ID, url: `https://www.etsy.com/listing/${LISTING_ID}/cleaning-schedule-template-for-cleaning`, summary: summarize(after), ETSY_WRITE_COUNT: writes });
+      await sleep(700); const im = await images(token); await sleep(700); const fi = await files(token); await sleep(700); const vi = await videos(token);
+      if (!imageRowsOk(im) || !fileRowsOk(fi) || !videoRowsOk(vi)) throw new Error("PUBLISH_ASSET_GATE_FAILED");
+      await sleep(900); await patchListing(token, { state: "active" }); writes = 1;
+      let after = l;
+      for (let i = 0; i < 8; i++) { await sleep(1500); after = await listing(token); if (String(after?.state) === "active") break; }
+      if (!coreOk(after, true) || String(after?.state) !== "active") throw new Error("PUBLISH_FINAL_VERIFY_FAILED");
+      return NextResponse.json({ status: "PUBLISHED_PASS", listingId: LISTING_ID, url: `https://www.etsy.com/listing/${LISTING_ID}/cleaning-schedule-template-for-cleaning`, imageCount: im.length, fileCount: fi.length, videoCount: vi.length, ETSY_WRITE_COUNT: writes });
     }
+
     throw new Error("ACTION_INVALID");
   } catch (e) {
     return NextResponse.json({ status: writes > 0 ? "RECONCILIATION_REQUIRED" : "BLOCKED_FAIL_CLOSED", error: e instanceof Error ? e.message : "UNKNOWN", ETSY_WRITE_COUNT: writes }, { status: writes > 0 ? 202 : 409, headers: { "cache-control": "no-store" } });
