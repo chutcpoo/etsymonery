@@ -46,7 +46,8 @@ function rows(v: any) { return Array.isArray(v?.results) ? v.results : []; }
 function priceOk(v: any) { return Number(v?.amount) / Number(v?.divisor) === 5.9 && v?.currency_code === "USD"; }
 function tagsOk(v: any) { return Array.isArray(v) && v.length === TAGS.length && v.every((x: string, i: number) => x === TAGS[i]); }
 function coreOk(l: any, allowActive = false) { const state = String(l?.state ?? ""); return Number(l?.listing_id) === LISTING_ID && Number(l?.shop_id) === SHOP_ID && (state === "draft" || (allowActive && state === "active")) && String(l?.title ?? "") === TITLE && String(l?.description ?? "").trim() === DESCRIPTION && priceOk(l?.price) && Number(l?.quantity) === 999 && Number(l?.taxonomy_id) === 12476 && tagsOk(l?.tags); }
-function fileRowsOk(a: any[]) { if (a.length !== FILES.length) return false; const x = [...a].sort((p, q) => Number(p.rank) - Number(q.rank)); return x.every((r, i) => Number(r.rank) === i + 1 && String(r.filename) === FILES[i].name && Number(r.size_bytes) === FILES[i].size); }
+function sameEtsyFilename(actual: unknown, expected: string) { return String(actual ?? "").replace(/\s+/g, "") === expected.replace(/\s+/g, ""); }
+function fileRowsOk(a: any[]) { if (a.length !== FILES.length) return false; const x = [...a].sort((p, q) => Number(p.rank) - Number(q.rank)); return x.every((r, i) => Number(r.rank) === i + 1 && sameEtsyFilename(r.filename, FILES[i].name) && Number(r.size_bytes) === FILES[i].size); }
 function imageRowsOk(a: any[]) { if (a.length !== IMAGES.length) return false; const x = [...a].sort((p, q) => Number(p.rank) - Number(q.rank)); return x.every((r, i) => Number(r.rank) === i + 1); }
 function videoRowsOk(a: any[]) { return a.length === 1 && String(a[0]?.video_state ?? "") === "active"; }
 function authError(request: Request) { if (!gate()) return "GATE_DISABLED"; if ((request.headers.get("x-operation-id") ?? "") !== AUTHORIZATION_ID) return "OPERATION_ID_INVALID"; return ""; }
@@ -85,11 +86,11 @@ export async function POST(request: Request) {
       await sleep(700); const current = await files(token);
       const rank = Number(form.get("rank")); if (!Number.isInteger(rank) || rank < 1 || rank > FILES.length) throw new Error("FILE_RANK_INVALID");
       const spec = FILES[rank - 1], existing = current.find((r: any) => Number(r.rank) === rank);
-      if (existing) { if (String(existing.filename) === spec.name && Number(existing.size_bytes) === spec.size) return NextResponse.json({ status: "ALREADY_PRESENT", action, rank, ETSY_WRITE_COUNT: 0 }); throw new Error("FILE_RANK_CONFLICT"); }
+      if (existing) { if (sameEtsyFilename(existing.filename, spec.name) && Number(existing.size_bytes) === spec.size) return NextResponse.json({ status: "ALREADY_PRESENT", action, rank, ETSY_WRITE_COUNT: 0 }); throw new Error("FILE_RANK_CONFLICT"); }
       const asset = form.get("asset"); if (!(asset instanceof File)) throw new Error("FILE_ASSET_REQUIRED"); const b = await assetBytes(asset, spec);
       await sleep(700); await uploadBuyerFile(token, spec, rank, b); writes = 1; await sleep(1200);
       const after = await files(token), row = after.find((r: any) => Number(r.rank) === rank);
-      if (!row || String(row.filename) !== spec.name || Number(row.size_bytes) !== spec.size) throw new Error("FILE_FINAL_VERIFY_FAILED");
+      if (!row || !sameEtsyFilename(row.filename, spec.name) || Number(row.size_bytes) !== spec.size) throw new Error("FILE_FINAL_VERIFY_FAILED");
       return NextResponse.json({ status: "PASS", action, rank, fileName: spec.name, fileCount: after.length, ETSY_WRITE_COUNT: writes });
     }
 
