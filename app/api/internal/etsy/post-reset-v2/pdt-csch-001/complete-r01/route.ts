@@ -69,7 +69,7 @@ export async function GET() {
     const im = await images(token); await sleep(650);
     const fi = await files(token); await sleep(650);
     const vi = await videos(token);
-    return NextResponse.json({ status: "READ_ONLY", coreOk: coreOk(l, true), state: l?.state, assets: { images: imageRowsOk(im), imageCount: im.length, files: fileRowsOk(fi), fileCount: fi.length, video: videoRowsOk(vi), videoCount: vi.length }, ETSY_WRITE_COUNT: 0 }, { headers: { "cache-control": "no-store" } });
+    return NextResponse.json({ status: "READ_ONLY", coreOk: coreOk(l, true), state: l?.state, assets: { images: imageRowsOk(im), imageCount: im.length, files: fileRowsOk(fi), fileCount: fi.length, video: videoRowsOk(vi), videoCount: vi.length }, fileRows: fi.map((r:any)=>({rank:Number(r.rank),filename:String(r.filename??""),sizeBytes:Number(r.size_bytes)})), imageRows: im.map((r:any)=>({rank:Number(r.rank),imageId:Number(r.listing_image_id)})), videoRows: vi.map((r:any)=>({videoId:Number(r.video_id),state:String(r.video_state??"")})), ETSY_WRITE_COUNT: 0 }, { headers: { "cache-control": "no-store" } });
   } catch (e) { return NextResponse.json({ status: "READ_ONLY_FAILED", error: e instanceof Error ? e.message : "UNKNOWN", ETSY_WRITE_COUNT: 0 }, { status: 409 }); }
 }
 
