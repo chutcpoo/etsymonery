@@ -1,0 +1,96 @@
+{
+  "productId": "PDT-PCL-002",
+  "productName": "Professional Cleaning Checklist",
+  "status": "BUILD_READY",
+  "sheetCount": 11,
+  "pageCount": 11,
+  "driveSourceFolder": "Product 02 - Cleaning Checklist",
+  "buyerPackage": [
+    {
+      "name": "PDT-PCL-002 Buyer Package FINAL CLEAN.zip",
+      "sizeBytes": 112341,
+      "sha256": "6222634c8e1e8b6dff3b1785ac4843c791fd0f0483ab1a66eb4f67e032831a9f"
+    },
+    {
+      "name": "Professional Cleaning Checklist Example - Premium Final.xlsx",
+      "sizeBytes": 35788,
+      "sha256": "121b2ff8ae6f4a9ab096d5cd58920805440dee57fcce8edaa1ec714937ac8341"
+    },
+    {
+      "name": "Professional Cleaning Checklist Printable - Premium Final.pdf",
+      "sizeBytes": 47977,
+      "sha256": "e6f6c35ec88b34dccefdf6d10c09cfe29189c4674de55b3bd5c36ddba2e46711"
+    },
+    {
+      "name": "Professional Cleaning Checklist Template - Premium Final.xlsx",
+      "sizeBytes": 33474,
+      "sha256": "05deeb686559fa12f3549d73a13f07905b9165035084226c602ff119ab7baf3f"
+    },
+    {
+      "name": "Professional Cleaning Checklist User Guide - Premium Final.pdf",
+      "sizeBytes": 35600,
+      "sha256": "af9a5cd8d1db00d27f7bbffa24087043859c07c85f229bda3963022f74abb588"
+    }
+  ],
+  "listingImages": [
+    {
+      "name": "01_Hero_Cover.jpg",
+      "sizeBytes": 679436,
+      "sha256": "fa0f6750ddede803b001ef53188e8df7b57b89eb9153af3fd4c35d8b08288fd6"
+    },
+    {
+      "name": "02_What_You_Get.jpg",
+      "sizeBytes": 635468,
+      "sha256": "bdd5c704e1b8905804b1a34ab53c6f66543f6483d3fa7956d6ab1828d34436ae"
+    },
+    {
+      "name": "03_Standard_Cleaning.jpg",
+      "sizeBytes": 695827,
+      "sha256": "4ff24c67e31b3db0faa07e3ca1b801689ecfdd36fae850afce0b60c9af6c8b07"
+    },
+    {
+      "name": "04_Deep_MoveInOut.jpg",
+      "sizeBytes": 690534,
+      "sha256": "8fbc8f5296fca62183aa438f15d9b1251cca86e60d57e6735431141b519ca737"
+    },
+    {
+      "name": "05_Key_Features.jpg",
+      "sizeBytes": 661238,
+      "sha256": "004ddbdc72ca57f7587b69f46b43208fc4df3d34ecbcb26aca1f8fbfc9d0ea58"
+    },
+    {
+      "name": "06_How_It_Helps.jpg",
+      "sizeBytes": 464106,
+      "sha256": "d3975c7bcf83fb84debbbb87256e49d84e1818f385c20be6bf03dd9975946265"
+    },
+    {
+      "name": "07_Who_Its_For.jpg",
+      "sizeBytes": 473613,
+      "sha256": "86b6fdd21d27e76134738f488e71f76b6da1a225236cd248cb9e65efefd8ead5"
+    },
+    {
+      "name": "08_Compatibility.jpg",
+      "sizeBytes": 471172,
+      "sha256": "4ba8826ebe292f57d930a4d74e55f67f4dcf11b79b6e157d0ee99d43c839efd3"
+    },
+    {
+      "name": "09_Before_You_Buy.jpg",
+      "sizeBytes": 678662,
+      "sha256": "6b99c5150e52cf736709acb3ee5c916158443a500458509e86c6c1094fbcf3da"
+    },
+    {
+      "name": "10_Brand_Collection.jpg",
+      "sizeBytes": 634210,
+      "sha256": "0c49f9c563806da371f2eb5168fcc4461a4b7070a89e714aa1052a3bb9d03456"
+    }
+  ],
+  "listingVideos": [
+    {
+      "name": "Professional_Cleaning_Checklist_Listing_Video.mp4",
+      "sizeBytes": 541641,
+      "sha256": "35be05b5f71b5c24ff7871e391a37c072053d8a106ca504c38818dce7c897593"
+    }
+  ],
+  "publishedToEtsy": false,
+  "lockGeneratedAt": "2026-10-04T22:05:00+07:00"
+}

@@ -1,0 +1,96 @@
+{
+  "productId": "PDT-CPR-003",
+  "productName": "Cleaning Service Proposal System",
+  "status": "BUILD_READY",
+  "sheetCount": 6,
+  "pageCount": 8,
+  "driveSourceFolder": "Product 03 - Cleaning Proposal",
+  "buyerPackage": [
+    {
+      "name": "Cleaning Service Proposal Example - Premium Final.xlsx",
+      "sizeBytes": 17779,
+      "sha256": "c2cc4a77d4d087867ac36722b2bff371cfdf3074b09fdb84a2f50b9a8679e36f"
+    },
+    {
+      "name": "Cleaning Service Proposal Printable - Premium Final.pdf",
+      "sizeBytes": 810924,
+      "sha256": "786e1a5ce7948e22c6d4507b9d85c1ed2928ac6e35c898a132862bee470c25ab"
+    },
+    {
+      "name": "Cleaning Service Proposal Template - Premium Final.xlsx",
+      "sizeBytes": 17661,
+      "sha256": "fe81f89881b4ae425dabe7fb7fa06243e5b348bde546f5441bfea5ee115e33af"
+    },
+    {
+      "name": "Cleaning Service Proposal User Guide - Premium Final.pdf",
+      "sizeBytes": 469980,
+      "sha256": "818898d435a477ae7e9eafb1e9490eca540a1b3f9cd380cb7943ae61d05d9b5b"
+    },
+    {
+      "name": "PDT-CPR-003 Buyer Package FINAL CLEAN.zip",
+      "sizeBytes": 741220,
+      "sha256": "725f45aaf86888022f3cd0447baa5b7ddedebc20bf939b0d3c0cfc5da502f35e"
+    }
+  ],
+  "listingImages": [
+    {
+      "name": "01_Hero.jpg",
+      "sizeBytes": 729837,
+      "sha256": "500d3e6cba6fcc43eeb4935c4667f20874a8fc9a7d0093d8bba074f7e9bdfcbe"
+    },
+    {
+      "name": "02_What_You_Get.jpg",
+      "sizeBytes": 548514,
+      "sha256": "bc6636e7ddb0d10e4986becfe89acf2bed3041d0890c418d9fee38240cbef415"
+    },
+    {
+      "name": "03_Scope_Matrix.jpg",
+      "sizeBytes": 701493,
+      "sha256": "c3b3f494e006dfc2a0658370e2823f23de905e89dd97ed4f57a57e67fb24587d"
+    },
+    {
+      "name": "04_Pricing_Schedule.jpg",
+      "sizeBytes": 675193,
+      "sha256": "530cde1d025e62abdc1a4abb5a3619612aefc068b2fa721f3c8ac554716bbc46"
+    },
+    {
+      "name": "05_Service_Agreement.jpg",
+      "sizeBytes": 645281,
+      "sha256": "ff06b56bb117dacd3f7d18ea523f4dc111da39c6d30c7ab8cc0cacf979eb50ea"
+    },
+    {
+      "name": "06_How_It_Works.jpg",
+      "sizeBytes": 746261,
+      "sha256": "252fa00ce2a6a79a9dec80b0223bc0f5baa62984040f99f7afed3d8fee557a73"
+    },
+    {
+      "name": "07_Real_World_Use.jpg",
+      "sizeBytes": 642161,
+      "sha256": "34e90fb4f7d337ebed0eda5fb30345a37ec8f8dccf784be49ffee7c791f8ae0f"
+    },
+    {
+      "name": "08_Who_Its_For.jpg",
+      "sizeBytes": 745528,
+      "sha256": "860282abcf730cc2390c22b6fa5f626ad0c59dac06e1b03de4ea72ca68e4dd31"
+    },
+    {
+      "name": "09_Compatibility_Notes.jpg",
+      "sizeBytes": 649298,
+      "sha256": "1c2700cd3b51e57be61c070080a9919614582e15d255760dfbf1d1712d948a7f"
+    },
+    {
+      "name": "10_Collection_Cross_Sell.jpg",
+      "sizeBytes": 838866,
+      "sha256": "f53872dabd01d94cdd523e6c191980256e523b2507a555034165fc9b69f1cc9c"
+    }
+  ],
+  "listingVideos": [
+    {
+      "name": "Cleaning_Service_Proposal_Listing_Video.mp4",
+      "sizeBytes": 541981,
+      "sha256": "66bc0d87003c624f4913c69573c8471c9d8c1f4cdd4f9078cb0dd39f6826a214"
+    }
+  ],
+  "publishedToEtsy": false,
+  "lockGeneratedAt": "2026-10-04T22:05:00+07:00"
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0.0",
+  "singleSourceOfTruth": "Google Drive (PoonthaiDigital - Project Files/04 - Product Roadmap)",
+  "gitRepo": "chutcpoo/etsymonery",
+  "lastUpdated": "2026-10-04T22:05:00+07:00",
+  "products": [
+    {
+      "productId": "PDT-CS-001",
+      "productName": "Cleaning Schedule",
+      "status": "BUILD_READY",
+      "lockFile": "PDT-CS-001.json",
+      "buyerFileCount": 4,
+      "imageCount": 10,
+      "videoCount": 1
+    },
+    {
+      "productId": "PDT-PCL-002",
+      "productName": "Professional Cleaning Checklist",
+      "status": "BUILD_READY",
+      "lockFile": "PDT-PCL-002.json",
+      "buyerFileCount": 5,
+      "imageCount": 10,
+      "videoCount": 1
+    },
+    {
+      "productId": "PDT-CPR-003",
+      "productName": "Cleaning Service Proposal System",
+      "status": "BUILD_READY",
+      "lockFile": "PDT-CPR-003.json",
+      "buyerFileCount": 5,
+      "imageCount": 10,
+      "videoCount": 1
+    }
+  ]
+}
