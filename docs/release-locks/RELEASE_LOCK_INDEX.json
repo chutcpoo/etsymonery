@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "singleSourceOfTruth": "Google Drive (PoonthaiDigital - Project Files/04 - Product Roadmap)",
   "gitRepo": "chutcpoo/etsymonery",
-  "lastUpdated": "2026-10-04T22:05:00+07:00",
+  "lastUpdated": "2026-10-04T23:00:00+07:00",
   "products": [
     {
       "productId": "PDT-CS-001",
@@ -18,7 +18,7 @@
       "productName": "Professional Cleaning Checklist",
       "status": "BUILD_READY",
       "lockFile": "PDT-PCL-002.json",
-      "buyerFileCount": 4,
+      "buyerFileCount": 5,
       "imageCount": 10,
       "videoCount": 1
     },

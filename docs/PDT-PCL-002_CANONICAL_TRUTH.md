@@ -9,11 +9,12 @@ Product ID: PDT-PCL-002
 
 - Template workbook: 11 sheets
 - Example workbook: 12 sheets
-- Printable PDF: 10 pages
+- Printable PDF (A4): 10 pages
+- Printable PDF (US Letter): 10 pages
 - User Guide PDF: 6 pages
-- Buyer package: 4 files
+- Buyer package: 5 files
 
-Any automation, QA gate, Etsy listing copy, release manifest, or publisher candidate for PDT-PCL-002 must use exactly `11 / 12 / 10 / 6 / 4`.
+Any automation, QA gate, Etsy listing copy, release manifest, or publisher candidate for PDT-PCL-002 must use exactly `11 / 12 / 10 / 6 / 5`.
 
 If any source or generated candidate reports `11-page Printable PDF` or `4-page User Guide`, the result is invalid and must fail closed as `SOURCE MISMATCH`.
 
@@ -22,8 +23,9 @@ If any source or generated candidate reports `11-page Printable PDF` or `4-page 
 - 11-Sheet Template
 - 12-Sheet Example
 - 10-Page A4 Printable PDF
+- 10-Page US Letter Printable PDF
 - 6-Page User Guide
-- 4 Digital Files Included
+- 5 Digital Files Included
 
 ## Product boundaries
 

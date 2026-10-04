@@ -3,9 +3,16 @@
   "productName": "Cleaning Schedule",
   "status": "BUILD_READY",
   "sheetCount": 7,
-  "pageCount": 4,
+  "userGuidePageCount": 4,
+  "jobSheetPageCount": 1,
+  "buyerFilesCount": 4,
   "driveSourceFolder": "Product 01 - Cleaning Schedule",
   "buyerPackage": [
+    {
+      "name": "Cleaning Schedule Daily Job Sheet Printable - Premium Final.pdf",
+      "sizeBytes": 295402,
+      "sha256": "ea4b1d3ba0d3802947eeec31313a122e8be32f04edcecf28b27bf3865e7da3eb"
+    },
     {
       "name": "Cleaning Schedule Example.xlsx",
       "sizeBytes": 37887,
@@ -23,8 +30,8 @@
     },
     {
       "name": "PDT-CS-001 Buyer Package FINAL CLEAN.zip",
-      "sizeBytes": 9641974,
-      "sha256": "771c5ac85718a0746eddda46a64197f1cd753c6a9db22aad0e75d9adc83d824c"
+      "sizeBytes": 287720,
+      "sha256": "fd6841ce4ffa2844e3874302b94099b8de6f68fd3b3086c26c3a1f44ec8495dd"
     }
   ],
   "listingImages": [

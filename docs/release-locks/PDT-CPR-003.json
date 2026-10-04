@@ -2,14 +2,23 @@
   "productId": "PDT-CPR-003",
   "productName": "Cleaning Service Proposal System",
   "status": "BUILD_READY",
+  "canonicalSource": "PRODUCT_TRUTH_MANIFESTO — PDT-CPR-003 — CANONICAL",
   "sheetCount": 6,
-  "pageCount": 8,
+  "printableProposalPages": 8,
+  "userGuidePages": 6,
+  "intakeSheetPages": 2,
+  "buyerFilesCount": 5,
   "driveSourceFolder": "Product 03 - Cleaning Proposal",
   "buyerPackage": [
     {
       "name": "Cleaning Service Proposal Example - Premium Final.xlsx",
       "sizeBytes": 17779,
       "sha256": "c2cc4a77d4d087867ac36722b2bff371cfdf3074b09fdb84a2f50b9a8679e36f"
+    },
+    {
+      "name": "Cleaning Service Proposal Facility Intake Sheet - Premium Final.pdf",
+      "sizeBytes": 427886,
+      "sha256": "b2b7b6531837e4cc30293237db79e645bad762f6749849baf73ef367ce87e81a"
     },
     {
       "name": "Cleaning Service Proposal Printable - Premium Final.pdf",
@@ -28,8 +37,8 @@
     },
     {
       "name": "PDT-CPR-003 Buyer Package FINAL CLEAN.zip",
-      "sizeBytes": 741220,
-      "sha256": "725f45aaf86888022f3cd0447baa5b7ddedebc20bf939b0d3c0cfc5da502f35e"
+      "sizeBytes": 981962,
+      "sha256": "6ad52ee94aca30c8f375ddf019caa92dd575fdf78dedbbac2abba6d8e7f5e264"
     }
   ],
   "listingImages": [
@@ -40,8 +49,8 @@
     },
     {
       "name": "02_What_You_Get.jpg",
-      "sizeBytes": 548514,
-      "sha256": "bc6636e7ddb0d10e4986becfe89acf2bed3041d0890c418d9fee38240cbef415"
+      "sizeBytes": 562714,
+      "sha256": "068b75a4e33d41c40df1e5e7bd6f09934b9a5158c443c71996b1b5196138cb92"
     },
     {
       "name": "03_Scope_Matrix.jpg",
@@ -87,10 +96,10 @@
   "listingVideos": [
     {
       "name": "Cleaning_Service_Proposal_Listing_Video.mp4",
-      "sizeBytes": 541981,
-      "sha256": "66bc0d87003c624f4913c69573c8471c9d8c1f4cdd4f9078cb0dd39f6826a214"
+      "sizeBytes": 542016,
+      "sha256": "f041ff25db327ff7f8151978d380b06b02a2491e5cf23ae0f94fe13063f4a3bf"
     }
   ],
   "publishedToEtsy": false,
-  "lockGeneratedAt": "2026-10-04T22:05:00+07:00"
+  "lockGeneratedAt": "2026-10-04T23:00:00+07:00"
 }

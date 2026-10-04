@@ -6,15 +6,16 @@
   "sheetCount": 11,
   "templateSheetCount": 11,
   "exampleSheetCount": 12,
-  "printablePageCount": 10,
+  "printablePageCountA4": 10,
+  "printablePageCountUSLetter": 10,
   "userGuidePageCount": 6,
-  "buyerFilesCount": 4,
+  "buyerFilesCount": 5,
   "driveSourceFolder": "Product 02 - Cleaning Checklist",
   "buyerPackage": [
     {
       "name": "PDT-PCL-002 Buyer Package FINAL CLEAN.zip",
-      "sizeBytes": 112341,
-      "sha256": "6222634c8e1e8b6dff3b1785ac4843c791fd0f0483ab1a66eb4f67e032831a9f"
+      "sizeBytes": 160741,
+      "sha256": "4629417ec61f8a8071b40af9b937a2c2fc0677d137534a8515167316e2eed22d"
     },
     {
       "name": "Professional Cleaning Checklist Example - Premium Final.xlsx",
@@ -25,6 +26,11 @@
       "name": "Professional Cleaning Checklist Printable - Premium Final.pdf",
       "sizeBytes": 47977,
       "sha256": "e6f6c35ec88b34dccefdf6d10c09cfe29189c4674de55b3bd5c36ddba2e46711"
+    },
+    {
+      "name": "Professional Cleaning Checklist Printable US Letter - Premium Final.pdf",
+      "sizeBytes": 52814,
+      "sha256": "44b30cc39dd47eb3ee9106f9dc4a0621c036ab2c77a5878a24c008339fdd66a0"
     },
     {
       "name": "Professional Cleaning Checklist Template - Premium Final.xlsx",
@@ -45,8 +51,8 @@
     },
     {
       "name": "02_What_You_Get.jpg",
-      "sizeBytes": 635468,
-      "sha256": "bdd5c704e1b8905804b1a34ab53c6f66543f6483d3fa7956d6ab1828d34436ae"
+      "sizeBytes": 643191,
+      "sha256": "4d786c6cdf5b65f1789d9335f174f2071c1ab5aaf132785f8d983486cc6ed085"
     },
     {
       "name": "03_Standard_Cleaning.jpg",
@@ -75,8 +81,8 @@
     },
     {
       "name": "08_Compatibility.jpg",
-      "sizeBytes": 471172,
-      "sha256": "4ba8826ebe292f57d930a4d74e55f67f4dcf11b79b6e157d0ee99d43c839efd3"
+      "sizeBytes": 474340,
+      "sha256": "770ff2b17f502ad6fe45c7b29eafe10f532333d0c134f979d8986605002c5f31"
     },
     {
       "name": "09_Before_You_Buy.jpg",
@@ -85,8 +91,8 @@
     },
     {
       "name": "10_Brand_Collection.jpg",
-      "sizeBytes": 634210,
-      "sha256": "0c49f9c563806da371f2eb5168fcc4461a4b7070a89e714aa1052a3bb9d03456"
+      "sizeBytes": 634122,
+      "sha256": "45c17c50e92872d96431f84ccd560702472fa61032d04e10c50a211082f753ae"
     }
   ],
   "listingVideos": [
@@ -97,5 +103,5 @@
     }
   ],
   "publishedToEtsy": false,
-  "lockGeneratedAt": "2026-10-04T22:05:00+07:00"
+  "lockGeneratedAt": "2026-10-04T23:00:00+07:00"
 }
