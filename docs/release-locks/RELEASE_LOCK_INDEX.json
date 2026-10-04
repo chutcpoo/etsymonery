@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "singleSourceOfTruth": "Google Drive (PoonthaiDigital - Project Files/04 - Product Roadmap)",
   "gitRepo": "chutcpoo/etsymonery",
-  "lastUpdated": "2026-10-04T23:00:00+07:00",
+  "lastUpdated": "2026-10-04T23:45:00+07:00",
   "products": [
     {
       "productId": "PDT-CS-001",
@@ -30,6 +30,114 @@
       "buyerFileCount": 5,
       "imageCount": 10,
       "videoCount": 1
+    },
+    {
+      "productId": "PDT-CBP-004",
+      "productName": "Cleaning Business Planner",
+      "status": "PLANNED",
+      "lockFile": "PDT-CBP-004.json",
+      "buyerFileCount": 0,
+      "imageCount": 0,
+      "videoCount": 0
+    },
+    {
+      "productId": "PDT-DCL-005",
+      "productName": "Deep Cleaning Checklist",
+      "status": "PLANNED",
+      "lockFile": "PDT-DCL-005.json",
+      "buyerFileCount": 0,
+      "imageCount": 0,
+      "videoCount": 0
+    },
+    {
+      "productId": "PDT-MCL-006",
+      "productName": "Move-In Move-Out Checklist",
+      "status": "PLANNED",
+      "lockFile": "PDT-MCL-006.json",
+      "buyerFileCount": 0,
+      "imageCount": 0,
+      "videoCount": 0
+    },
+    {
+      "productId": "PDT-CCP-007",
+      "productName": "Commercial Cleaning Proposal",
+      "status": "PLANNED",
+      "lockFile": "PDT-CCP-007.json",
+      "buyerFileCount": 0,
+      "imageCount": 0,
+      "videoCount": 0
+    },
+    {
+      "productId": "PDT-CQE-008",
+      "productName": "Cleaning Quote & Estimate",
+      "status": "PLANNED",
+      "lockFile": "PDT-CQE-008.json",
+      "buyerFileCount": 0,
+      "imageCount": 0,
+      "videoCount": 0
+    },
+    {
+      "productId": "PDT-CSC-009",
+      "productName": "Cleaning Service Contract",
+      "status": "PLANNED",
+      "lockFile": "PDT-CSC-009.json",
+      "buyerFileCount": 0,
+      "imageCount": 0,
+      "videoCount": 0
+    },
+    {
+      "productId": "PDT-CIF-010",
+      "productName": "Cleaning Client Intake Form",
+      "status": "PLANNED",
+      "lockFile": "PDT-CIF-010.json",
+      "buyerFileCount": 0,
+      "imageCount": 0,
+      "videoCount": 0
+    },
+    {
+      "productId": "PDT-CIP-011",
+      "productName": "Cleaning Invoice & Payment Tracker",
+      "status": "PLANNED",
+      "lockFile": "PDT-CIP-011.json",
+      "buyerFileCount": 0,
+      "imageCount": 0,
+      "videoCount": 0
+    },
+    {
+      "productId": "PDT-CRM-012",
+      "productName": "Cleaning Client CRM Tracker",
+      "status": "PLANNED",
+      "lockFile": "PDT-CRM-012.json",
+      "buyerFileCount": 0,
+      "imageCount": 0,
+      "videoCount": 0
+    },
+    {
+      "productId": "PDT-ABT-013",
+      "productName": "Airbnb Turnover & Restock Kit",
+      "status": "PLANNED",
+      "lockFile": "PDT-ABT-013.json",
+      "buyerFileCount": 0,
+      "imageCount": 0,
+      "videoCount": 0
+    },
+    {
+      "productId": "PDT-CFB-014",
+      "productName": "Cleaning Business Forms Bundle",
+      "status": "PLANNED",
+      "lockFile": "PDT-CFB-014.json",
+      "buyerFileCount": 0,
+      "imageCount": 0,
+      "videoCount": 0
+    },
+    {
+      "productId": "PDT-CMK-015",
+      "productName": "Cleaning Operations Master Kit",
+      "status": "PLANNED",
+      "lockFile": "PDT-CMK-015.json",
+      "buyerFileCount": 0,
+      "imageCount": 0,
+      "videoCount": 0
     }
   ]
 }
