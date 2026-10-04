@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "productId": "PDT-CPR-003",
+  "productName": "Cleaning Service Proposal System",
+  "releaseState": "FINAL_QC_PASS",
+  "sourceOfTruth": "Google Drive",
+  "syncPolicy": {
+    "producerMustReadThisFileBeforeBuild": true,
+    "reviewerMustReadThisFileBeforeQC": true,
+    "reviewerMayNotInventExpectedValues": true,
+    "producerMayNotSelfApprove": true,
+    "anyArtifactHashChangeInvalidatesQc": true,
+    "anyClaimOrPageCountChangeInvalidatesQc": true,
+    "publishAuthority": "USER_ONLY"
+  },
+  "expectedStructure": {
+    "templateSheets": 6,
+    "exampleSheets": 6,
+    "printablePdfPages": 8,
+    "userGuidePdfPages": 6,
+    "buyerPackageFileCount": 4,
+    "listingImageCount": 10
+  },
+  "requiredClaims": {
+    "userGuide": [
+      "Complete User Guide & Commercial Proposal Manual",
+      "designed natively for desktop Microsoft Excel (Windows and macOS)",
+      "can be opened in Google Sheets with standard formula fidelity"
+    ],
+    "printable": [
+      "FICTIONAL COMPLETED EXAMPLE",
+      "SAMPLE OPERATIONAL TERMS",
+      "LEGAL SAMPLE DISCLAIMER",
+      "FICTIONAL SAMPLE SIGNATURE BLOCK"
+    ]
+  },
+  "forbiddenClaims": [
+    "win high-value recurring contracts",
+    "winning proposal in under 15 minutes",
+    "full cross-platform compatibility across Windows, Mac, iPad, and Google Sheets"
+  ],
+  "artifacts": [
+    {
+      "name": "Cleaning Service Proposal Template - Premium Final.xlsx",
+      "sizeBytes": 17661,
+      "sha256": "fe81f89881b4ae425dabe7fb7fa06243e5b348bde546f5441bfea5ee115e33af"
+    },
+    {
+      "name": "Cleaning Service Proposal Example - Premium Final.xlsx",
+      "sizeBytes": 17779,
+      "sha256": "c2cc4a77d4d087867ac36722b2bff371cfdf3074b09fdb84a2f50b9a8679e36f"
+    },
+    {
+      "name": "Cleaning Service Proposal Printable - Premium Final.pdf",
+      "sizeBytes": 810924,
+      "sha256": "786e1a5ce7948e22c6d4507b9d85c1ed2928ac6e35c898a132862bee470c25ab"
+    },
+    {
+      "name": "Cleaning Service Proposal User Guide - Premium Final.pdf",
+      "sizeBytes": 469980,
+      "sha256": "818898d435a477ae7e9eafb1e9490eca540a1b3f9cd380cb7943ae61d05d9b5b"
+    },
+    {
+      "name": "PDT-CPR-003 Buyer Package FINAL CLEAN.zip",
+      "sizeBytes": 741220,
+      "sha256": "725f45aaf86888022f3cd0447baa5b7ddedebc20bf939b0d3c0cfc5da502f35e"
+    }
+  ],
+  "qcDecision": {
+    "independentQc": "PASS",
+    "claimSafety": "PASS",
+    "compatibilityWording": "PASS",
+    "fictionalSampleLabeling": "PASS",
+    "legalSampleClarity": "PASS",
+    "buyerZipIntegrity": "PASS"
+  }
+}
