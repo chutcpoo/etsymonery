@@ -2,8 +2,13 @@
   "productId": "PDT-PCL-002",
   "productName": "Professional Cleaning Checklist",
   "status": "BUILD_READY",
+  "canonicalSource": "PRODUCT_TRUTH_MANIFESTO — PDT-PCL-002 — CANONICAL",
   "sheetCount": 11,
-  "pageCount": 11,
+  "templateSheetCount": 11,
+  "exampleSheetCount": 12,
+  "printablePageCount": 10,
+  "userGuidePageCount": 6,
+  "buyerFilesCount": 4,
   "driveSourceFolder": "Product 02 - Cleaning Checklist",
   "buyerPackage": [
     {
