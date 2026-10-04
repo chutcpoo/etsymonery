@@ -28,6 +28,21 @@ Conversion rate is not calculated without an authoritative visit denominator.
 
 The repository contains only a derived, read-only Product_ID ↔ Etsy Listing_ID identifier projection required for runtime reconciliation. It is not Product Truth and cannot override the Catalog.
 
+## Canonical PoonthaiDigital Commerce Stack
+
+For the PoonthaiDigital project, use the following mapping as the canonical commerce stack for selling digital products on Etsy:
+
+- **Google Drive** — operational Product Truth, buyer files, final listing assets, release evidence, and source documents.
+- **GitHub** — `chutcpoo/etsymonery` (`https://github.com/chutcpoo/etsymonery`) is the canonical code/config repository for Etsy sales and publishing automation.
+- **Vercel** — project `autodigitalpublisher` in team `shopee-affiliate-ai` (`https://vercel.com/shopee-affiliate-ai/autodigitalpublisher`) is the canonical deployment target for this commerce application.
+- **Etsy** — PoonthaiDigital's marketplace endpoint for live product listings and buyer delivery.
+
+Canonical flow:
+
+`Google Drive Product Truth → GitHub etsymonery → Vercel autodigitalpublisher → Etsy PoonthaiDigital`
+
+Do not substitute `poonthaidigital-tools` as the primary GitHub/Vercel stack for Etsy commerce unless a task explicitly requires it.
+
 ### Safety
 
 - Marketplace writes remain disabled by default.
