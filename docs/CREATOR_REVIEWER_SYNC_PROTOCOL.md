@@ -1,59 +1,76 @@
 # PoonthaiDigital Creator ↔ Reviewer Sync Protocol
 
-This protocol prevents the file creator and the independent reviewer from using different Product Truth values.
+This protocol applies to the entire PoonthaiDigital project, not only Product 03.
 
-## Single shared contract
+## Project-wide single source of truth
 
-For each product, both roles must read the same machine-readable release lock before doing any work. For Product 03 the canonical lock is:
+Both the creator and the independent reviewer must start from the same canonical Google Drive root:
 
-`config/pdt-cpr-003-release-lock.json`
+`https://drive.google.com/drive/folders/1gSNJPipVI4RWuvp-k13I0LSixG63fGbz`
 
-Google Drive remains the source of truth for buyer files and release assets. GitHub stores only the sanitized release contract, expected counts, required/forbidden claims, sizes, and hashes.
+Project-wide source mapping is stored in:
+
+`config/poonthaidigital-project-source.json`
+
+The canonical Drive root contains the project structure for Project Overview, Brand & Visual Identity, Etsy Store Setup, Product Roadmap, Market Research, Listing Assets, and Archive.
+
+Google Drive is the primary operational Product Truth for source files, buyer files, listing assets, release evidence, and current product state. GitHub stores derived code, sanitized release contracts, product locks, tests, and automation logic. Vercel deploys the GitHub application. Etsy remains the marketplace endpoint controlled by the user.
+
+Canonical flow:
+
+`Google Drive PoonthaiDigital Root → GitHub chutcpoo/etsymonery → Vercel shopee-affiliate-ai/autodigitalpublisher → Etsy PoonthaiDigital`
+
+## Conflict rule
+
+If any Creator copy, Reviewer copy, GitHub value, Vercel value, chat attachment, local file, report, or previous QC result disagrees with the current file or metadata under the canonical Google Drive root, the current Google Drive version wins.
+
+The reviewer must return `QC_STALE` or `SOURCE_MISMATCH` until the exact current Drive artifacts are independently verified.
 
 ## Creator rules
 
-1. Read the release lock before build/rebuild.
-2. Build only from current Google Drive Product Truth.
-3. Never change expected counts or claims locally without updating Product Truth first.
-4. After any output file changes, regenerate size/SHA-256 values and mark QC stale.
-5. Do not self-approve FINAL QC.
-6. Do not publish Etsy; publish authority remains with the user.
+1. Start every product task from the canonical Drive root and locate the product under the project structure.
+2. Read the current Product Truth and actual source files before creating or rebuilding output.
+3. Never use an old chat attachment or local copy as authoritative when Drive has a newer version.
+4. After any material output change, update the relevant per-product release lock derived from the current Drive artifacts.
+5. Record exact filenames, counts, byte sizes, hashes, claims, compatibility statements, and other product-specific gates where applicable.
+6. Mark prior QC stale after any material artifact or claim change.
+7. Do not self-approve FINAL QC.
+8. Do not publish Etsy; publish authority remains with the user.
 
 ## Reviewer rules
 
-1. Read the same release lock before QC.
-2. Fetch the actual current Google Drive artifacts, not old chat attachments or cached copies.
-3. Validate filename, byte size, SHA-256, page/sheet counts, required claims, forbidden claims, ZIP contents, and listing asset counts.
-4. Never infer missing expected values and never copy the creator's PASS result without independent verification.
-5. If any hash, count, claim, or package member differs, return `FINAL QC: FAIL / SOURCE MISMATCH`.
-6. A PASS applies only to the exact hashes in the release lock.
+1. Start every QC task from the same canonical Drive root.
+2. Refetch the current Drive artifacts before FINAL QC; do not rely on the creator's report alone.
+3. Use the relevant product-specific release lock only as a derived expectation contract; verify that it still matches Drive.
+4. Validate the actual product-specific facts: filenames, byte sizes, SHA-256 hashes, page counts, sheet counts, formulas, validation rules, required/forbidden claims, ZIP contents, listing asset counts, video, compatibility wording, and legal/sample labeling where applicable.
+5. Never invent missing expected values.
+6. Never copy the creator's PASS without independent verification.
+7. If Drive and the release lock differ, Drive wins and the result is `SOURCE_MISMATCH` or `QC_STALE`.
+8. FINAL_QC_PASS applies only to the exact current Drive artifacts verified in that QC run.
+
+## Per-product release locks
+
+Every product may have its own release lock, for example:
+
+`config/<product-id>-release-lock.json`
+
+A product-specific lock is not an independent source of truth. It must always be derived from and reconciled against the canonical Google Drive root. Product 03's existing lock is therefore only the current release contract for PDT-CPR-003, not the project-wide authority.
 
 ## Invalidation rule
 
-Any material change to a buyer file, PDF, ZIP, listing claim, page count, sheet count, or compatibility statement invalidates prior QC immediately. The creator must rebuild the release lock and the reviewer must rerun independent QC.
+Any material change in Google Drive to a buyer file, source file, PDF, spreadsheet, ZIP, listing image, video, listing claim, page count, sheet count, formula, validation rule, compatibility statement, or Product Truth invalidates prior QC for that affected product immediately.
 
-## Product 03 locked baseline
-
-- Product ID: `PDT-CPR-003`
-- Template: 6 sheets
-- Example: 6 sheets
-- Printable: 8 pages
-- User Guide: 6 pages
-- Buyer package: 4 files
-- Listing images: 10
-- Etsy publish: user-controlled
-
-Current independent QC status is `PASS` only for the exact artifacts and SHA-256 hashes recorded in `config/pdt-cpr-003-release-lock.json`.
+The creator rebuilds or updates the derived release lock. The reviewer then refetches Drive and reruns independent QC.
 
 ## Handoff status vocabulary
 
 Use only these states between creator and reviewer:
 
-- `BUILD_READY` — creator has produced files but reviewer has not verified them.
-- `QC_IN_PROGRESS` — reviewer is checking the exact locked artifacts.
-- `FINAL_QC_PASS` — exact hashes and all gates match.
-- `FINAL_QC_FAIL` — at least one gate failed.
-- `SOURCE_MISMATCH` — reviewer received a different file/hash/version than the creator locked.
-- `QC_STALE` — a material file or claim changed after the last PASS.
+- `BUILD_READY` — creator has produced files but reviewer has not independently verified the current Drive artifacts.
+- `QC_IN_PROGRESS` — reviewer is checking the exact current Drive artifacts.
+- `FINAL_QC_PASS` — current Drive artifacts and all applicable product gates match.
+- `FINAL_QC_FAIL` — at least one applicable product gate failed.
+- `SOURCE_MISMATCH` — creator/reviewer/release-lock artifacts differ from current Drive.
+- `QC_STALE` — a material Drive file or claim changed after the last PASS.
 
-Never use `PASS`, `READY`, or `FINAL` without the product ID and release-lock identity.
+Never use `PASS`, `READY`, or `FINAL` without the Product ID and the current verified release identity.
