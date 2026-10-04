@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "project": "PoonthaiDigital",
+  "scope": "PROJECT_WIDE",
+  "canonicalGoogleDriveRoot": {
+    "folderId": "1gSNJPipVI4RWuvp-k13I0LSixG63fGbz",
+    "url": "https://drive.google.com/drive/folders/1gSNJPipVI4RWuvp-k13I0LSixG63fGbz",
+    "role": "PRIMARY_SOURCE_OF_TRUTH"
+  },
+  "canonicalTopLevelFolders": {
+    "01_project_overview": "1W1XaJtvPw6j6TA0TBi_9qTZaCavzcU1T",
+    "02_brand_visual_identity": "1e2QMxGwOvaK_R3bj1s0gIJg_Rc7MLlP-",
+    "03_etsy_store_setup": "1fbTV0eL-NV2ErO6aEjtT2tSV1o0n6IlJ",
+    "04_product_roadmap": "1XEsKrcZdfkmVcyXauBm1Eia2XWiE9Een",
+    "05_market_research": "1Jptmal3tti_64f8NF5ykGwkUI2SmJMSv",
+    "06_listing_assets": "1ha_x5q1yeV_Ot7trWbzxgAFHXWHCjwDT",
+    "07_archive": "1E1UE7a_sOX9dgRlBG0ByHnIh4wMUrZ_N"
+  },
+  "downstream": {
+    "github": "chutcpoo/etsymonery",
+    "vercel": "shopee-affiliate-ai/autodigitalpublisher",
+    "etsy": "PoonthaiDigital"
+  },
+  "syncPolicy": {
+    "creatorAndReviewerUseSameDriveRoot": true,
+    "driveOverridesChatAttachments": true,
+    "driveOverridesLocalCopies": true,
+    "githubMayStoreOnlyDerivedReleaseContractsAndCode": true,
+    "perProductReleaseLockMustDeriveFromDrive": true,
+    "materialDriveChangeInvalidatesPriorQc": true,
+    "reviewerMustRefetchDriveBeforeFinalQc": true,
+    "producerMayNotSelfApprove": true,
+    "publishAuthority": "USER_ONLY"
+  },
+  "conflictRule": "If Creator, Reviewer, GitHub, Vercel, chat attachment, or local copy disagrees with the current canonical Google Drive root, Google Drive wins and QC becomes QC_STALE or SOURCE_MISMATCH until reverified."
+}
