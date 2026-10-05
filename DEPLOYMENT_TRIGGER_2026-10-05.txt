@@ -1,0 +1,3 @@
+Vercel production deployment trigger.
+Source baseline: 0213eb91c5ebc214d572d23d19a5bd3d04d96ce6
+Purpose: rebuild main with Production environment after FINAL_QC_PASS release-lock updates.
