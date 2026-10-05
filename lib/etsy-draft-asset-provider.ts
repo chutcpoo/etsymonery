@@ -24,6 +24,7 @@ export type EtsyDraftAssetPayload = {
 
 type EtsyDraftAssetProviderDependencies = {
   fetchImpl?: typeof fetch;
+  apiHeaders?: typeof etsyApiHeaders;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -80,14 +81,15 @@ function toObservation(value: Record<string, unknown>): EtsyReadBackObservation 
   };
 }
 
-function multipartHeaders(accessToken: string) {
-  const headers = etsyApiHeaders(accessToken);
+function multipartHeaders(accessToken: string, headersFactory: typeof etsyApiHeaders) {
+  const headers = headersFactory(accessToken);
   delete headers["content-type"];
   return headers;
 }
 
 export class EtsyDraftAssetProvider implements ReconciledWriteProvider {
   private readonly fetchImpl: typeof fetch;
+  private readonly apiHeaders: typeof etsyApiHeaders;
   private baselineIds: Set<string> | null = null;
 
   constructor(
@@ -97,6 +99,7 @@ export class EtsyDraftAssetProvider implements ReconciledWriteProvider {
     dependencies: EtsyDraftAssetProviderDependencies = {}
   ) {
     this.fetchImpl = dependencies.fetchImpl ?? fetch;
+    this.apiHeaders = dependencies.apiHeaders ?? etsyApiHeaders;
   }
 
   private collectionUrl() {
@@ -118,7 +121,7 @@ export class EtsyDraftAssetProvider implements ReconciledWriteProvider {
       `https://api.etsy.com/v3/application/listings/${this.payload.draftListingId}`,
       {
         method: "GET",
-        headers: etsyApiHeaders(this.accessToken),
+        headers: this.apiHeaders(this.accessToken),
         cache: "no-store"
       }
     );
@@ -131,7 +134,7 @@ export class EtsyDraftAssetProvider implements ReconciledWriteProvider {
   async readAssets() {
     const response = await this.fetchImpl(this.collectionUrl(), {
       method: "GET",
-      headers: etsyApiHeaders(this.accessToken),
+      headers: this.apiHeaders(this.accessToken),
       cache: "no-store"
     });
     if (!response.ok) throw new Error(`ETSY_ASSET_READBACK_FAILED:${response.status}`);
@@ -184,7 +187,7 @@ export class EtsyDraftAssetProvider implements ReconciledWriteProvider {
     try {
       response = await this.fetchImpl(this.uploadUrl(), {
         method: "POST",
-        headers: multipartHeaders(this.accessToken),
+        headers: multipartHeaders(this.accessToken, this.apiHeaders),
         body,
         cache: "no-store"
       });

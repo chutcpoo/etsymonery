@@ -12,6 +12,7 @@ import type { ReleaseOperationProvider, ReleaseReceipt } from "./etsy-release-op
 export type EtsyRecord = Record<string, unknown>;
 export type ReleaseProviderDependencies = {
   fetchImpl: typeof fetch;
+  apiHeaders?: typeof etsyApiHeaders;
   getAccessToken?: (scopes: readonly string[]) => Promise<string>;
   assertExecutionAllowed: () => void;
   loadManifest: () => Promise<ProductManifest>;
@@ -45,7 +46,7 @@ export class EtsyReleaseContext {
   }
   async read(path: string): Promise<EtsyRecord> {
     const r = await fetchEtsyReadWithRetry(this.dependencies.fetchImpl, `https://api.etsy.com/v3/application${path}`,
-      { method: "GET", headers: etsyApiHeaders(await this.token()), cache: "no-store" });
+      { method: "GET", headers: (this.dependencies.apiHeaders ?? etsyApiHeaders)(await this.token()), cache: "no-store" });
     if (!r.ok) throw new Error(`ETSY_RELEASE_READ_FAILED:${r.status}`);
     const v: unknown = await r.json();
     if (!v || typeof v !== "object" || Array.isArray(v)) throw new Error("ETSY_RELEASE_READ_INVALID");
@@ -84,7 +85,7 @@ export class EtsyReleaseContext {
       videos: media.videos.map(r => ({ id: r.video_id, state: r.video_state })) });
   }
   async sellerCheck(allowedDraftId?: string, allowMatchingDraft = false) {
-    const snapshot = await getEtsySellerStateSnapshot({ shopId: this.manifest.shop.shopId, accessToken: await this.token(), dependencies: { fetchImpl: this.dependencies.fetchImpl, retryOptions: { sleep: this.sleep } } });
+    const snapshot = await getEtsySellerStateSnapshot({ shopId: this.manifest.shop.shopId, accessToken: await this.token(), dependencies: { fetchImpl: this.dependencies.fetchImpl, apiHeaders: this.dependencies.apiHeaders, retryOptions: { sleep: this.sleep } } });
     const protectedIds = new Set(this.manifest.protectedSellerState.map(r => r.listingId));
     for (const expected of this.manifest.protectedSellerState) {
       const actual = snapshot.listings.find(r => r.listingId === expected.listingId);
@@ -109,7 +110,7 @@ export class EtsyReleaseContext {
   }
   async post(path: string, body: BodyInit, contentType?: string, listingId?: string) {
     await this.guard(listingId);
-    const headers = etsyApiHeaders(await this.token());
+    const headers = (this.dependencies.apiHeaders ?? etsyApiHeaders)(await this.token());
     if (contentType) headers["content-type"] = contentType; else delete headers["content-type"];
     const response = await this.dependencies.fetchImpl(`https://api.etsy.com/v3/application${path}`, { method: "POST", headers, body, cache: "no-store" });
     if (!response.ok) throw new Error(`ETSY_MUTATION_OUTCOME_UNCONFIRMED:${response.status}`);
@@ -183,7 +184,7 @@ export class GenericEtsyAssetProvider implements ReleaseOperationProvider {
     this.delegate = new EtsyDraftAssetProvider(await c.token(), { operationKind: this.kind, candidateId: m.candidateId,
       candidateFingerprint: releaseFingerprints(m).candidateFingerprint, expectedListingFingerprint: releaseFingerprints(m).listingFingerprint,
       shopId: m.shop.shopId, draftListingId: Number(this.listingId), assetSha256: this.asset.sha256, assetName: this.asset.filename,
-      rank: this.asset.rank, altText: this.asset.altText }, this.file, { fetchImpl: guardedFetch });
+      rank: this.asset.rank, altText: this.asset.altText }, this.file, { fetchImpl: guardedFetch, apiHeaders: c.dependencies.apiHeaders });
     return (await this.delegate.apply({ operationId: "release", kind: this.kind, payload: {} })).providerResourceId;
   }
   async verify(resourceId: string): Promise<ReleaseReceipt | null> {

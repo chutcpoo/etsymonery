@@ -7,6 +7,7 @@ import { assertReleaseId, type ProductManifest } from "./etsy-release-manifest";
 import { prepareRelease, getReleaseStatus, type ReleaseEngineDependencies } from "./etsy-release-engine";
 
 export function assertGenericPrepareRuntime() {
+  if (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_GIT_COMMIT_REF === "feat/generic-etsy-release-engine") throw new Error("GENERIC_REAL_ETSY_PREVIEW_DISABLED");
   // Etsy has no separate sandbox host. Preview is still a real seller write and
   // needs explicit enablement; production is forbidden regardless of flags.
   if (process.env.VERCEL_ENV !== "preview" || process.env.ETSY_GENERIC_PREPARE_ENABLED !== "true") throw new Error("GENERIC_PREPARE_RUNTIME_DISABLED");
@@ -27,32 +28,35 @@ export async function loadTrustedReleaseManifest(releaseId: string): Promise<Pro
 export type ReleaseApiDependencies = {
   ledger?: OperationLedgerRepository; loadManifest?: typeof loadTrustedReleaseManifest;
   engine?: Omit<ReleaseEngineDependencies, "ledger" | "loadManifest" | "resolveAsset">;
+  assertRuntime?: () => void;
+  authorize?: (request: Request) => void;
 };
 function failure(error: unknown) {
   return NextResponse.json({ status: "BLOCKED_FAIL_CLOSED", error: error instanceof Error ? error.message : "RELEASE_FAILED", livePublishPerformed: false }, { status: 409, headers: { "cache-control": "no-store" } });
 }
 export function createReleaseApi(deps: ReleaseApiDependencies = {}) {
+  const assertRuntime = deps.assertRuntime ?? assertGenericPrepareRuntime, authorize = deps.authorize ?? releaseApiAuthorization;
   const ledger = deps.ledger ?? new NeonOperationLedgerRepository(), load = deps.loadManifest ?? loadTrustedReleaseManifest;
   return {
     prepare: async (request: Request) => {
       try {
-        releaseApiAuthorization(request);
+        authorize(request);
         // Fail before token, manifest store, DB or any network use when disabled.
-        assertGenericPrepareRuntime();
+        assertRuntime();
         const form = await request.formData(); const releaseId = assertReleaseId(String(form.get("releaseId") ?? ""));
         const manifest = await load(releaseId);
         const result = await prepareRelease(manifest, { ...deps.engine, ledger, loadManifest: () => load(releaseId),
-          fetchImpl: deps.engine?.fetchImpl ?? fetch, assertExecutionAllowed: assertGenericPrepareRuntime,
+          fetchImpl: deps.engine?.fetchImpl ?? fetch, assertExecutionAllowed: assertRuntime,
           resolveAsset: async asset => { const file = form.get(asset.assetId); if (!(file instanceof File)) throw new Error("MISSING_RELEASE_ASSET"); return file; } });
         return NextResponse.json(result, { status: result.status === "READY_TO_PUBLISH" ? 200 : 409, headers: { "cache-control": "no-store" } });
       } catch (error) { return failure(error); }
     },
     status: async (request: Request, releaseId: string) => {
-      try { releaseApiAuthorization(request); return NextResponse.json(await getReleaseStatus(await load(assertReleaseId(releaseId)), ledger), { headers: { "cache-control": "no-store" } }); }
+      try { authorize(request); return NextResponse.json(await getReleaseStatus(await load(assertReleaseId(releaseId)), ledger), { headers: { "cache-control": "no-store" } }); }
       catch (error) { return failure(error); }
     },
     publish: async (request: Request, _releaseId: string) => {
-      try { releaseApiAuthorization(request); throw new Error("GENERIC_PRODUCTION_PUBLISH_DISABLED"); } catch (error) { return failure(error); }
+      try { authorize(request); throw new Error("GENERIC_PRODUCTION_PUBLISH_DISABLED"); } catch (error) { return failure(error); }
     }
   };
 }

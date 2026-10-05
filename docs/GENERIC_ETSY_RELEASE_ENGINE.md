@@ -174,3 +174,32 @@ There is no route deletion, main merge, deployment or real publish in this revis
 Ready for mocked Preview validation. Real seller draft validation is pending approved
 manifest/evidence, trusted source provisioning, durable DB and explicit seller-write
 approval. Production execution is not ready and remains disabled.
+
+## Branch-only Preview stub validation
+
+The `feat/generic-etsy-release-engine` branch supports the three release APIs with
+`x-autodigitalpublisher-preview-stub: synthetic-fixture-only`. This is a public
+synthetic fixture selector, never a real API credential. It works only when
+VERCEL_ENV=preview, VERCEL_GIT_COMMIT_REF is this exact branch, and real generic
+prepare is disabled. No Preview environment secrets or Etsy credentials need to be
+provisioned. All OAuth/header/HTTP/ledger dependencies are injected stub implementations
+with no global fetch, token store, or DB fallback. Source fixtures are signature-only
+synthetic data, not real buyer files or Product Truth evidence.
+
+Responses identify validationMode=PREVIEW_STUB_ONLY, mockMutationCount (4 for synthetic
+draft/image/file/video), ETSY_WRITE_COUNT=0 and livePublishPerformed=false. Publish
+still returns GENERIC_PRODUCTION_PUBLISH_DISABLED for absent and forged authorization.
+The real generic prepare runtime is hard-blocked on this Preview branch even if its
+write flag is enabled. Middleware rejects all legacy Etsy routes, including GET execute
+URLs, on this branch regardless of inherited route gates.
+
+The mock ledger is PROCESS_LOCAL_TEST_ONLY: a separate Vercel function/cold start can
+show NOT_STARTED on status. This is explicit and is not proof of remote durable Neon
+recovery. The real durable ledger remains unchanged and unused in this validation.
+`node --import tsx scripts/generic-preview-smoke.ts` exercises prepare, replay, status,
+publish rejection, forged authorization, real prepare denial, and legacy GET denial;
+set PREVIEW_SMOKE_URL for the deployed Preview. Never target a production URL.
+
+Additional local verification: 412 tests PASS, typecheck/build PASS, full HTTP stub
+smoke PASS. Remote CI uses a draft PR into main to trigger the existing CI workflow;
+no workflow permission expansion or production deployment is introduced.
