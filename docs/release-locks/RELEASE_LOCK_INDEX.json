@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "singleSourceOfTruth": "Google Drive (PoonthaiDigital - Project Files/04 - Product Roadmap)",
   "gitRepo": "chutcpoo/etsymonery",
-  "lastUpdated": "2026-10-05T09:35:00+07:00",
+  "lastUpdated": "2026-10-05T10:07:00+07:00",
   "products": [
     {
       "productId": "PDT-CS-001",
@@ -20,7 +20,10 @@
       "lockFile": "PDT-PCL-002.json",
       "buyerFileCount": 4,
       "imageCount": 10,
-      "videoCount": 1
+      "videoCount": 1,
+      "etsyListingId": 4588681044,
+      "etsyListingUrl": "https://www.etsy.com/listing/4588681044",
+      "publishedToEtsy": true
     },
     {
       "productId": "PDT-CPR-003",
