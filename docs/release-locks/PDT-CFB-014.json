@@ -1,12 +1,103 @@
 {
   "productId": "PDT-CFB-014",
   "productName": "Cleaning Business Forms Bundle (14 Essential Operational Forms)",
-  "status": "HOLD \u2014 OFFER REDESIGN",
+  "status": "BUILD_READY",
   "sheetCount": 15,
+  "userGuidePageCount": 10,
+  "printablePageCount": 28,
+  "buyerFilesCount": 5,
   "driveSourceFolder": "Product 14 - Cleaning Business Forms Bundle",
-  "buyerPackage": [],
-  "listingImages": [],
-  "listingVideos": [],
+  "buyerPackage": [
+    {
+      "name": "Cleaning Business Forms Bundle Implementation Guide.pdf",
+      "sizeBytes": 225301,
+      "sha256": "19349123324bf670a505c3b2cb0349e3a71ca9a4d0308fdf027c4440252860a8"
+    },
+    {
+      "name": "Cleaning Business Forms Master Example.xlsx",
+      "sizeBytes": 24134,
+      "sha256": "4884ac39f6c434db175e3b7cc79f10621c2cdf61d502712cca8d4b59a642cc62"
+    },
+    {
+      "name": "Cleaning Business Forms Master Template.xlsx",
+      "sizeBytes": 22419,
+      "sha256": "e4902feb127d8110e0127c482f9aa86370873ce32a2c563336a5a8831c346a1c"
+    },
+    {
+      "name": "Cleaning Business Forms Printable Pack A4.pdf",
+      "sizeBytes": 407910,
+      "sha256": "48231025cea4bb77678982894d7cce2a961a7440fa1e2b045071a5d83bcd1a09"
+    },
+    {
+      "name": "Cleaning Business Forms Printable Pack US Letter.pdf",
+      "sizeBytes": 407518,
+      "sha256": "2ff5c0f9a66cb3ef2dadfbc8e58794ac4b96d311b791a8e604057b886245dffc"
+    },
+    {
+      "name": "PDT-CFB-014 Buyer Package FINAL CLEAN.zip",
+      "sizeBytes": 713937,
+      "sha256": "5d6627e0935a8e05c142affe9ac4cfd95281599c449a421cfaa7dd20d80f22a5"
+    }
+  ],
+  "listingImages": [
+    {
+      "name": "01_Hero.jpg",
+      "sizeBytes": 503922,
+      "sha256": "e7e6bfee4bff7986690068595351322e47e9cbf03dbba936ad9ba77db1ef6b25"
+    },
+    {
+      "name": "02_What_You_Get.jpg",
+      "sizeBytes": 427384,
+      "sha256": "87d380173281f50b1a956a29f5af4ae7a752638d98dcc1ffbb96c127c0937658"
+    },
+    {
+      "name": "03_Intake_Quote_Forms.jpg",
+      "sizeBytes": 466682,
+      "sha256": "5f24fa4e33db495d5440e90c295e3787d273245505698e023264867c528e194e"
+    },
+    {
+      "name": "04_Service_Agreement_Work_Order.jpg",
+      "sizeBytes": 495252,
+      "sha256": "adc13d74a5e26f378633ae97b63b6340dc0ecef93d2a63c0a00ea79ac3b60772"
+    },
+    {
+      "name": "05_Residential_Deep_Clean_Checklists.jpg",
+      "sizeBytes": 415989,
+      "sha256": "aa337836b6c34bd3512ce731dfc46da9819b95fffeda57c756ed39174b3d8b5e"
+    },
+    {
+      "name": "06_MoveOut_Commercial_Checklists.jpg",
+      "sizeBytes": 433467,
+      "sha256": "9fc24b7657406693cd73be7e6364d11839091ba1742cf058e8343fb023f1f2a5"
+    },
+    {
+      "name": "07_QualityControl_Supply_Feedback.jpg",
+      "sizeBytes": 461738,
+      "sha256": "b861002c1eed88a195ae0809c24fdcdd020fb08af7d4e533be40ad75aff0094e"
+    },
+    {
+      "name": "08_Who_Its_For.jpg",
+      "sizeBytes": 434041,
+      "sha256": "2160f04faef12dea1ece9f6e6866d86fb13bddebff540a854b2aa229b409611d"
+    },
+    {
+      "name": "09_Compatibility_Notes.jpg",
+      "sizeBytes": 415803,
+      "sha256": "a47ecb88e715bf8266a643f5ed9c7dfa9f08f9e920dd2db1f0757bc222bdbb60"
+    },
+    {
+      "name": "10_Collection_Cross_Sell.jpg",
+      "sizeBytes": 395453,
+      "sha256": "57e5680e1a45c29a529d3722526e277e3a6b2d39ed06b1f61aebe8324c676900"
+    }
+  ],
+  "listingVideos": [
+    {
+      "name": "Cleaning_Business_Forms_Listing_Video.mp4",
+      "sizeBytes": 369504,
+      "sha256": "494fcb9caa63881c4eec4117a23941d7bf4b836bdd42443cab519bc314c1d1c7"
+    }
+  ],
   "publishedToEtsy": false,
-  "lockGeneratedAt": "2026-10-05T08:50:00+07:00"
+  "lockGeneratedAt": "2026-10-05T09:05:00+07:00"
 }

@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "singleSourceOfTruth": "Google Drive (PoonthaiDigital - Project Files/04 - Product Roadmap)",
   "gitRepo": "chutcpoo/etsymonery",
-  "lastUpdated": "2026-10-05T08:50:00+07:00",
+  "lastUpdated": "2026-10-05T09:12:00+07:00",
   "products": [
     {
       "productId": "PDT-CS-001",
@@ -124,20 +124,20 @@
     {
       "productId": "PDT-CFB-014",
       "productName": "Cleaning Business Forms Bundle (14 Essential Operational Forms)",
-      "status": "HOLD — OFFER REDESIGN",
+      "status": "BUILD_READY",
       "lockFile": "PDT-CFB-014.json",
-      "buyerFileCount": 0,
-      "imageCount": 0,
-      "videoCount": 0
+      "buyerFileCount": 5,
+      "imageCount": 10,
+      "videoCount": 1
     },
     {
       "productId": "PDT-CMK-015",
       "productName": "Cleaning Business Operations Master Kit (Flagship Operational Suite)",
-      "status": "HOLD — ARCHITECTURE REDESIGN",
+      "status": "BUILD_READY",
       "lockFile": "PDT-CMK-015.json",
-      "buyerFileCount": 0,
-      "imageCount": 0,
-      "videoCount": 0
+      "buyerFileCount": 5,
+      "imageCount": 10,
+      "videoCount": 1
     }
   ]
 }

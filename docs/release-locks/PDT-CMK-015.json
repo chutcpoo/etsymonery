@@ -1,12 +1,103 @@
 {
   "productId": "PDT-CMK-015",
   "productName": "Cleaning Business Operations Master Kit (Flagship Operational Suite)",
-  "status": "HOLD \u2014 ARCHITECTURE REDESIGN",
+  "status": "BUILD_READY",
   "sheetCount": 14,
+  "userGuidePageCount": 16,
+  "fieldManualPageCount": 32,
+  "buyerFilesCount": 5,
   "driveSourceFolder": "Product 15 - Cleaning Operations Master Kit",
-  "buyerPackage": [],
-  "listingImages": [],
-  "listingVideos": [],
+  "buyerPackage": [
+    {
+      "name": "Cleaning Operations Master Field Manual Printable A4.pdf",
+      "sizeBytes": 806324,
+      "sha256": "a29402bb7a35c051ee5b50b4f2393fc1d7653501dba1c4e04fa0f45f4eee84b5"
+    },
+    {
+      "name": "Cleaning Operations Master Field Manual Printable US Letter.pdf",
+      "sizeBytes": 805815,
+      "sha256": "3b8aaed4580c6146fd1e6c72012089736060771c6129d936f60357b826cb1ea2"
+    },
+    {
+      "name": "Cleaning Operations Master Implementation Architecture Guide.pdf",
+      "sizeBytes": 680969,
+      "sha256": "432a664a210aa0cc7ebb577877197582a86bcccae7272f58b37c45f94ecab117"
+    },
+    {
+      "name": "Cleaning Operations Master System Example.xlsx",
+      "sizeBytes": 34988,
+      "sha256": "d3f0be6db825e840ac6cf1665384fff325fbd6fb5ed24165ae7f9616a540fab0"
+    },
+    {
+      "name": "Cleaning Operations Master System Template.xlsx",
+      "sizeBytes": 30708,
+      "sha256": "2412d3848923bcb5961e886d40cee15fefa76196f84811e377f506eb2ee0ee13"
+    },
+    {
+      "name": "PDT-CMK-015 Buyer Package FINAL CLEAN.zip",
+      "sizeBytes": 1270943,
+      "sha256": "d0d4f5a52d5da733598eed77eb36bf35d303c028d33cf741d46270d5737ae670"
+    }
+  ],
+  "listingImages": [
+    {
+      "name": "01_Hero.jpg",
+      "sizeBytes": 490510,
+      "sha256": "0109f89f2f70c49ae38b150571ad30946e3ecb583a234668fa1726f4c423bd0c"
+    },
+    {
+      "name": "02_What_You_Get.jpg",
+      "sizeBytes": 467567,
+      "sha256": "fb65315ddb527d4cab8ebb3a65a29eb3de252eb690fd17b24d998d4104924af1"
+    },
+    {
+      "name": "03_Lifecycle_Architecture_Map.jpg",
+      "sizeBytes": 404370,
+      "sha256": "346931774e62ce2fed1573a1a118175d879530dce97045468068b30fa6e49f63"
+    },
+    {
+      "name": "04_Intake_Quoting_Engine.jpg",
+      "sizeBytes": 463609,
+      "sha256": "ce56e89a470b408d1467ff0a98d78c698efad079113bce526633a32bb7b512d9"
+    },
+    {
+      "name": "05_Agreement_Dispatch_Board.jpg",
+      "sizeBytes": 484685,
+      "sha256": "cf9dcdfe1994f7b6bd7d0e9eb6ec60abfb11150bb652abf30c7103211fe5a5a7"
+    },
+    {
+      "name": "06_Checklists_QC_Scorecard.jpg",
+      "sizeBytes": 456118,
+      "sha256": "716bc4bf7aa034781d606a38f5d08c60d16d92a30a12ad7c393f48d2105565c0"
+    },
+    {
+      "name": "07_Invoice_Aging_Ledger.jpg",
+      "sizeBytes": 456476,
+      "sha256": "9436851b3099ed8f2c14ccedb14e0e5c67da9ee63009498a53eb45441704c365"
+    },
+    {
+      "name": "08_Customer_Retention_Dashboard.jpg",
+      "sizeBytes": 475250,
+      "sha256": "b2ebeef8e2c9d41cae17f3792ce7dfa3c9335ddff478fa08f81e3a354e2c23c3"
+    },
+    {
+      "name": "09_Compatibility_Notes.jpg",
+      "sizeBytes": 420582,
+      "sha256": "3b0a1a4deb452ca08e46d3b6eaf4ed926495aa8e0ee812a4946f22f42d34c92e"
+    },
+    {
+      "name": "10_Collection_Cross_Sell.jpg",
+      "sizeBytes": 396348,
+      "sha256": "74dec28ed5eaf550303a4dd6b65a076d97f860beae710b7773c90a53e5e4e89f"
+    }
+  ],
+  "listingVideos": [
+    {
+      "name": "Cleaning_Operations_Master_Kit_Listing_Video.mp4",
+      "sizeBytes": 377474,
+      "sha256": "afad7f55ac4d9a97ec1dd90e4da50025cb09204be1f177e2afd54eaf4b812c78"
+    }
+  ],
   "publishedToEtsy": false,
-  "lockGeneratedAt": "2026-10-05T08:50:00+07:00"
+  "lockGeneratedAt": "2026-10-05T09:10:00+07:00"
 }
