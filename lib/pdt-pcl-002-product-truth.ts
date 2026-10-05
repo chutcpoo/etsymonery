@@ -5,7 +5,7 @@ export const PDT_PCL_002_PRODUCT_TRUTH = Object.freeze({
   exampleSheets: 12,
   printablePdfPages: 10,
   userGuidePages: 6,
-  buyerFileCount: 5,
+  buyerFileCount: 4,
   listingImageCount: 10,
   listingVideoCount: 1,
   primaryEnvironment: "Microsoft Excel Desktop",
@@ -57,5 +57,5 @@ export const PDT_PCL_002_ETSY_COPY = Object.freeze({
   example: "12-Sheet Example",
   printable: "10-Page A4 Printable PDF",
   userGuide: "6-Page User Guide",
-  buyerPackage: "5 Digital Files Included"
+  buyerPackage: "4 Digital Files Included"
 } as const);
