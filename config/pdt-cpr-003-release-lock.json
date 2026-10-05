@@ -18,7 +18,8 @@
     "exampleSheets": 6,
     "printablePdfPages": 8,
     "userGuidePdfPages": 6,
-    "buyerPackageFileCount": 4,
+    "intakeSheetPdfPages": 2,
+    "buyerPackageFileCount": 5,
     "listingImageCount": 10
   },
   "requiredClaims": {
@@ -61,9 +62,14 @@
       "sha256": "818898d435a477ae7e9eafb1e9490eca540a1b3f9cd380cb7943ae61d05d9b5b"
     },
     {
+      "name": "Cleaning Service Proposal Facility Intake Sheet - Premium Final.pdf",
+      "sizeBytes": 427886,
+      "sha256": "b2b7b6531837e4cc30293237db79e645bad762f6749849baf73ef367ce87e81a"
+    },
+    {
       "name": "PDT-CPR-003 Buyer Package FINAL CLEAN.zip",
-      "sizeBytes": 741220,
-      "sha256": "725f45aaf86888022f3cd0447baa5b7ddedebc20bf939b0d3c0cfc5da502f35e"
+      "sizeBytes": 981962,
+      "sha256": "6ad52ee94aca30c8f375ddf019caa92dd575fdf78dedbbac2abba6d8e7f5e264"
     }
   ],
   "qcDecision": {
