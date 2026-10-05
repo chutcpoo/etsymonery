@@ -61,16 +61,16 @@ const TAGS = [
   "cleaning proposal",
   "cleaning business",
   "commercial cleaning",
-  "cleaning bid template",
+  "cleaning bid",
   "proposal template",
   "cleaning contract",
-  "cleaning service form",
+  "cleaning service",
   "excel template",
   "cleaning pricing",
   "janitorial proposal",
   "cleaning quote",
   "bid proposal",
-  "cleaning business form"
+  "janitorial bid"
 ] as const;
 
 const LISTING = Object.freeze({
@@ -173,7 +173,10 @@ async function createDraft(token: string) {
     const reconciled = await exactDraftMatches(token); if (reconciled.length === 1) return { listingId: reconciled[0], reconciled: true, reason: "POST_NETWORK_ERROR_RECONCILED" }; throw new Error("CPR_DRAFT_CREATE_AMBIGUOUS");
   }
   if (r.status >= 500) { const reconciled = await exactDraftMatches(token); if (reconciled.length === 1) return { listingId: reconciled[0], reconciled: true, reason: `POST_5xx_RECONCILED_${r.status}` }; throw new Error(`CPR_DRAFT_CREATE_AMBIGUOUS_${r.status}`); }
-  if (!r.ok) throw new Error(`CPR_DRAFT_CREATE_REJECTED_${r.status}`);
+  if (!r.ok) {
+    const errText = await r.text();
+    throw new Error(`CPR_DRAFT_CREATE_REJECTED_${r.status}_${errText.slice(0, 300)}`);
+  }
   const payload = await parseJson(r); const id = isRec(payload) ? Number(payload.listing_id) : NaN;
   if (!Number.isSafeInteger(id) || id <= 0) { const reconciled = await exactDraftMatches(token); if (reconciled.length === 1) return { listingId: reconciled[0], reconciled: true, reason: "POST_RECEIPT_INVALID_RECONCILED" }; throw new Error("CPR_DRAFT_RECEIPT_INVALID"); }
   const detail = await fetchListing(token, id);

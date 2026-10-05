@@ -61,7 +61,21 @@ const DESCRIPTION = [
   "5. Copy agreed tier into Sheet 6 for the service agreement"
 ].join("\n");
 
-const TAGS = ["cleaning proposal","cleaning business","commercial cleaning","cleaning bid template","proposal template","cleaning contract","cleaning service form","excel template","cleaning pricing","janitorial proposal","cleaning quote","bid proposal","cleaning business form"] as const;
+const TAGS = [
+  "cleaning proposal",
+  "cleaning business",
+  "commercial cleaning",
+  "cleaning bid",
+  "proposal template",
+  "cleaning contract",
+  "cleaning service",
+  "excel template",
+  "cleaning pricing",
+  "janitorial proposal",
+  "cleaning quote",
+  "bid proposal",
+  "janitorial bid"
+] as const;
 
 const LISTING_DRAFT = Object.freeze({ title: TITLE, description: DESCRIPTION, priceUsd: 6.9, tags: [...TAGS], quantity: 999, who_made: "i_did", when_made: "2020_2026", taxonomy_id: 12476, type: "download", state: "draft" });
 const LISTING_ACTIVE = Object.freeze({ ...LISTING_DRAFT, state: "active" });
@@ -72,6 +86,8 @@ const ACTIVE_FP = createListingFingerprint(LISTING_ACTIVE);
 const PROTECTED = Object.freeze([
   { listingId: 4587646332, state: "active", title: "Cleaning Business Schedule Template, Editable Excel Planner, Daily Weekly Monthly Tasks" }
 ] as const);
+
+const PCL_002_LISTING_ID = 4588681044;
 
 type Spec = { name: string; size: number; sha: string; mime: string };
 
