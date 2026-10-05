@@ -13,7 +13,7 @@ export const maxDuration = 60;
 const SHOP_ID = 23582741;
 const GATE = "[GATE_CPR_RELEASE_R01]";
 const OPERATION_ID = "PDT-CPR-003-V1-ETSY-COMPLETE-R01-20261005";
-const NONCE_SHA256 = "425a71d53798b681757e28cb30ea04e450bcbbc470f69d1d74180bd783b2dc57";
+const NONCE_SHA256 = "640b024f72af9f2e383ee8a580b35dfe163b039957d162f44d0dd6f9b1e27635";
 const SHOP_SECTION = "Schedules & Checklists";
 
 // PDT-PCL-002 known listing ID (must be active before CPR-003 can publish)

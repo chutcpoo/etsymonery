@@ -13,7 +13,7 @@ export const maxDuration = 60;
 const SHOP_ID = 23582741;
 const GATE = "[GATE_CPR_RELEASE_R01]";
 const OPERATION_ID = "PDT-CPR-003-V1-ETSY-DRAFT-CREATE-R01-20261005";
-const NONCE_SHA256 = "5cd95c6348dac30a7d8774ad1600f3fa2ddb6eedc1270935794175db7d8a7047";
+const NONCE_SHA256 = "640b024f72af9f2e383ee8a580b35dfe163b039957d162f44d0dd6f9b1e27635";
 
 const TITLE = "Cleaning Service Proposal Template, Editable Excel & PDF, Commercial Bid System, Scope Matrix, 3-Tier Pricing";
 const DESCRIPTION = [
