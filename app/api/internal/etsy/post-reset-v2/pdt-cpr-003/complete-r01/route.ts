@@ -87,8 +87,6 @@ const PROTECTED = Object.freeze([
   { listingId: 4587646332, state: "active", title: "Cleaning Business Schedule Template, Editable Excel Planner, Daily Weekly Monthly Tasks" }
 ] as const);
 
-const PCL_002_LISTING_ID = 4588681044;
-
 type Spec = { name: string; size: number; sha: string; mime: string };
 
 /**
