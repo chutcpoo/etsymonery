@@ -10,6 +10,7 @@ import {
   MemoryProductCreationPlanRepository
 } from "./repository";
 import { NeonProductCreationPlanRepository } from "./postgres-plan-store";
+import { seedSmokeTestPlan } from "./seed-plans";
 
 export interface PlanStorage {
   savePlan(plan: ProductCreationPlan, customPlanId?: string): Promise<FrozenProductPlan>;
@@ -169,8 +170,10 @@ export function getProductPlanStore(customRepo?: ProductCreationPlanRepository):
     return new DurableProductPlanStore(new NeonProductCreationPlanRepository());
   }
 
-  // Memory fallback for offline test suites
-  return new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+  // Memory fallback for offline test suites / CI environments
+  const memoryRepo = new MemoryProductCreationPlanRepository();
+  seedSmokeTestPlan(memoryRepo);
+  return new DurableProductPlanStore(memoryRepo);
 }
 
 export const globalPlanStore = getProductPlanStore();

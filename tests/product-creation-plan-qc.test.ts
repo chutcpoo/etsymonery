@@ -1289,10 +1289,10 @@ test("Global Enforcement 57: POST /api/products/prepare route integration blocks
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      productId: "NEW-PRODUCT-001",
+      productId: "PDT-CBEO-004",
       version: "V1",
-      productName: "New Product",
-      canonicalDriveFileId: "drive-file-001",
+      productName: "Cleaning Business Expansion Operations",
+      canonicalDriveFileId: "drive-file-004",
       buyerFiles: ["buyer.xlsx"],
       galleryFiles: ["01.png"],
       title: "New Product Spreadsheet",
