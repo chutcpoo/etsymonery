@@ -4,6 +4,7 @@ import { ETSY_SELLER_READ_SCOPES, ETSY_SELLER_WRITE_SCOPES, etsyApiHeaders } fro
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 import { getStoredEtsyShopId } from "../../../../../../../lib/token-store";
 
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -191,6 +192,10 @@ async function executeCategoryRepair(body: Rec) {
 }
 
 export async function GET(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-IPT-001", "IPT_001_CATEGORY_REPAIR_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const url = new URL(request.url);
   if (url.searchParams.get("action") === "execute") {
     return executeCategoryRepair({
@@ -228,6 +233,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-IPT-001", "IPT_001_CATEGORY_REPAIR_R01_POST");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const body = await request.json().catch(() => ({}));
   if (!isRec(body)) return NextResponse.json({status:"BLOCKED_FAIL_CLOSED",error:"INVALID_BODY",ETSY_WRITE_COUNT:0},{status:400});
   return executeCategoryRepair(body);

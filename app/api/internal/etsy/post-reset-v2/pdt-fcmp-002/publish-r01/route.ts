@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 import {
   handlePdtFcmp002V1PublishR01Post,
   pdtFcmp002V1PublishR01Plan
@@ -8,6 +9,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-FCMP-002", "FCMP_002_PUBLISH_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const plan = pdtFcmp002V1PublishR01Plan();
   {
     const url = new URL(request.url);
@@ -42,5 +47,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-FCMP-002", "FCMP_002_PUBLISH_R01_POST");
+  if (_buildGateBlock) return _buildGateBlock;
+
   return handlePdtFcmp002V1PublishR01Post(request);
 }

@@ -8,6 +8,7 @@ import { verifyEtsyReadBackIdentity, type EtsyReadBackObservation } from "../../
 import { getEtsySellerStateSnapshot } from "../../../../../../../lib/etsy-seller-state-reconciliation";
 import { beginOperation, NeonOperationLedgerRepository, recordOperationResult } from "../../../../../../../lib/operation-ledger";
 
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -405,6 +406,10 @@ function planPayload(
 }
 
 export async function GET(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-RPT-003", "RPT_003_DRAFT_CREATE_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const url = new URL(request.url);
 
   if (url.searchParams.get("action") !== "execute_relay") {

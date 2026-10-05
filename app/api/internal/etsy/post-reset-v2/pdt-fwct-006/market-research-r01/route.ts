@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "../../../../../../../lib/etsy";
 import { fetchEtsyReadWithRetry } from "../../../../../../../lib/etsy-http";
 
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,10 @@ async function searchTerm(term: string) {
 }
 
 export async function GET() {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-FWCT-006", "FWCT_006_MARKET_RESEARCH_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   try {
     const evidence = [];
     for (const term of TERMS) evidence.push(await searchTerm(term));

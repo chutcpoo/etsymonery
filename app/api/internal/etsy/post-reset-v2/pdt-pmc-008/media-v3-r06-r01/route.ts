@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "../../../../../../../lib/etsy";
 import { fetchEtsyReadWithRetry } from "../../../../../../../lib/etsy-http";
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 import {
   verifyEtsyReadBackIdentity,
   type EtsyReadBackObservation
@@ -696,6 +697,10 @@ function fileFromZip(zip: Buffer, expected: (typeof IMAGES)[number]) {
 }
 
 export async function GET(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-PMC-008", "PMC_008_MEDIA_V3_R06");
+  if (_buildGateBlock) return _buildGateBlock;
+
   try {
     const url = new URL(request.url);
 
@@ -946,6 +951,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-PMC-008", "PMC_008_MEDIA_V3_R06_POST");
+  if (_buildGateBlock) return _buildGateBlock;
+
   let writes = 0;
   let deletePerformed = false;
 

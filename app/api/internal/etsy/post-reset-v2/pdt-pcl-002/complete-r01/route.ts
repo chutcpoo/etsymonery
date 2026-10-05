@@ -6,6 +6,7 @@ import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 import { verifyEtsyReadBackIdentity, type EtsyReadBackObservation } from "../../../../../../../lib/etsy-readback-normalizer";
 import { getEtsySellerStateSnapshot } from "../../../../../../../lib/etsy-seller-state-reconciliation";
 
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -173,6 +174,10 @@ async function verifySeller(token:string, id:number, active=false){
 }
 
 export async function GET(request:Request){
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-PCL-002", "PCL_002_COMPLETE_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   try {
     const url=new URL(request.url);
     const idParam = url.searchParams.get("listingId");
@@ -226,6 +231,10 @@ export async function GET(request:Request){
 }
 
 export async function POST(request:Request){
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-PCL-002", "PCL_002_COMPLETE_R01_POST");
+  if (_buildGateBlock) return _buildGateBlock;
+
   let writes=0;
   try {
     if(!gateEnabled()) throw new Error("PCL_COMPLETE_GATE_DISABLED");

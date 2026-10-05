@@ -6,6 +6,7 @@ import { etsyApiHeaders } from "../../../../../lib/etsy";
 import { getValidEtsyAccessToken } from "../../../../../lib/etsy-auth";
 import { getEtsySellerStateSnapshot } from "../../../../../lib/etsy-seller-state-reconciliation";
 
+import { enforceBuildGateForRoute } from "../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -485,6 +486,10 @@ async function plan() {
 }
 
 export async function GET(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-RPT-003", "RPT_003_HERO_V2_R01_PUBLIC");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const u = new URL(request.url);
   const action = u.searchParams.get("action");
 

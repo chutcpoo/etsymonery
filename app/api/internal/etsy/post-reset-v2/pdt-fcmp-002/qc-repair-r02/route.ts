@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "../../../../../../../lib/etsy";
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 import { getEtsySellerStateSnapshot } from "../../../../../../../lib/etsy-seller-state-reconciliation";
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 import {
   PDT_FCMP_002_V1_GALLERY,
   PDT_FCMP_002_V1_LISTING_IDENTITY
@@ -283,6 +284,10 @@ async function deleteBuyerFile(token: string, fileId: number) {
 }
 
 export async function GET(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-FCMP-002", "FCMP_002_QC_REPAIR_R02");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const url = new URL(request.url);
   if (url.searchParams.get("action") === "diagnose") {
     try {

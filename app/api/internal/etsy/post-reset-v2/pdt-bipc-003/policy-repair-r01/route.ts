@@ -4,6 +4,7 @@ import { etsyApiHeaders } from "../../../../../../../lib/etsy";
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 import { getEtsySellerStateSnapshot } from "../../../../../../../lib/etsy-seller-state-reconciliation";
 
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -145,6 +146,10 @@ async function diagnose(){
 }
 
 export async function GET(request:Request){
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-BIPC-003", "BIPC_003_POLICY_REPAIR_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const url=new URL(request.url);
   if(url.searchParams.get("action")==="execute"){
     let writes=0;

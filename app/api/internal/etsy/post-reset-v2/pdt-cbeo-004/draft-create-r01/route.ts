@@ -5,6 +5,7 @@ import { etsyApiHeaders } from "../../../../../../../lib/etsy";
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 import { verifyEtsyReadBackIdentity, type EtsyReadBackObservation } from "../../../../../../../lib/etsy-readback-normalizer";
 import { getEtsySellerStateSnapshot } from "../../../../../../../lib/etsy-seller-state-reconciliation";
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 import {
   beginOperation,
   NeonOperationLedgerRepository,
@@ -449,6 +450,10 @@ function planPayload(
 }
 
 export async function GET(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-CBEO-004", "CBEO_004_DRAFT_CREATE_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const url = new URL(request.url);
 
   if (url.searchParams.get("action") !== "execute_relay") {

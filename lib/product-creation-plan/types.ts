@@ -15,6 +15,7 @@ export type AutomationStatus = "MANUAL" | "AUTOMATED" | "HYBRID";
 export type PlanStatus =
   | "DRAFT"
   | "PLAN_APPROVED"
+  | "PLAN_APPROVAL_PENDING"
   | "PLAN_BLOCKED"
   | "PLAN_REVIEW_REQUIRED"
   | "PLAN_STALE";

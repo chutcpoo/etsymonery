@@ -141,3 +141,22 @@ export function prepareNewProductCandidate(manifest: NewProductManifest): Prepar
     EtsyWriteCount: 0
   };
 }
+
+/**
+ * Centrally gated candidate orchestrator (BLOCKER 3):
+ * Directly calls assertApprovedProductPlanForBuild before returning
+ * any prepared candidate for non-legacy products.
+ */
+export async function prepareNewProductCandidateWithGate(
+  manifest: NewProductManifest,
+  options?: { store?: import("./product-creation-plan").PlanStorage }
+): Promise<PreparedProductCandidate> {
+  const { assertApprovedProductPlanForBuild } = await import("./product-creation-plan");
+  await assertApprovedProductPlanForBuild({
+    productId: manifest.productId,
+    builder: "POST_RESET_CANDIDATE_ORCHESTRATOR",
+    store: options?.store
+  });
+  return prepareNewProductCandidate(manifest);
+}
+

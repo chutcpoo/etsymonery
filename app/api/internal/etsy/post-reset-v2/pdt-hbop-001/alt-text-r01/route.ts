@@ -5,6 +5,7 @@ import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 import { getStoredEtsyShopId } from "../../../../../../../lib/token-store";
 import { PDT_HBOP_001_V2_ALT_TEXT_R01 as R01 } from "../../../../../../../lib/pdt-hbop-001-v2-alt-text-r01";
 
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -85,6 +86,10 @@ function protectedFingerprint(listing: Rec, images: Rec[], files: Rec[], videos:
 }
 
 export async function GET(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-HBOP-001", "HBOP_001_ALT_TEXT_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const url = new URL(request.url);
   const action = url.searchParams.get("action") ?? "plan";
   let providerWrites = 0;

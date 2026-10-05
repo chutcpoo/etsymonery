@@ -4,6 +4,7 @@ import { etsyApiHeaders } from "../../../../../../../lib/etsy";
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 import { getEtsySellerStateSnapshot } from "../../../../../../../lib/etsy-seller-state-reconciliation";
 
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -353,6 +354,10 @@ async function verifyPersistence(token: string, listingId: number) {
 }
 
 export async function GET(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-BIPC-003", "BIPC_003_DRAFT_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const url = new URL(request.url);
   if (url.searchParams.get("action") === "reconcile_readonly") {
     try {

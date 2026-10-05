@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "../../../../../../../lib/etsy";
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -244,6 +245,10 @@ function snapshot(s:Awaited<ReturnType<typeof readAll>>){
 }
 
 export async function GET(request:Request){
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-IPT-001", "IPT_001_MEDIA_POLICY_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const url=new URL(request.url); const action=url.searchParams.get("action")??"plan";
   if(action==="diagnose"){
     try{ const token=await getValidEtsyAccessToken(); const s=await readAll(token); return NextResponse.json({status:"DIAGNOSTIC_READ_ONLY",mode:"PDT_IPT_001_MEDIA_POLICY_R01",...snapshot(s),baselineMatches:baselineMatches(s),finalMatches:finalMatches(s),ETSY_WRITE_COUNT:0},{headers:{"cache-control":"no-store"}}); }

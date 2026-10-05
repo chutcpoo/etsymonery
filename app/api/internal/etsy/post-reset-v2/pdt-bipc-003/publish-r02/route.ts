@@ -4,6 +4,7 @@ import { etsyApiHeaders } from "../../../../../../../lib/etsy";
 import { fetchEtsyReadWithRetry } from "../../../../../../../lib/etsy-http";
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 import { getEtsySellerStateSnapshot } from "../../../../../../../lib/etsy-seller-state-reconciliation";
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 import {
   PDT_BIPC_003_V1_AUTHORIZATION_TEXT,
   PDT_BIPC_003_V1_BUYER_FILES,
@@ -89,6 +90,10 @@ async function publishOnce(token:string){
 }
 
 export async function GET(request:Request){
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-BIPC-003", "BIPC_003_PUBLISH_R02");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const url=new URL(request.url);
 
   if(url.searchParams.get("action")==="reconcile_readonly"){

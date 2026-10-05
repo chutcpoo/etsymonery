@@ -17,6 +17,7 @@ import {
 } from "../../../../../../../lib/etsy-readback-normalizer";
 import { NeonOperationLedgerRepository } from "../../../../../../../lib/operation-ledger";
 
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -546,6 +547,10 @@ async function plan() {
 }
 
 export async function GET() {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-PMC-008", "PMC_008_MEDIA_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   try {
     const payload = await plan();
     return NextResponse.json(payload, {
@@ -565,6 +570,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-PMC-008", "PMC_008_MEDIA_R01_POST");
+  if (_buildGateBlock) return _buildGateBlock;
+
   let writes = 0;
   try {
     if (!gateEnabled()) throw new Error("PMC_MEDIA_R01_GATE_DISABLED");

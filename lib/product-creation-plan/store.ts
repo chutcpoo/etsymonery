@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import {
   type ProductCreationPlan,
   type FrozenProductPlan,
@@ -7,33 +5,64 @@ import {
   computePlanSha256
 } from "./types";
 import { evaluateProductCreationPlanQC } from "./qc-engine";
+import {
+  type ProductCreationPlanRepository,
+  MemoryProductCreationPlanRepository
+} from "./repository";
+import { NeonProductCreationPlanRepository } from "./postgres-plan-store";
+import { seedSmokeTestPlan } from "./seed-plans";
 
 export interface PlanStorage {
-  savePlan(plan: ProductCreationPlan, planId?: string): Promise<FrozenProductPlan>;
+  savePlan(plan: ProductCreationPlan, customPlanId?: string): Promise<FrozenProductPlan>;
   getPlan(planId: string): Promise<FrozenProductPlan | null>;
   getPlanByProductId(productId: string): Promise<FrozenProductPlan | null>;
   runQC(planId: string): Promise<FrozenProductPlan>;
-  approvePlan(planId: string): Promise<FrozenProductPlan>;
-  checkStaleness(planId: string, currentPlanContent?: ProductCreationPlan): Promise<{ isStale: boolean; status: PlanStatus }>;
+  approvePlan(planId: string, hooks?: import("./repository").ApprovalTestHooks): Promise<FrozenProductPlan>;
+  checkStaleness(
+    planId: string,
+    currentPlanContent?: ProductCreationPlan
+  ): Promise<{ isStale: boolean; status: PlanStatus }>;
 }
 
-const PLANS_DOCS_DIR = path.join(process.cwd(), "docs", "product-plans");
+const FORBIDDEN_SECRET_KEYS = [
+  "password",
+  "apikey",
+  "secret",
+  "token",
+  "accesstoken",
+  "refreshtoken",
+  "privatekey"
+];
 
-export class MemoryAndDiskPlanStore implements PlanStorage {
-  private readonly plans = new Map<string, FrozenProductPlan>();
-  private readonly productIndex = new Map<string, string>(); // productId -> planId
+export function assertNoSecretFields(obj: unknown, path = ""): void {
+  if (!obj || typeof obj !== "object") return;
 
-  constructor(private readonly diskSync: boolean = true) {
-    if (this.diskSync && !fs.existsSync(PLANS_DOCS_DIR)) {
-      try {
-        fs.mkdirSync(PLANS_DOCS_DIR, { recursive: true });
-      } catch {
-        // Ignored if permissions restrict
-      }
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      assertNoSecretFields(obj[i], `${path}[${i}]`);
     }
+    return;
   }
 
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    const normalizedKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+    for (const forbidden of FORBIDDEN_SECRET_KEYS) {
+      if (normalizedKey.includes(forbidden)) {
+        throw new Error(
+          `SECURITY_SECRET_FIELD_FORBIDDEN: Plan contains forbidden credential/secret key "${key}" at "${path ? `${path}.${key}` : key}".`
+        );
+      }
+    }
+    assertNoSecretFields(value, path ? `${path}.${key}` : key);
+  }
+}
+
+export class DurableProductPlanStore implements PlanStorage {
+  constructor(private readonly repository: ProductCreationPlanRepository) {}
+
   async savePlan(plan: ProductCreationPlan, customPlanId?: string): Promise<FrozenProductPlan> {
+    assertNoSecretFields(plan);
+
     const planId = customPlanId || `PLAN-${plan.productId}-V1`;
     const planSha256 = computePlanSha256(plan);
     const qcResult = evaluateProductCreationPlanQC(plan);
@@ -49,47 +78,25 @@ export class MemoryAndDiskPlanStore implements PlanStorage {
       plan: structuredClone(plan)
     };
 
-    this.plans.set(planId, record);
-    this.productIndex.set(plan.productId, planId);
-
+    await this.repository.save(record);
     return structuredClone(record);
   }
 
   async getPlan(planId: string): Promise<FrozenProductPlan | null> {
-    const memory = this.plans.get(planId);
-    if (memory) return structuredClone(memory);
-
-    // Try disk
-    if (this.diskSync) {
-      const diskPath = path.join(PLANS_DOCS_DIR, `${planId}.json`);
-      if (fs.existsSync(diskPath)) {
-        try {
-          const content = JSON.parse(fs.readFileSync(diskPath, "utf8")) as FrozenProductPlan;
-          this.plans.set(planId, content);
-          this.productIndex.set(content.productId, planId);
-          return structuredClone(content);
-        } catch {
-          return null;
-        }
-      }
-    }
-
-    return null;
+    return this.repository.load(planId);
   }
 
   async getPlanByProductId(productId: string): Promise<FrozenProductPlan | null> {
-    const planId = this.productIndex.get(productId);
-    if (planId) {
-      return this.getPlan(planId);
-    }
-    return null;
+    return this.repository.loadByProductId(productId);
   }
 
   async runQC(planId: string): Promise<FrozenProductPlan> {
-    const record = await this.getPlan(planId);
+    const record = await this.repository.load(planId);
     if (!record) {
       throw new Error(`PRODUCT_PLAN_NOT_FOUND:${planId}`);
     }
+
+    assertNoSecretFields(record.plan);
 
     const qcResult = evaluateProductCreationPlanQC(record.plan);
     record.qcResult = qcResult;
@@ -103,51 +110,37 @@ export class MemoryAndDiskPlanStore implements PlanStorage {
       }
     }
 
-    this.plans.set(planId, record);
+    await this.repository.save(record);
     return structuredClone(record);
   }
 
-  async approvePlan(planId: string): Promise<FrozenProductPlan> {
-    const record = await this.getPlan(planId);
-    if (!record) {
+  /**
+   * BLOCKER 2 — REAL TRANSACTIONAL ATOMIC APPROVAL (FAIL-CLOSED):
+   *
+   * Executes atomic approval within a single transaction boundary:
+   *   BEGIN -> SELECT ... FOR UPDATE -> QC check -> SHA computation ->
+   *   write PLAN_APPROVAL_PENDING -> write PLAN_APPROVED ->
+   *   in-transaction readback verification -> COMMIT / ROLLBACK.
+   *
+   * If ANY assertion, check, or step fails: ROLLBACK is executed.
+   * Durable state is NEVER left as PLAN_APPROVED or partial PLAN_APPROVAL_PENDING residue.
+   */
+  async approvePlan(planId: string, hooks?: import("./repository").ApprovalTestHooks): Promise<FrozenProductPlan> {
+    const existing = await this.repository.load(planId);
+    if (!existing) {
       throw new Error(`PRODUCT_PLAN_NOT_FOUND:${planId}`);
     }
+    assertNoSecretFields(existing.plan);
 
-    // Re-evaluate QC to ensure it is currently valid
-    const qcResult = evaluateProductCreationPlanQC(record.plan);
-    record.qcResult = qcResult;
-    record.planSha256 = computePlanSha256(record.plan);
-
-    if (!qcResult.passed) {
-      record.status = qcResult.status;
-      this.plans.set(planId, record);
-      throw new Error(`CANNOT_APPROVE_PLAN: QC status is ${qcResult.status}. ${qcResult.issues.map(i => i.message).join(" | ")}`);
-    }
-
-    record.status = "PLAN_APPROVED";
-    record.approvedAt = new Date().toISOString();
-
-    this.plans.set(planId, record);
-    this.productIndex.set(record.productId, planId);
-
-    // Save to disk for version control
-    if (this.diskSync) {
-      try {
-        const diskPath = path.join(PLANS_DOCS_DIR, `${planId}.json`);
-        fs.writeFileSync(diskPath, JSON.stringify(record, null, 2), "utf8");
-      } catch (err) {
-        console.warn("Could not sync plan to disk:", err);
-      }
-    }
-
-    return structuredClone(record);
+    return this.repository.approveAtomic(planId, hooks);
   }
+
 
   async checkStaleness(
     planId: string,
     currentPlanContent?: ProductCreationPlan
   ): Promise<{ isStale: boolean; status: PlanStatus }> {
-    const record = await this.getPlan(planId);
+    const record = await this.repository.load(planId);
     if (!record) {
       return { isStale: true, status: "PLAN_BLOCKED" };
     }
@@ -165,12 +158,29 @@ export class MemoryAndDiskPlanStore implements PlanStorage {
 
     return { isStale: false, status: record.status };
   }
-
-  clear() {
-    this.plans.clear();
-    this.productIndex.clear();
-  }
 }
 
-// Singleton global instance
-export const globalPlanStore = new MemoryAndDiskPlanStore(true);
+// Factory helper
+export function getProductPlanStore(customRepo?: ProductCreationPlanRepository): DurableProductPlanStore {
+  if (customRepo) {
+    return new DurableProductPlanStore(customRepo);
+  }
+
+  if (process.env.DATABASE_URL?.trim()) {
+    return new DurableProductPlanStore(new NeonProductCreationPlanRepository());
+  }
+
+  // Memory fallback for offline test suites / CI environments
+  const memoryRepo = new MemoryProductCreationPlanRepository();
+  seedSmokeTestPlan(memoryRepo);
+  return new DurableProductPlanStore(memoryRepo);
+}
+
+export const globalPlanStore = getProductPlanStore();
+
+// Backwards compatibility alias for existing code
+export class MemoryAndDiskPlanStore extends DurableProductPlanStore {
+  constructor(_diskSync?: boolean) {
+    super(new MemoryProductCreationPlanRepository());
+  }
+}

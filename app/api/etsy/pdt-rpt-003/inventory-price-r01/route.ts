@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "../../../../../lib/etsy";
 import { getValidEtsyAccessToken } from "../../../../../lib/etsy-auth";
 
+import { enforceBuildGateForRoute } from "../../../../../lib/product-creation-plan";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -92,6 +93,10 @@ async function plan(){
 }
 
 export async function GET(request:Request){
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-RPT-003", "RPT_003_INVENTORY_PRICE_R01_PUBLIC");
+  if (_buildGateBlock) return _buildGateBlock;
+
  const u=new URL(request.url);
  if(u.searchParams.get("action")!=="execute"){
   try{return NextResponse.json(await plan(),{headers:{"cache-control":"no-store"}});}

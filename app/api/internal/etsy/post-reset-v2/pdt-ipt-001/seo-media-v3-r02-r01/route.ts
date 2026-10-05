@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "../../../../../../../lib/etsy";
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -589,6 +590,10 @@ async function plan() {
 }
 
 export async function GET(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-IPT-001", "IPT_001_SEO_MEDIA_V3_R02");
+  if (_buildGateBlock) return _buildGateBlock;
+
   try {
     const url = new URL(request.url);
 

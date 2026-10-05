@@ -20,6 +20,7 @@ import {
 import { getEtsySellerStateSnapshot } from "../../../../../../../lib/etsy-seller-state-reconciliation";
 import { NeonOperationLedgerRepository } from "../../../../../../../lib/operation-ledger";
 
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -488,6 +489,10 @@ async function planPayload() {
 }
 
 export async function GET() {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-PMC-008", "PMC_008_DRAFT_BUYERFILES_R02");
+  if (_buildGateBlock) return _buildGateBlock;
+
   try {
     const payload = await planPayload();
     return NextResponse.json(payload, {
@@ -507,6 +512,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-PMC-008", "PMC_008_DRAFT_BUYERFILES_R02_POST");
+  if (_buildGateBlock) return _buildGateBlock;
+
   let writes = 0;
   try {
     if (!gateEnabled()) {

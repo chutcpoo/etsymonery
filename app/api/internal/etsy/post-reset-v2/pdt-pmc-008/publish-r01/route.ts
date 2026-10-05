@@ -9,6 +9,7 @@ import {
 } from "../../../../../../../lib/etsy-readback-normalizer";
 import { getEtsySellerStateSnapshot } from "../../../../../../../lib/etsy-seller-state-reconciliation";
 
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -362,6 +363,10 @@ function allTrue(record: Record<string, boolean>) {
 }
 
 export async function GET(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-PMC-008", "PMC_008_PUBLISH_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   try {
     const url = new URL(request.url);
     const action = url.searchParams.get("action") ?? "plan";
@@ -438,6 +443,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-PMC-008", "PMC_008_PUBLISH_R01_POST");
+  if (_buildGateBlock) return _buildGateBlock;
+
   let writes = 0;
   try {
     if (!gateEnabled()) throw new Error("PMC_PUBLISH_R01_GATE_DISABLED");
