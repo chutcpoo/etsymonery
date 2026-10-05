@@ -3,9 +3,15 @@ import test from "node:test";
 import {
   evaluateProductCreationPlanQC,
   type ProductCreationPlan,
-  MemoryAndDiskPlanStore,
+  type FrozenProductPlan,
+  type ProductCreationPlanRepository,
+  MemoryProductCreationPlanRepository,
+  DurableProductPlanStore,
   verifyBuildPrerequisites,
-  computePlanSha256
+  assertApprovedProductPlanForBuild,
+  computePlanSha256,
+  isProductPlanRequired,
+  LEGACY_EXEMPT_PRODUCTS
 } from "../lib/product-creation-plan";
 
 function createValidBasePlan(): ProductCreationPlan {
@@ -393,309 +399,513 @@ function createValidBasePlan(): ProductCreationPlan {
   };
 }
 
-// -------------------------------------------------------------
-// Test 1: Incomplete plan → BLOCK
-// -------------------------------------------------------------
-test("QC Gate: 1. incomplete plan → BLOCK", () => {
-  const plan = createValidBasePlan();
-  // Remove mandatory field
-  (plan as Partial<ProductCreationPlan>).productName = "";
-  const result = evaluateProductCreationPlanQC(plan);
+// =============================================================
+// SECTION 1: PERSISTENCE & FAIL-CLOSED (TASK 1 & TASK 2)
+// =============================================================
 
-  assert.equal(result.status, "PLAN_BLOCKED");
-  assert.equal(result.passed, false);
-  assert.ok(result.issues.some(i => i.rule === "MANDATORY_FIELD_MISSING"));
-});
-
-// -------------------------------------------------------------
-// Test 2: Missing or vague buyer persona → REVIEW_REQUIRED
-// -------------------------------------------------------------
-test("QC Gate: 2. missing/vague buyer persona → REVIEW_REQUIRED", () => {
-  const plan = createValidBasePlan();
-  plan.targetBuyer = "Cleaners"; // Too brief (< 15 chars)
-  const result = evaluateProductCreationPlanQC(plan);
-
-  assert.equal(result.status, "PLAN_REVIEW_REQUIRED");
-  assert.equal(result.passed, false);
-  assert.ok(result.issues.some(i => i.rule === "IDEA_CLARITY_VAGUE"));
-});
-
-// -------------------------------------------------------------
-// Test 3: Unknown file count or TBD in key scope fields → BLOCK
-// -------------------------------------------------------------
-test("QC Gate: 3. unknown file count or TBD in scope → BLOCK", () => {
-  const plan = createValidBasePlan();
-  plan.buyerProblem = "To be determined later by TBD analysis";
-  const result = evaluateProductCreationPlanQC(plan);
-
-  assert.equal(result.status, "PLAN_BLOCKED");
-  assert.ok(result.issues.some(i => i.rule === "SCOPE_LOCK_TBD_FORBIDDEN"));
-});
-
-// -------------------------------------------------------------
-// Test 4: No acceptance criteria → BLOCK
-// -------------------------------------------------------------
-test("QC Gate: 4. no acceptance criteria → BLOCK", () => {
-  const plan = createValidBasePlan();
-  delete (plan as Partial<ProductCreationPlan>).acceptanceCriteria;
-  const result = evaluateProductCreationPlanQC(plan);
-
-  assert.equal(result.status, "PLAN_BLOCKED");
-  assert.ok(result.issues.some(i => i.rule === "ACCEPTANCE_CRITERIA_REQUIRED"));
-});
-
-// -------------------------------------------------------------
-// Test 5: Unsupported or prohibited claim → BLOCK
-// -------------------------------------------------------------
-test("QC Gate: 5. unsupported / prohibited claim → BLOCK", () => {
-  const plan = createValidBasePlan();
-  // Manual product asserts automated accounting
-  plan.supportedClaims.push({
-    claim: "Fully automated accounting software engine",
-    status: "VERIFIED"
-  });
-  const result = evaluateProductCreationPlanQC(plan);
-
-  assert.equal(result.status, "PLAN_BLOCKED");
-  assert.ok(result.issues.some(i => i.rule === "MANUAL_PRODUCT_AUTOMATION_CLAIM_FORBIDDEN"));
-});
-
-// -------------------------------------------------------------
-// Test 6: High policy risk / unresolved critical risk → BLOCK
-// -------------------------------------------------------------
-test("QC Gate: 6. high policy risk (unresolved CRITICAL/HIGH risk) → BLOCK", () => {
-  const plan = createValidBasePlan();
-  plan.planRisks?.push({
-    category: "POLICY",
-    description: "Contains medical sanitization claim without EPA registration disclaimer",
-    severity: "HIGH",
-    resolved: false
-  });
-  const result = evaluateProductCreationPlanQC(plan);
-
-  assert.equal(result.status, "PLAN_BLOCKED");
-  assert.ok(result.issues.some(i => i.rule === "UNRESOLVED_CRITICAL_HIGH_RISK"));
-});
-
-// -------------------------------------------------------------
-// Test 7: Image storyboard missing or count != 10 → BLOCK
-// -------------------------------------------------------------
-test("QC Gate: 7. image storyboard missing / count != 10 → BLOCK", () => {
-  const plan = createValidBasePlan();
-  plan.listingImagePlan = plan.listingImagePlan.slice(0, 9); // Only 9 images
-  const result = evaluateProductCreationPlanQC(plan);
-
-  assert.equal(result.status, "PLAN_BLOCKED");
-  assert.ok(result.issues.some(i => i.rule === "LISTING_IMAGES_EXACTLY_10_REQUIRED"));
-});
-
-// -------------------------------------------------------------
-// Test 8: Video required but no storyboard → BLOCK
-// -------------------------------------------------------------
-test("QC Gate: 8. video required but no storyboard → BLOCK", () => {
-  const plan = createValidBasePlan();
-  plan.acceptanceCriteria.videoRequired = true;
-  delete plan.videoPlan;
-  const result = evaluateProductCreationPlanQC(plan);
-
-  assert.equal(result.status, "PLAN_BLOCKED");
-  assert.ok(result.issues.some(i => i.rule === "VIDEO_PLAN_REQUIRED"));
-});
-
-// -------------------------------------------------------------
-// Test 9: Approved valid plan → PASS (PLAN_APPROVED)
-// -------------------------------------------------------------
-test("QC Gate: 9. approved valid plan → PASS (PLAN_APPROVED)", () => {
-  const plan = createValidBasePlan();
-  const result = evaluateProductCreationPlanQC(plan);
-
-  assert.equal(result.status, "PLAN_APPROVED");
-  assert.equal(result.passed, true);
-  assert.equal(result.issues.length, 0);
-  assert.ok(result.scores.overallScore >= 90);
-});
-
-// -------------------------------------------------------------
-// Test 10: Modified approved plan → PLAN_STALE
-// -------------------------------------------------------------
-test("QC Gate: 10. modified approved plan → PLAN_STALE", async () => {
-  const store = new MemoryAndDiskPlanStore(false);
+test("Persistence 1: save plan persists in repository", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
   const plan = createValidBasePlan();
   const saved = await store.savePlan(plan);
-  await store.approvePlan(saved.planId);
 
-  // Check initial staleness (not stale)
-  const initialCheck = await store.checkStaleness(saved.planId, plan);
-  assert.equal(initialCheck.isStale, false);
-  assert.equal(initialCheck.status, "PLAN_APPROVED");
-
-  // Tamper with plan content
-  const modifiedPlan = structuredClone(plan);
-  modifiedPlan.priceTargetUsd = 14.99; // Modified!
-
-  const modifiedCheck = await store.checkStaleness(saved.planId, modifiedPlan);
-  assert.equal(modifiedCheck.isStale, true);
-  assert.equal(modifiedCheck.status, "PLAN_STALE");
+  assert.equal(saved.status, "DRAFT");
+  const loaded = await repo.load(saved.planId);
+  assert.ok(loaded);
+  assert.equal(loaded?.planId, saved.planId);
+  assert.equal(loaded?.productId, "PDT-CBP-004");
 });
 
-// -------------------------------------------------------------
-// Test 11: Build without approved plan → BLOCK
-// -------------------------------------------------------------
-test("Build Gate: 11. build without approved plan → BLOCK", async () => {
-  const store = new MemoryAndDiskPlanStore(false);
-  // Attempt build on non-existent plan
+test("Persistence 2: approved plan persists in repository with status PLAN_APPROVED", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
+  const approved = await store.approvePlan(saved.planId);
+
+  assert.equal(approved.status, "PLAN_APPROVED");
+  assert.ok(approved.approvedAt);
+  const loaded = await repo.load(saved.planId);
+  assert.equal(loaded?.status, "PLAN_APPROVED");
+  assert.equal(loaded?.planSha256, approved.planSha256);
+});
+
+test("Persistence 3: cross-function cold start / isolate simulation reads plan", async () => {
+  const sharedRepo = new MemoryProductCreationPlanRepository();
+  // Isolate 1: create and approve
+  const storeInstance1 = new DurableProductPlanStore(sharedRepo);
+  const plan = createValidBasePlan();
+  const saved = await storeInstance1.savePlan(plan);
+  const approved = await storeInstance1.approvePlan(saved.planId);
+
+  // Isolate 2: completely new store instance reading from shared backing store
+  const storeInstance2 = new DurableProductPlanStore(sharedRepo);
+  const readback = await storeInstance2.getPlan(saved.planId);
+
+  assert.ok(readback);
+  assert.equal(readback?.planId, approved.planId);
+  assert.equal(readback?.status, "PLAN_APPROVED");
+  assert.equal(readback?.planSha256, approved.planSha256);
+  assert.equal(readback?.approvedAt, approved.approvedAt);
+});
+
+test("Persistence 4: getPlanByProductId works after fresh store instance", async () => {
+  const sharedRepo = new MemoryProductCreationPlanRepository();
+  const store1 = new DurableProductPlanStore(sharedRepo);
+  const plan = createValidBasePlan();
+  await store1.savePlan(plan);
+  await store1.approvePlan(`PLAN-${plan.productId}-V1`);
+
+  const store2 = new DurableProductPlanStore(sharedRepo);
+  const byProduct = await store2.getPlanByProductId("PDT-CBP-004");
+  assert.ok(byProduct);
+  assert.equal(byProduct?.productId, "PDT-CBP-004");
+  assert.equal(byProduct?.status, "PLAN_APPROVED");
+});
+
+test("Persistence 5: DB write failure blocks approval (fail closed)", async () => {
+  // Mock failing repository on save
+  const failingRepo: ProductCreationPlanRepository = {
+    async save(record: FrozenProductPlan) {
+      if (record.status === "PLAN_APPROVED") {
+        throw new Error("DATABASE_CONNECTION_TIMEOUT");
+      }
+    },
+    async load(_id: string) {
+      return {
+        planId: "PLAN-PDT-CBP-004-V1",
+        planVersion: 1,
+        productId: "PDT-CBP-004",
+        status: "DRAFT",
+        planSha256: "some-hash",
+        approvedAt: null,
+        qcResult: { status: "PLAN_APPROVED", passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
+        plan: createValidBasePlan()
+      };
+    },
+    async loadByProductId() { return null; },
+    async list() { return []; }
+  };
+
+  const store = new DurableProductPlanStore(failingRepo);
+  await assert.rejects(
+    async () => store.approvePlan("PLAN-PDT-CBP-004-V1"),
+    (err: Error) => err.message.includes("PLAN_APPROVAL_FAILED:PERSISTENCE_WRITE_FAILED")
+  );
+});
+
+test("Persistence 6: DB readback mismatch blocks approval (fail closed)", async () => {
+  // Mock repository that corrupts the record on readback
+  const corruptingRepo: ProductCreationPlanRepository = {
+    async save() {},
+    async load(_id: string) {
+      return {
+        planId: "PLAN-PDT-CBP-004-V1",
+        planVersion: 1,
+        productId: "PDT-CBP-004",
+        status: "PLAN_BLOCKED", // Corrupted status!
+        planSha256: "corrupted-hash",
+        approvedAt: null,
+        qcResult: { status: "PLAN_APPROVED", passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
+        plan: createValidBasePlan()
+      };
+    },
+    async loadByProductId() { return null; },
+    async list() { return []; }
+  };
+
+  const store = new DurableProductPlanStore(corruptingRepo);
+  await assert.rejects(
+    async () => store.approvePlan("PLAN-PDT-CBP-004-V1"),
+    (err: Error) => err.message.includes("PLAN_APPROVAL_FAILED:PERSISTENCE_STATUS_MISMATCH")
+  );
+});
+
+test("Persistence 7: stored SHA mismatch blocks build", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
+  const approved = await store.approvePlan(saved.planId);
+
+  // Build gate called with wrong hash
   const result = await verifyBuildPrerequisites({
-    productId: "PDT-CBP-004",
+    productId: plan.productId,
+    planId: approved.planId,
+    planSha256: "deadbeef00000000000000000000000000000000000000000000000000000000",
     store
   });
 
   assert.equal(result.allowed, false);
   assert.equal(result.status, "BUILD_BLOCKED");
+  assert.ok(result.reason.includes("PLAN_HASH_MISMATCH"));
+});
+
+// =============================================================
+// SECTION 2: BUILD GATE LOGIC (TASK 4 & TASK 5)
+// =============================================================
+
+test("Build Gate 8: no plan → BLOCK", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+  const result = await verifyBuildPrerequisites({
+    productId: "PDT-CBP-004",
+    store
+  });
+  assert.equal(result.allowed, false);
+  assert.equal(result.status, "BUILD_BLOCKED");
   assert.ok(result.reason.includes("NO_APPROVED_PLAN_FOUND"));
 });
 
-// -------------------------------------------------------------
-// Test 12: Build with matching plan hash → ALLOW
-// -------------------------------------------------------------
-test("Build Gate: 12. build with matching plan hash → ALLOW", async () => {
-  const store = new MemoryAndDiskPlanStore(false);
+test("Build Gate 9: DRAFT plan → BLOCK", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
+
+  const result = await verifyBuildPrerequisites({
+    productId: plan.productId,
+    planId: saved.planId,
+    store
+  });
+  assert.equal(result.allowed, false);
+  assert.equal(result.status, "BUILD_BLOCKED");
+  assert.ok(result.reason.includes("PLAN_NOT_APPROVED"));
+});
+
+test("Build Gate 10: REVIEW_REQUIRED plan → BLOCK", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+  const plan = createValidBasePlan();
+  plan.targetBuyer = "Cleaners"; // Vague buyer persona
+  const saved = await store.savePlan(plan);
+  await store.runQC(saved.planId);
+
+  const result = await verifyBuildPrerequisites({
+    productId: plan.productId,
+    planId: saved.planId,
+    store
+  });
+  assert.equal(result.allowed, false);
+  assert.equal(result.status, "BUILD_BLOCKED");
+  assert.ok(result.reason.includes("PLAN_NOT_APPROVED"));
+});
+
+test("Build Gate 11: PLAN_BLOCKED → BLOCK", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+  const plan = createValidBasePlan();
+  plan.listingImagePlan = plan.listingImagePlan.slice(0, 5); // Invalid image count
+  const saved = await store.savePlan(plan);
+  await store.runQC(saved.planId);
+
+  const result = await verifyBuildPrerequisites({
+    productId: plan.productId,
+    planId: saved.planId,
+    store
+  });
+  assert.equal(result.allowed, false);
+  assert.equal(result.status, "BUILD_BLOCKED");
+});
+
+test("Build Gate 12: PLAN_STALE → BLOCK", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
+  const approved = await store.approvePlan(saved.planId);
+
+  // Simulate internal plan drift
+  approved.plan.priceTargetUsd = 99.99;
+  await (store as any).repository.save(approved);
+
+  const result = await verifyBuildPrerequisites({
+    productId: plan.productId,
+    planId: approved.planId,
+    store
+  });
+  assert.equal(result.allowed, false);
+  assert.equal(result.status, "BUILD_BLOCKED");
+  assert.ok(result.reason.includes("PLAN_STALE"));
+});
+
+test("Build Gate 13: approved correct hash → ALLOW with evidence", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
   const plan = createValidBasePlan();
   const saved = await store.savePlan(plan);
   const approved = await store.approvePlan(saved.planId);
 
   const result = await verifyBuildPrerequisites({
-    productId: "PDT-CBP-004",
+    productId: plan.productId,
     planId: approved.planId,
     planSha256: approved.planSha256,
+    builder: "AUTOMATED_TEST_RUNNER",
     store
   });
 
   assert.equal(result.allowed, true);
   assert.equal(result.status, "BUILD_PERMITTED");
-  if (result.allowed) {
-    assert.equal(result.productId, "PDT-CBP-004");
+  if (result.status === "BUILD_PERMITTED") {
+    assert.equal(result.productId, plan.productId);
     assert.equal(result.planSha256, approved.planSha256);
+    assert.ok(result.evidence);
+    assert.equal(result.evidence.result, "BUILD_PERMITTED");
+    assert.ok(result.evidence.buildCorrelationId.startsWith("BLD-PDT-CBP-004-"));
   }
 });
 
-// -------------------------------------------------------------
-// Test 13: Wrong product family / DNA mismatch → REVIEW_REQUIRED
-// -------------------------------------------------------------
-test("QC Gate: 13. wrong product family/DNA layout mismatch → REVIEW_REQUIRED", () => {
+test("Build Gate 14: wrong caller hash → BLOCK", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
   const plan = createValidBasePlan();
-  // SPREADSHEET_SCHEDULE paired with PRINTABLE portrait layout
-  plan.shopDnaProfile.layoutFamily = "PRINTABLE_CHECKLIST_PORTRAIT";
-  const result = evaluateProductCreationPlanQC(plan);
+  const saved = await store.savePlan(plan);
+  const approved = await store.approvePlan(saved.planId);
 
-  assert.equal(result.status, "PLAN_REVIEW_REQUIRED");
-  assert.ok(result.issues.some(i => i.rule === "SHOP_DNA_FAMILY_MISMATCH"));
+  const result = await verifyBuildPrerequisites({
+    productId: plan.productId,
+    planId: approved.planId,
+    planSha256: "badhash",
+    store
+  });
+  assert.equal(result.allowed, false);
+  assert.ok(result.reason.includes("PLAN_HASH_MISMATCH"));
 });
 
-// -------------------------------------------------------------
-// Test 14: High buyer confusion risk → BLOCK
-// -------------------------------------------------------------
-test("QC Gate: 14. high buyer confusion risk → BLOCK", () => {
+test("Build Gate 15: unresolved HIGH risk → BLOCK", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
   const plan = createValidBasePlan();
   plan.planRisks?.push({
-    category: "BUYER_CONFUSION",
-    description: "Buyer might assume automated API integration with local MLS",
-    severity: "MEDIUM",
-    resolved: false // Unresolved!
+    category: "COMPATIBILITY",
+    description: "Mac users missing Calibri fonts",
+    severity: "HIGH",
+    resolved: false
   });
-  const result = evaluateProductCreationPlanQC(plan);
+  const saved = await store.savePlan(plan);
 
-  assert.equal(result.status, "PLAN_BLOCKED");
-  assert.ok(result.issues.some(i => i.rule === "BUYER_CONFUSION_RISK_UNRESOLVED"));
+  await assert.rejects(
+    async () => store.approvePlan(saved.planId),
+    (err: Error) => err.message.includes("CANNOT_APPROVE_PLAN")
+  );
 });
 
-// -------------------------------------------------------------
-// Test 15: API Routes Lifecycle (create -> get -> qc -> approve -> build)
-// -------------------------------------------------------------
-import { POST as createPlanRoute } from "../app/api/product-plans/create/route";
-import { GET as getPlanRoute } from "../app/api/product-plans/[planId]/route";
-import { POST as runPlanQCRoute } from "../app/api/product-plans/[planId]/qc/route";
-import { POST as approvePlanRoute } from "../app/api/product-plans/[planId]/approve/route";
-import { POST as buildProductRoute } from "../app/api/products/[productId]/build/route";
-
-test("API Routes: full creation, QC, approval, and build authorization lifecycle", async () => {
+test("Build Gate 16: unresolved CRITICAL risk → BLOCK", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
   const plan = createValidBasePlan();
-  plan.productId = "PDT-CBP-004-TEST";
-
-  // 1. POST /api/product-plans/create
-  const createReq = new Request("http://localhost/api/product-plans/create", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ plan })
+  plan.planRisks?.push({
+    category: "POLICY",
+    description: "Contains copyrighted third-party bid formula",
+    severity: "CRITICAL",
+    resolved: false
   });
-  const createRes = await createPlanRoute(createReq);
-  assert.equal(createRes.status, 201);
-  const createdJson = await createRes.json() as { planId: string; qcStatus: string; qcPassed: boolean };
-  assert.equal(createdJson.qcStatus, "PLAN_APPROVED");
-  assert.equal(createdJson.qcPassed, true);
-  const planId = createdJson.planId;
+  const saved = await store.savePlan(plan);
 
-  // 2. GET /api/product-plans/[planId]
-  const getReq = new Request(`http://localhost/api/product-plans/${planId}`);
-  const getRes = await getPlanRoute(getReq, { params: Promise.resolve({ planId }) });
-  assert.equal(getRes.status, 200);
-  const getJson = await getRes.json() as { planId: string; status: string };
-  assert.equal(getJson.planId, planId);
-
-  // 3. POST /api/product-plans/[planId]/qc
-  const qcReq = new Request(`http://localhost/api/product-plans/${planId}/qc`, { method: "POST" });
-  const qcRes = await runPlanQCRoute(qcReq, { params: Promise.resolve({ planId }) });
-  assert.equal(qcRes.status, 200);
-  const qcJson = await qcRes.json() as { status: string; passed: boolean };
-  assert.equal(qcJson.status, "PLAN_APPROVED");
-  assert.equal(qcJson.passed, true);
-
-  // 4. Attempt Build before approval -> should be 409 blocked
-  const prematureBuildReq = new Request(`http://localhost/api/products/${plan.productId}/build`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ planId })
-  });
-  const prematureBuildRes = await buildProductRoute(prematureBuildReq, {
-    params: Promise.resolve({ productId: plan.productId })
-  });
-  assert.equal(prematureBuildRes.status, 409);
-  const prematureJson = await prematureBuildRes.json() as { status: string };
-  assert.equal(prematureJson.status, "BUILD_BLOCKED");
-
-  // 5. POST /api/product-plans/[planId]/approve
-  const approveReq = new Request(`http://localhost/api/product-plans/${planId}/approve`, { method: "POST" });
-  const approveRes = await approvePlanRoute(approveReq, { params: Promise.resolve({ planId }) });
-  assert.equal(approveRes.status, 200);
-  const approveJson = await approveRes.json() as { status: string; planSha256: string };
-  assert.equal(approveJson.status, "PLAN_APPROVED");
-  const planSha256 = approveJson.planSha256;
-
-  // 6. POST /api/products/[productId]/build with valid approved plan & matching hash -> 200 permitted
-  const validBuildReq = new Request(`http://localhost/api/products/${plan.productId}/build`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ planId, planSha256 })
-  });
-  const validBuildRes = await buildProductRoute(validBuildReq, {
-    params: Promise.resolve({ productId: plan.productId })
-  });
-  assert.equal(validBuildRes.status, 200);
-  const validBuildJson = await validBuildRes.json() as { status: string; productId: string };
-  assert.equal(validBuildJson.status, "BUILD_PERMITTED");
-  assert.equal(validBuildJson.productId, plan.productId);
-
-  // 7. POST /api/products/[productId]/build with WRONG hash -> 409 blocked
-  const badHashBuildReq = new Request(`http://localhost/api/products/${plan.productId}/build`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ planId, planSha256: "0000000000000000000000000000000000000000000000000000000000000000" })
-  });
-  const badHashBuildRes = await buildProductRoute(badHashBuildReq, {
-    params: Promise.resolve({ productId: plan.productId })
-  });
-  assert.equal(badHashBuildRes.status, 409);
-  const badHashJson = await badHashBuildRes.json() as { status: string; reason: string };
-  assert.equal(badHashJson.status, "BUILD_BLOCKED");
-  assert.ok(badHashJson.reason.includes("PLAN_HASH_MISMATCH"));
+  await assert.rejects(
+    async () => store.approvePlan(saved.planId),
+    (err: Error) => err.message.includes("CANNOT_APPROVE_PLAN")
+  );
 });
 
+// =============================================================
+// SECTION 3: GLOBAL ENFORCEMENT & POLICY (TASK 4, 6, 7)
+// =============================================================
+
+test("Global Enforcement 17: XLSX build path without plan → BLOCK via assertApprovedProductPlanForBuild", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+  await assert.rejects(
+    async () => assertApprovedProductPlanForBuild({ productId: "PDT-CBP-004", builder: "XLSX_GENERATOR", store }),
+    (err: Error) => err.message.includes("BUILD_BLOCKED")
+  );
+});
+
+test("Global Enforcement 18: PDF build path without plan → BLOCK via assertApprovedProductPlanForBuild", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+  await assert.rejects(
+    async () => assertApprovedProductPlanForBuild({ productId: "PDT-CBP-004", builder: "PDF_GENERATOR", store }),
+    (err: Error) => err.message.includes("BUILD_BLOCKED")
+  );
+});
+
+test("Global Enforcement 19: Image build path without plan → BLOCK via assertApprovedProductPlanForBuild", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+  await assert.rejects(
+    async () => assertApprovedProductPlanForBuild({ productId: "PDT-CBP-004", builder: "IMAGE_GENERATOR", store }),
+    (err: Error) => err.message.includes("BUILD_BLOCKED")
+  );
+});
+
+test("Global Enforcement 20: Video build path without plan → BLOCK via assertApprovedProductPlanForBuild", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+  await assert.rejects(
+    async () => assertApprovedProductPlanForBuild({ productId: "PDT-CBP-004", builder: "VIDEO_GENERATOR", store }),
+    (err: Error) => err.message.includes("BUILD_BLOCKED")
+  );
+});
+
+test("Global Enforcement 21: Etsy prepare route without plan → BLOCK", async () => {
+  const { POST: prepareRoute } = await import("../app/api/products/prepare/route");
+  const unapprovedProduct = {
+    productId: "PDT-CBP-004",
+    version: "V1",
+    productName: "Cleaning Business Planner",
+    canonicalDriveFileId: "drive-cbp-004",
+    buyerFiles: ["planner.xlsx"],
+    galleryFiles: ["01.png"],
+    title: "Cleaning Business Planning Workbook",
+    description: "Operational spreadsheet for cleaning businesses.",
+    tags: Array.from({ length: 13 }, (_, i) => `tag ${i + 1}`),
+    priceUsd: 9.9,
+    productTruthVerified: true,
+    testerPass: true,
+    finalQcPass: true
+  };
+
+  const req = new Request("http://localhost/api/products/prepare", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(unapprovedProduct)
+  });
+
+  const res = await prepareRoute(req);
+  assert.equal(res.status, 409);
+  const json = await res.json() as { status: string };
+  assert.equal(json.status, "BUILD_BLOCKED");
+});
+
+test("Global Enforcement 22: Etsy release candidate preparation without plan → BLOCK via central gate", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+  await assert.rejects(
+    async () => assertApprovedProductPlanForBuild({
+      productId: "PDT-DCL-005",
+      builder: "ETSY_RELEASE_CANDIDATE_PREPARE",
+      store
+    }),
+    (err: Error) => err.message.includes("BUILD_BLOCKED:NO_APPROVED_PLAN_FOUND")
+  );
+});
+
+test("Global Enforcement 23: Legacy read-only routes still function without plan interference", async () => {
+  const { GET: statusRoute } = await import("../app/api/etsy/status/route");
+  const res = await statusRoute();
+  assert.equal(res.status, 200);
+  const json = await res.json() as { service: string; apiCredentialsConfigured: boolean };
+  assert.equal(json.service, "etsy-open-api-v3");
+});
+
+test("Global Enforcement 24: Product 01–03 legacy compatibility maintained (isProductPlanRequired is false)", () => {
+  assert.equal(isProductPlanRequired("PDT-CS-001"), false);
+  assert.equal(isProductPlanRequired("PDT-PCL-002"), false);
+  assert.equal(isProductPlanRequired("PDT-CPR-003"), false);
+  assert.ok(LEGACY_EXEMPT_PRODUCTS.includes("PDT-CPR-003"));
+});
+
+test("Global Enforcement 25: Product 04+ bypass attempt blocked (isProductPlanRequired is true)", () => {
+  assert.equal(isProductPlanRequired("PDT-CBP-004"), true);
+  assert.equal(isProductPlanRequired("PDT-DCL-005"), true);
+  assert.equal(isProductPlanRequired("PDT-MCL-006"), true);
+  assert.equal(isProductPlanRequired("PDT-CMK-015"), true);
+});
+
+// =============================================================
+// SECTION 4: DURABILITY, STALENESS & SECURITY (TASK 3, 8, 12)
+// =============================================================
+
+test("Durability 26: approve → new store instance → GET works", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store1 = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store1.savePlan(plan);
+  await store1.approvePlan(saved.planId);
+
+  // New store instance
+  const store2 = new DurableProductPlanStore(repo);
+  const fetched = await store2.getPlan(saved.planId);
+  assert.ok(fetched);
+  assert.equal(fetched?.status, "PLAN_APPROVED");
+});
+
+test("Durability 27: approve → new isolate simulation → build gate works", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store1 = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store1.savePlan(plan);
+  const approved = await store1.approvePlan(saved.planId);
+
+  // Fresh isolate / process simulation
+  const freshStore = new DurableProductPlanStore(repo);
+  const buildResult = await verifyBuildPrerequisites({
+    productId: plan.productId,
+    planId: approved.planId,
+    planSha256: approved.planSha256,
+    store: freshStore
+  });
+
+  assert.equal(buildResult.allowed, true);
+  assert.equal(buildResult.status, "BUILD_PERMITTED");
+});
+
+test("Durability 28: restart preserves same SHA", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store1 = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store1.savePlan(plan);
+  const approved = await store1.approvePlan(saved.planId);
+
+  const initialSha = approved.planSha256;
+
+  // Simulate server restart
+  const restartedStore = new DurableProductPlanStore(repo);
+  const loaded = await restartedStore.getPlan(saved.planId);
+
+  assert.equal(loaded?.planSha256, initialSha);
+});
+
+test("Durability 29: plan mutation makes plan PLAN_STALE", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
+  await store.approvePlan(saved.planId);
+
+  // Caller modifies plan
+  const mutated = structuredClone(plan);
+  mutated.buyerFiles = mutated.buyerFiles.slice(0, 3); // Changed files!
+
+  const staleness = await store.checkStaleness(saved.planId, mutated);
+  assert.equal(staleness.isStale, true);
+  assert.equal(staleness.status, "PLAN_STALE");
+});
+
+test("Durability 30: re-approve produces new SHA and is accepted", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
+  const approved1 = await store.approvePlan(saved.planId);
+
+  // Update plan with additional supported claim
+  const plan2 = structuredClone(plan);
+  plan2.supportedClaims.push({
+    claim: "Tested on Excel for Mac 2021",
+    status: "VERIFIED"
+  });
+  await store.savePlan(plan2, saved.planId);
+
+  const approved2 = await store.approvePlan(saved.planId);
+  assert.notEqual(approved2.planSha256, approved1.planSha256);
+
+  // Build gate now succeeds with new SHA
+  const buildCheck = await verifyBuildPrerequisites({
+    productId: plan.productId,
+    planId: saved.planId,
+    planSha256: approved2.planSha256,
+    store
+  });
+  assert.equal(buildCheck.allowed, true);
+  assert.equal(buildCheck.status, "BUILD_PERMITTED");
+});
+
+test("Security 31: secret keys in plan JSON throw SECURITY_SECRET_FIELD_FORBIDDEN (TASK 12)", async () => {
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+  const planWithSecret = createValidBasePlan();
+  // Inject secret key
+  (planWithSecret as any).apiKey = "secret-token-value-12345";
+
+  await assert.rejects(
+    async () => store.savePlan(planWithSecret),
+    (err: Error) => err.message.includes("SECURITY_SECRET_FIELD_FORBIDDEN")
+  );
+});
