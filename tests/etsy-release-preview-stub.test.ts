@@ -37,3 +37,17 @@ test("legacy GET execute and all protected mutations blocked on preview branch",
     const r = middleware(new NextRequest("https://example.test/api/internal/etsy/post-reset-v2/pdt-bipc-003/video-r01?action=execute", { method })); assert.equal(r.status, 403);
   } } finally { process.env = old; }
 });
+
+test("HTTP stub fails closed without durable Preview configuration; never falls back to production DATABASE_URL", async () => {
+  const old = { ...process.env }; env(); delete process.env.GENERIC_PREVIEW_DATABASE_URL; delete process.env.GENERIC_PREVIEW_LEDGER_SCHEMA; process.env.DATABASE_URL = "postgres://production-must-not-be-used";
+  try {
+    const { previewStubApi } = await import("../lib/etsy-release-preview-stub");
+    const req=request(previewStubForm()); const response=await previewStubApi(req)!.prepare(req);
+    assert.equal(response.status,409); const body=await response.json();assert.equal(body.error,"DURABLE_PREVIEW_VALIDATION_UNAVAILABLE");assert.equal(body.ETSY_WRITE_COUNT,0);
+  } finally { process.env=old; }
+});
+test("Preview ledger rejects schema escape before connecting", async () => {
+  const { NeonOperationLedgerRepository }=await import("../lib/operation-ledger");
+  for(const schema of ["public","generic_release_preview_x; DROP SCHEMA public","production"])
+    assert.throws(()=>new NeonOperationLedgerRepository({url:"postgres://never",schema}),/INVALID_PREVIEW_LEDGER_SCHEMA/);
+});

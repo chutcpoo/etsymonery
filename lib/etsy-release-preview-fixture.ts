@@ -16,9 +16,9 @@ function asset(assetId: string, filename: string, mimeType: string, bytes: Buffe
 }
 export function createPreviewStubManifest(releaseId = PREVIEW_STUB_RELEASE_ID): ProductManifest {
   assertReleaseId(releaseId);
-  if (releaseId !== PREVIEW_STUB_RELEASE_ID) throw new Error("PREVIEW_STUB_RELEASE_NOT_ALLOWED");
+  if (![PREVIEW_STUB_RELEASE_ID, "preview-stub-interrupted"].includes(releaseId)) throw new Error("PREVIEW_STUB_RELEASE_NOT_ALLOWED");
   const m: ProductManifest = { schemaVersion: "1.0.0", releaseId, productId: "SYNTHETIC-STUB-PRODUCT", candidateId: "SYNTHETIC-STUB-CANDIDATE",
-    title: "Synthetic preview fixture", description: "Stub transport only. Not real product evidence.", price: 1, quantity: 1,
+    title: `Synthetic preview fixture ${releaseId}`, description: "Stub transport only. Not real product evidence.", price: 1, quantity: 1,
     taxonomyId: 123, tags: Array.from({ length: 13 }, (_, i) => `stub tag ${i}`), whoMade: "i_did", whenMade: "2020_2026", shop: { shopId: 77, userId: 88 },
     listingImages: [asset("stub-image", "stub.png", "image/png", PREVIEW_STUB_BYTES.image, "Synthetic preview fixture")],
     buyerFiles: [asset("stub-file", "stub.pdf", "application/pdf", PREVIEW_STUB_BYTES.file)],
@@ -31,8 +31,8 @@ export function createPreviewStubManifest(releaseId = PREVIEW_STUB_RELEASE_ID): 
   m.releaseLock.candidateFingerprint = fp.candidateFingerprint; m.testerPass.candidateFingerprint = fp.candidateFingerprint; m.finalQcPass.candidateFingerprint = fp.candidateFingerprint;
   return m;
 }
-export function previewStubForm() {
-  const m = createPreviewStubManifest(), form = new FormData(); form.set("releaseId", m.releaseId);
+export function previewStubForm(releaseId = PREVIEW_STUB_RELEASE_ID) {
+  const m = createPreviewStubManifest(releaseId), form = new FormData(); form.set("releaseId", m.releaseId);
   for (const [a, bytes] of [[m.listingImages[0], PREVIEW_STUB_BYTES.image], [m.buyerFiles[0], PREVIEW_STUB_BYTES.file], [m.video!, PREVIEW_STUB_BYTES.video]] as const)
     form.set(a.assetId, new File([new Uint8Array(bytes)], a.filename, { type: a.mimeType }));
   return form;

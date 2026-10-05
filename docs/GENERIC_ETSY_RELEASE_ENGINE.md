@@ -181,10 +181,13 @@ The `feat/generic-etsy-release-engine` branch supports the three release APIs wi
 `x-autodigitalpublisher-preview-stub: synthetic-fixture-only`. This is a public
 synthetic fixture selector, never a real API credential. It works only when
 VERCEL_ENV=preview, VERCEL_GIT_COMMIT_REF is this exact branch, and real generic
-prepare is disabled. No Preview environment secrets or Etsy credentials need to be
-provisioned. All OAuth/header/HTTP/ledger dependencies are injected stub implementations
-with no global fetch, token store, or DB fallback. Source fixtures are signature-only
-synthetic data, not real buyer files or Product Truth evidence.
+prepare is disabled. Etsy OAuth/header/HTTP dependencies remain injected synthetic
+providers. HTTP validation requires GENERIC_PREVIEW_DATABASE_URL and
+GENERIC_PREVIEW_LEDGER_SCHEMA, scoped to this Preview branch only. There is no
+DATABASE_URL fallback. The Neon operation repository uses a strictly validated,
+qualified schema and the provider resources live in a separate table in that schema.
+A restricted login role can write only this schema. Fixtures are synthetic signatures,
+not buyer files or Product Truth evidence.
 
 Responses identify validationMode=PREVIEW_STUB_ONLY, mockMutationCount (4 for synthetic
 draft/image/file/video), ETSY_WRITE_COUNT=0 and livePublishPerformed=false. Publish
@@ -193,13 +196,23 @@ The real generic prepare runtime is hard-blocked on this Preview branch even if 
 write flag is enabled. Middleware rejects all legacy Etsy routes, including GET execute
 URLs, on this branch regardless of inherited route gates.
 
-The mock ledger is PROCESS_LOCAL_TEST_ONLY: a separate Vercel function/cold start can
-show NOT_STARTED on status. This is explicit and is not proof of remote durable Neon
-recovery. The real durable ledger remains unchanged and unused in this validation.
-`node --import tsx scripts/generic-preview-smoke.ts` exercises prepare, replay, status,
-publish rejection, forged authorization, real prepare denial, and legacy GET denial;
-set PREVIEW_SMOKE_URL for the deployed Preview. Never target a production URL.
+HTTP requests reconstruct the repository/provider session on every call; no process-local
+ledger is used. Only the unit-test session helper defaults to memory. Missing durable
+configuration fails closed. Two fixed fixtures are allowed: preview-stub-smoke and
+preview-stub-interrupted. The latter accepts x-preview-stub-fault: draft-response-lost:
+it durably commits a synthetic draft, drops its response, and makes subsequent
+readback unavailable for that request. The next request must reconcile through GET
+readback and resume assets, with no duplicate draft creation. This is fault injection,
+not an actual killed server process; independent process/deployment tests establish
+cold-start persistence separately.
 
-Additional local verification: 412 tests PASS, typecheck/build PASS, full HTTP stub
-smoke PASS. Remote CI uses a draft PR into main to trigger the existing CI workflow;
-no workflow permission expansion or production deployment is introduced.
+`node --import tsx scripts/generic-preview-smoke.ts` performs strict durable status,
+replay, publish denial and fault validation. PREVIEW_SMOKE_PHASE=cold reads the prior
+normal and interrupted fixtures, resumes and verifies replay without duplicate writes.
+Run seed and cold against distinct Preview deployments of the exact same SHA and schema.
+Never target production. `scripts/generic-durable-worker.ts` and
+`scripts/generic-durable-local-test.ts` additionally exercise a new Node process for
+every operation against a supplied isolated Preview config file (never committed).
+
+Remote CI uses the existing draft PR into main. No merge, Production promotion or
+real Etsy write is authorized by these tests.
