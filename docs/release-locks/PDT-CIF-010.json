@@ -1,12 +1,12 @@
 {
   "productId": "PDT-CIF-010",
-  "productName": "Cleaning Client Intake Form",
-  "status": "PLANNED",
+  "productName": "Cleaning Client Intake & Assessment Form",
+  "status": "BUILD_READY",
   "sheetCount": 6,
   "driveSourceFolder": "Product 10 - Cleaning Client Intake Form",
   "buyerPackage": [],
   "listingImages": [],
   "listingVideos": [],
   "publishedToEtsy": false,
-  "lockGeneratedAt": "2026-10-04T23:45:00+07:00"
+  "lockGeneratedAt": "2026-10-05T08:50:00+07:00"
 }

@@ -1,12 +1,12 @@
 {
   "productId": "PDT-CSC-009",
-  "productName": "Cleaning Service Contract",
-  "status": "PLANNED",
+  "productName": "Cleaning Service Agreement System",
+  "status": "BUILD_READY",
   "sheetCount": 6,
   "driveSourceFolder": "Product 09 - Cleaning Service Contract",
   "buyerPackage": [],
   "listingImages": [],
   "listingVideos": [],
   "publishedToEtsy": false,
-  "lockGeneratedAt": "2026-10-04T23:45:00+07:00"
+  "lockGeneratedAt": "2026-10-05T08:50:00+07:00"
 }

@@ -1,12 +1,12 @@
 {
   "productId": "PDT-CQE-008",
-  "productName": "Cleaning Quote & Estimate",
-  "status": "PLANNED",
+  "productName": "Cleaning Quote & Estimate Calculator",
+  "status": "BUILD_READY",
   "sheetCount": 6,
   "driveSourceFolder": "Product 08 - Cleaning Quote & Estimate",
   "buyerPackage": [],
   "listingImages": [],
   "listingVideos": [],
   "publishedToEtsy": false,
-  "lockGeneratedAt": "2026-10-04T23:45:00+07:00"
+  "lockGeneratedAt": "2026-10-05T08:50:00+07:00"
 }
