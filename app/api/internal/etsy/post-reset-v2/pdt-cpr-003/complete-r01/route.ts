@@ -177,7 +177,7 @@ async function verifySeller(token:string, id:number, active=false){
   // PCL-002 must remain active throughout CPR-003 publish process
   const pcl002=state.listings.find(x=>x.listingId===PCL_002_LISTING_ID);
   if (!pcl002||pcl002.state!=="active") throw new Error("PCL002_ACTIVE_DRIFT");
-  if (pcl002.title !== "Professional Cleaning Checklist Template, Editable Excel & PDF, 11 Cleaning Checklists, Commercial Residential") throw new Error("PCL002_TITLE_DRIFT");
+  if (pcl002.title !== "Professional Cleaning Checklist Template, Editable Excel & A4 PDF, Deep Clean, Move-In Move-Out, Quality Control") throw new Error("PCL002_TITLE_DRIFT");
   const target=state.listings.find(x=>x.listingId===id);
   if (!target||target.title!==TITLE) throw new Error("TARGET_LISTING_NOT_FOUND");
   if (active && target.state!=="active") throw new Error("TARGET_LISTING_STATE_MISMATCH_EXPECTED_ACTIVE");

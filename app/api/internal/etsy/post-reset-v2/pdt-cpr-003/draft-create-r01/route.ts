@@ -130,7 +130,7 @@ function sellerStateIsBaseline(state: Awaited<ReturnType<typeof getEtsySellerSta
   // PDT-PCL-002 must be active (published) before creating CPR-003
   const pcl002 = listings.find(item => item.listingId === PCL_002_LISTING_ID);
   if (!pcl002 || pcl002.state !== "active") return false;
-  if (pcl002.title !== "Professional Cleaning Checklist Template, Editable Excel & PDF, 11 Cleaning Checklists, Commercial Residential") return false;
+  if (pcl002.title !== "Professional Cleaning Checklist Template, Editable Excel & A4 PDF, Deep Clean, Move-In Move-Out, Quality Control") return false;
 
   return true;
 }
