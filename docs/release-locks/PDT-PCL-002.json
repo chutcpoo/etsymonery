@@ -7,15 +7,14 @@
   "templateSheetCount": 11,
   "exampleSheetCount": 12,
   "printablePageCountA4": 10,
-  "printablePageCountUSLetter": 10,
   "userGuidePageCount": 6,
-  "buyerFilesCount": 5,
+  "buyerFilesCount": 4,
   "driveSourceFolder": "Product 02 - Cleaning Checklist",
   "buyerPackage": [
     {
       "name": "PDT-PCL-002 Buyer Package FINAL CLEAN.zip",
-      "sizeBytes": 160741,
-      "sha256": "4629417ec61f8a8071b40af9b937a2c2fc0677d137534a8515167316e2eed22d"
+      "sizeBytes": 112341,
+      "sha256": "404a453e9ddb68ea5c328b06b987e9720d0def5f1f1ccce235d7728ecf9b59ad"
     },
     {
       "name": "Professional Cleaning Checklist Example - Premium Final.xlsx",
@@ -26,11 +25,6 @@
       "name": "Professional Cleaning Checklist Printable - Premium Final.pdf",
       "sizeBytes": 47977,
       "sha256": "e6f6c35ec88b34dccefdf6d10c09cfe29189c4674de55b3bd5c36ddba2e46711"
-    },
-    {
-      "name": "Professional Cleaning Checklist Printable US Letter - Premium Final.pdf",
-      "sizeBytes": 52814,
-      "sha256": "44b30cc39dd47eb3ee9106f9dc4a0621c036ab2c77a5878a24c008339fdd66a0"
     },
     {
       "name": "Professional Cleaning Checklist Template - Premium Final.xlsx",
@@ -103,5 +97,5 @@
     }
   ],
   "publishedToEtsy": false,
-  "lockGeneratedAt": "2026-10-04T23:00:00+07:00"
+  "lockGeneratedAt": "2026-10-05T07:43:36+07:00"
 }
