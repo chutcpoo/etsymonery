@@ -14,6 +14,11 @@ export async function GET() {
     liveCatalogCount: trackedCatalogCount,
     registeredLiveListings: trackedCatalogCount,
     newProductPreparationEndpoint: "/api/products/prepare",
-    etsyWrites: "DISABLED_UNTIL_NEW_EXACT_OPERATION"
+    etsyWrites: "DISABLED_UNTIL_NEW_EXACT_OPERATION",
+    productPlanStore: {
+      repository: Boolean(process.env.DATABASE_URL?.trim()) ? "NEON_POSTGRES" : "MEMORY_FALLBACK",
+      durable: Boolean(process.env.DATABASE_URL?.trim()),
+      databaseConfigured: Boolean(process.env.DATABASE_URL?.trim())
+    }
   });
 }

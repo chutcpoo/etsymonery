@@ -4,6 +4,7 @@ import { etsyApiHeaders } from "../../../../../../../lib/etsy";
 import { fetchEtsyReadWithRetry } from "../../../../../../../lib/etsy-http";
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 import { getEtsySellerStateSnapshot } from "../../../../../../../lib/etsy-seller-state-reconciliation";
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 import {
   PDT_BIPC_003_V1_BUYER_FILES,
   PDT_BIPC_003_V1_DESCRIPTION,
@@ -101,6 +102,10 @@ async function uploadVideo(token:string,bytes:Buffer){
 async function sleep(ms:number){await new Promise(r=>setTimeout(r,ms));}
 
 export async function GET(request:Request){
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-BIPC-003", "BIPC_003_VIDEO_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const url=new URL(request.url);
   const action=url.searchParams.get("action")??"plan";
 

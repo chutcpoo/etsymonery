@@ -114,9 +114,24 @@ export class DurableProductPlanStore implements PlanStorage {
   }
 
   /**
-   * TASK 2 — FAIL CLOSED ON PERSISTENCE:
-   * QC PASS → persist frozen plan → verify readback → verify stored SHA → verify stored status → return PLAN_APPROVED.
-   * If DB write or readback verification fails, throws PLAN_APPROVAL_FAILED.
+   * BLOCKER 2 — TWO-PHASE ATOMIC APPROVAL (FAIL CLOSED):
+   *
+   * Phase 1 — Intent: Write PLAN_APPROVAL_PENDING to durable store.
+   *   This marks that an approval attempt is in progress.
+   *   If anything fails from here, a compensation write is attempted
+   *   to set the record to PLAN_BLOCKED (never PLAN_APPROVED).
+   *
+   * Phase 2 — Commit: Write PLAN_APPROVED with full field set.
+   *   Immediately read back from store and verify ALL fields:
+   *     - status === "PLAN_APPROVED"
+   *     - planSha256 exact match
+   *     - productId exact match
+   *     - planVersion exact match
+   *     - approvedAt is present
+   *   If ANY field mismatches → compensate (write PLAN_BLOCKED) → throw.
+   *
+   * A failed approval can NEVER leave durable state as PLAN_APPROVED.
+   * Compensation errors are propagated, not swallowed.
    */
   async approvePlan(planId: string): Promise<FrozenProductPlan> {
     const record = await this.repository.load(planId);
@@ -127,62 +142,115 @@ export class DurableProductPlanStore implements PlanStorage {
     assertNoSecretFields(record.plan);
 
     const qcResult = evaluateProductCreationPlanQC(record.plan);
-    record.qcResult = qcResult;
-    record.planSha256 = computePlanSha256(record.plan);
+    const frozenSha = computePlanSha256(record.plan);
 
     if (!qcResult.passed) {
-      record.status = qcResult.status;
-      await this.repository.save(record).catch(() => {});
+      const rejectedRecord: FrozenProductPlan = {
+        ...record,
+        qcResult,
+        planSha256: frozenSha,
+        status: qcResult.status
+      };
+      await this.repository.save(rejectedRecord).catch(() => {});
       throw new Error(
         `CANNOT_APPROVE_PLAN: QC status is ${qcResult.status}. ${qcResult.issues.map((i) => i.message).join(" | ")}`
       );
     }
 
-    const approvedRecord: FrozenProductPlan = {
+    // Phase 1: Write PLAN_APPROVAL_PENDING — signals intent, prevents
+    // concurrent approval races. If this write fails we never claimed APPROVED.
+    const pendingRecord: FrozenProductPlan = {
       ...record,
-      status: "PLAN_APPROVED",
-      approvedAt: new Date().toISOString()
+      qcResult,
+      planSha256: frozenSha,
+      status: "PLAN_APPROVAL_PENDING",
+      approvedAt: null
     };
 
-    // 1. Persist to durable store
     try {
-      await this.repository.save(approvedRecord);
-    } catch (saveError) {
+      await this.repository.save(pendingRecord);
+    } catch (pendingError) {
       throw new Error(
-        `PLAN_APPROVAL_FAILED:PERSISTENCE_WRITE_FAILED: ${saveError instanceof Error ? saveError.message : "Database write error"}`
+        `PLAN_APPROVAL_FAILED:PENDING_WRITE_FAILED: ${pendingError instanceof Error ? pendingError.message : "Database write error"}`
       );
     }
 
-    // 2. Immediate readback verification (TASK 2)
-    let readback: FrozenProductPlan | null = null;
+    // Helper: compensate by writing PLAN_BLOCKED so durable state is never
+    // left as PLAN_APPROVED or PLAN_APPROVAL_PENDING after a failure.
+    const compensate = async (reason: string): Promise<never> => {
+      const blockedRecord: FrozenProductPlan = {
+        ...pendingRecord,
+        status: "PLAN_BLOCKED",
+        approvedAt: null
+      };
+      let compensationError: unknown;
+      try {
+        await this.repository.save(blockedRecord);
+      } catch (compErr) {
+        compensationError = compErr;
+      }
+      const suffix = compensationError
+        ? ` | COMPENSATION_WRITE_FAILED: ${compensationError instanceof Error ? compensationError.message : String(compensationError)}`
+        : "";
+      throw new Error(`PLAN_APPROVAL_FAILED:${reason}${suffix}`);
+    };
+
+    // Phase 2: Write PLAN_APPROVED with full field set.
+    const approvedAt = new Date().toISOString();
+    const approvedRecord: FrozenProductPlan = {
+      ...pendingRecord,
+      status: "PLAN_APPROVED",
+      approvedAt
+    };
+
+    try {
+      await this.repository.save(approvedRecord);
+    } catch (saveError) {
+      return compensate(
+        `PERSISTENCE_WRITE_FAILED: ${saveError instanceof Error ? saveError.message : "Database write error"}`
+      );
+    }
+
+    // Phase 2 readback — verify ALL fields inside same commit boundary.
+    let readback: FrozenProductPlan | null;
     try {
       readback = await this.repository.load(planId);
     } catch (readError) {
-      throw new Error(
-        `PLAN_APPROVAL_FAILED:PERSISTENCE_READBACK_FAILED: ${readError instanceof Error ? readError.message : "Database read error"}`
+      return compensate(
+        `PERSISTENCE_READBACK_FAILED: ${readError instanceof Error ? readError.message : "Database read error"}`
       );
     }
 
     if (!readback) {
-      throw new Error("PLAN_APPROVAL_FAILED:PERSISTENCE_READBACK_NOT_FOUND");
+      return compensate("PERSISTENCE_READBACK_NOT_FOUND");
     }
 
     if (readback.status !== "PLAN_APPROVED") {
-      throw new Error(
-        `PLAN_APPROVAL_FAILED:PERSISTENCE_STATUS_MISMATCH: Stored status is "${readback.status}", expected "PLAN_APPROVED"`
+      return compensate(
+        `PERSISTENCE_STATUS_MISMATCH: Stored status is "${readback.status}", expected "PLAN_APPROVED"`
       );
     }
 
     if (readback.planSha256 !== approvedRecord.planSha256) {
-      throw new Error(
-        `PLAN_APPROVAL_FAILED:PERSISTENCE_SHA_MISMATCH: Stored SHA "${readback.planSha256}" does not match approved SHA "${approvedRecord.planSha256}"`
+      return compensate(
+        `PERSISTENCE_SHA_MISMATCH: Stored SHA "${readback.planSha256}" does not match approved SHA "${approvedRecord.planSha256}"`
       );
     }
 
     if (readback.productId !== approvedRecord.productId) {
-      throw new Error(
-        `PLAN_APPROVAL_FAILED:PERSISTENCE_PRODUCT_MISMATCH: Stored product "${readback.productId}" does not match "${approvedRecord.productId}"`
+      return compensate(
+        `PERSISTENCE_PRODUCT_MISMATCH: Stored product "${readback.productId}" does not match "${approvedRecord.productId}"`
       );
+    }
+
+    if (readback.planVersion !== approvedRecord.planVersion) {
+      return compensate(
+        `PERSISTENCE_VERSION_MISMATCH: Stored version ${readback.planVersion} does not match ${approvedRecord.planVersion}`
+      );
+    }
+
+    if (!readback.approvedAt) {
+      return compensate("PERSISTENCE_APPROVED_AT_MISSING: approvedAt must be set on PLAN_APPROVED record");
     }
 
     return structuredClone(readback);

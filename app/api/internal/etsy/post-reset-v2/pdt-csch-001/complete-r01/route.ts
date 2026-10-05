@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { etsyApiHeaders } from "../../../../../../../lib/etsy";
 import { getValidEtsyAccessToken } from "../../../../../../../lib/etsy-auth";
 
+import { enforceBuildGateForRoute } from "../../../../../../../lib/product-creation-plan";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -64,6 +65,10 @@ async function uploadVideo(token: string, spec: Spec, b: Buffer) { const f = new
 async function patchListing(token: string, params: Record<string, string>) { const body = new URLSearchParams(params); const r = await fetch(`https://api.etsy.com/v3/application/shops/${SHOP_ID}/listings/${LISTING_ID}`, { method: "PATCH", headers: { ...etsyApiHeaders(token), "content-type": "application/x-www-form-urlencoded" }, body, cache: "no-store" }); if (!r.ok) throw new Error(`LISTING_PATCH_HTTP_${r.status}`); return json(r); }
 
 export async function GET() {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-CSCH-001", "CSCH_001_COMPLETE_R01");
+  if (_buildGateBlock) return _buildGateBlock;
+
   try {
     const token = await getValidEtsyAccessToken();
     const l = await listing(token); await sleep(650);
@@ -75,6 +80,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-CSCH-001", "CSCH_001_COMPLETE_R01_POST");
+  if (_buildGateBlock) return _buildGateBlock;
+
   const ae = authError(request); if (ae) return NextResponse.json({ status: "BLOCKED_FAIL_CLOSED", error: ae, ETSY_WRITE_COUNT: 0 }, { status: 403 });
   let writes = 0;
   try {

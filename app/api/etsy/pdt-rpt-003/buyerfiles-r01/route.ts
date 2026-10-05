@@ -9,6 +9,7 @@ import { verifyEtsyReadBackIdentity, type EtsyReadBackObservation } from "../../
 import { getEtsySellerStateSnapshot } from "../../../../../lib/etsy-seller-state-reconciliation";
 import { NeonOperationLedgerRepository } from "../../../../../lib/operation-ledger";
 
+import { enforceBuildGateForRoute } from "../../../../../lib/product-creation-plan";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 
@@ -80,6 +81,10 @@ async function plan(){
 }
 
 export async function GET(request:Request){
+  // BLOCKER 1 — CENTRAL BUILD GATE (verifies plan approval; LEGACY_EXEMPT passes through)
+  const _buildGateBlock = await enforceBuildGateForRoute("PDT-RPT-003", "RPT_003_BUYERFILES_R01_PUBLIC");
+  if (_buildGateBlock) return _buildGateBlock;
+
  const u=new URL(request.url);
  if(u.searchParams.get("action")!=="execute"){
    try{return NextResponse.json(await plan(),{headers:{"cache-control":"no-store"}});}catch(e){return NextResponse.json({status:"PLAN_BLOCKED",error:e instanceof Error?e.message:"UNKNOWN",ETSY_WRITE_COUNT:0},{status:409,headers:{"cache-control":"no-store"}});}
