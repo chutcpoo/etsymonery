@@ -16,7 +16,7 @@ export interface PlanStorage {
   getPlan(planId: string): Promise<FrozenProductPlan | null>;
   getPlanByProductId(productId: string): Promise<FrozenProductPlan | null>;
   runQC(planId: string): Promise<FrozenProductPlan>;
-  approvePlan(planId: string): Promise<FrozenProductPlan>;
+  approvePlan(planId: string, hooks?: import("./repository").ApprovalTestHooks): Promise<FrozenProductPlan>;
   checkStaleness(
     planId: string,
     currentPlanContent?: ProductCreationPlan
@@ -114,147 +114,26 @@ export class DurableProductPlanStore implements PlanStorage {
   }
 
   /**
-   * BLOCKER 2 — TWO-PHASE ATOMIC APPROVAL (FAIL CLOSED):
+   * BLOCKER 2 — REAL TRANSACTIONAL ATOMIC APPROVAL (FAIL-CLOSED):
    *
-   * Phase 1 — Intent: Write PLAN_APPROVAL_PENDING to durable store.
-   *   This marks that an approval attempt is in progress.
-   *   If anything fails from here, a compensation write is attempted
-   *   to set the record to PLAN_BLOCKED (never PLAN_APPROVED).
+   * Executes atomic approval within a single transaction boundary:
+   *   BEGIN -> SELECT ... FOR UPDATE -> QC check -> SHA computation ->
+   *   write PLAN_APPROVAL_PENDING -> write PLAN_APPROVED ->
+   *   in-transaction readback verification -> COMMIT / ROLLBACK.
    *
-   * Phase 2 — Commit: Write PLAN_APPROVED with full field set.
-   *   Immediately read back from store and verify ALL fields:
-   *     - status === "PLAN_APPROVED"
-   *     - planSha256 exact match
-   *     - productId exact match
-   *     - planVersion exact match
-   *     - approvedAt is present
-   *   If ANY field mismatches → compensate (write PLAN_BLOCKED) → throw.
-   *
-   * A failed approval can NEVER leave durable state as PLAN_APPROVED.
-   * Compensation errors are propagated, not swallowed.
+   * If ANY assertion, check, or step fails: ROLLBACK is executed.
+   * Durable state is NEVER left as PLAN_APPROVED or partial PLAN_APPROVAL_PENDING residue.
    */
-  async approvePlan(planId: string): Promise<FrozenProductPlan> {
-    const record = await this.repository.load(planId);
-    if (!record) {
+  async approvePlan(planId: string, hooks?: import("./repository").ApprovalTestHooks): Promise<FrozenProductPlan> {
+    const existing = await this.repository.load(planId);
+    if (!existing) {
       throw new Error(`PRODUCT_PLAN_NOT_FOUND:${planId}`);
     }
+    assertNoSecretFields(existing.plan);
 
-    assertNoSecretFields(record.plan);
-
-    const qcResult = evaluateProductCreationPlanQC(record.plan);
-    const frozenSha = computePlanSha256(record.plan);
-
-    if (!qcResult.passed) {
-      const rejectedRecord: FrozenProductPlan = {
-        ...record,
-        qcResult,
-        planSha256: frozenSha,
-        status: qcResult.status
-      };
-      await this.repository.save(rejectedRecord).catch(() => {});
-      throw new Error(
-        `CANNOT_APPROVE_PLAN: QC status is ${qcResult.status}. ${qcResult.issues.map((i) => i.message).join(" | ")}`
-      );
-    }
-
-    // Phase 1: Write PLAN_APPROVAL_PENDING — signals intent, prevents
-    // concurrent approval races. If this write fails we never claimed APPROVED.
-    const pendingRecord: FrozenProductPlan = {
-      ...record,
-      qcResult,
-      planSha256: frozenSha,
-      status: "PLAN_APPROVAL_PENDING",
-      approvedAt: null
-    };
-
-    try {
-      await this.repository.save(pendingRecord);
-    } catch (pendingError) {
-      throw new Error(
-        `PLAN_APPROVAL_FAILED:PENDING_WRITE_FAILED: ${pendingError instanceof Error ? pendingError.message : "Database write error"}`
-      );
-    }
-
-    // Helper: compensate by writing PLAN_BLOCKED so durable state is never
-    // left as PLAN_APPROVED or PLAN_APPROVAL_PENDING after a failure.
-    const compensate = async (reason: string): Promise<never> => {
-      const blockedRecord: FrozenProductPlan = {
-        ...pendingRecord,
-        status: "PLAN_BLOCKED",
-        approvedAt: null
-      };
-      let compensationError: unknown;
-      try {
-        await this.repository.save(blockedRecord);
-      } catch (compErr) {
-        compensationError = compErr;
-      }
-      const suffix = compensationError
-        ? ` | COMPENSATION_WRITE_FAILED: ${compensationError instanceof Error ? compensationError.message : String(compensationError)}`
-        : "";
-      throw new Error(`PLAN_APPROVAL_FAILED:${reason}${suffix}`);
-    };
-
-    // Phase 2: Write PLAN_APPROVED with full field set.
-    const approvedAt = new Date().toISOString();
-    const approvedRecord: FrozenProductPlan = {
-      ...pendingRecord,
-      status: "PLAN_APPROVED",
-      approvedAt
-    };
-
-    try {
-      await this.repository.save(approvedRecord);
-    } catch (saveError) {
-      return compensate(
-        `PERSISTENCE_WRITE_FAILED: ${saveError instanceof Error ? saveError.message : "Database write error"}`
-      );
-    }
-
-    // Phase 2 readback — verify ALL fields inside same commit boundary.
-    let readback: FrozenProductPlan | null;
-    try {
-      readback = await this.repository.load(planId);
-    } catch (readError) {
-      return compensate(
-        `PERSISTENCE_READBACK_FAILED: ${readError instanceof Error ? readError.message : "Database read error"}`
-      );
-    }
-
-    if (!readback) {
-      return compensate("PERSISTENCE_READBACK_NOT_FOUND");
-    }
-
-    if (readback.status !== "PLAN_APPROVED") {
-      return compensate(
-        `PERSISTENCE_STATUS_MISMATCH: Stored status is "${readback.status}", expected "PLAN_APPROVED"`
-      );
-    }
-
-    if (readback.planSha256 !== approvedRecord.planSha256) {
-      return compensate(
-        `PERSISTENCE_SHA_MISMATCH: Stored SHA "${readback.planSha256}" does not match approved SHA "${approvedRecord.planSha256}"`
-      );
-    }
-
-    if (readback.productId !== approvedRecord.productId) {
-      return compensate(
-        `PERSISTENCE_PRODUCT_MISMATCH: Stored product "${readback.productId}" does not match "${approvedRecord.productId}"`
-      );
-    }
-
-    if (readback.planVersion !== approvedRecord.planVersion) {
-      return compensate(
-        `PERSISTENCE_VERSION_MISMATCH: Stored version ${readback.planVersion} does not match ${approvedRecord.planVersion}`
-      );
-    }
-
-    if (!readback.approvedAt) {
-      return compensate("PERSISTENCE_APPROVED_AT_MISSING: approvedAt must be set on PLAN_APPROVED record");
-    }
-
-    return structuredClone(readback);
+    return this.repository.approveAtomic(planId, hooks);
   }
+
 
   async checkStaleness(
     planId: string,

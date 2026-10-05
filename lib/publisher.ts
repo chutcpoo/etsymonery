@@ -244,3 +244,22 @@ export function buildPublishPlan(pack: ProductPack): PublishPlan {
     etsyDraftWritesEnabled
   };
 }
+
+/**
+ * Centrally gated publish plan orchestrator (BLOCKER 3):
+ * Directly asserts approved product plan before creating any publish plan
+ * or Etsy release candidate.
+ */
+export async function buildGatedPublishPlan(
+  pack: ProductPack,
+  options?: { store?: import("./product-creation-plan").PlanStorage }
+): Promise<PublishPlan> {
+  const { assertApprovedProductPlanForBuild } = await import("./product-creation-plan");
+  await assertApprovedProductPlanForBuild({
+    productId: pack.productId,
+    builder: "PUBLISH_PLAN_ORCHESTRATOR",
+    store: options?.store
+  });
+  return buildPublishPlan(pack);
+}
+

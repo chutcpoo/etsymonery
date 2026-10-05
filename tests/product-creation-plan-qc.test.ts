@@ -463,63 +463,37 @@ test("Persistence 4: getPlanByProductId works after fresh store instance", async
   assert.equal(byProduct?.status, "PLAN_APPROVED");
 });
 
-test("Persistence 5: DB write failure blocks approval (fail closed)", async () => {
-  // Mock failing repository on save
-  const failingRepo: ProductCreationPlanRepository = {
-    async save(record: FrozenProductPlan) {
-      if (record.status === "PLAN_APPROVED") {
-        throw new Error("DATABASE_CONNECTION_TIMEOUT");
-      }
-    },
-    async load(_id: string) {
-      return {
-        planId: "PLAN-PDT-CBP-004-V1",
-        planVersion: 1,
-        productId: "PDT-CBP-004",
-        status: "DRAFT",
-        planSha256: "some-hash",
-        approvedAt: null,
-        qcResult: { status: "PLAN_APPROVED", passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
-        plan: createValidBasePlan()
-      };
-    },
-    async loadByProductId() { return null; },
-    async list() { return []; }
-  };
+test("Persistence 5: DB failure blocks approval and rolls back (fail closed)", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
 
-  const store = new DurableProductPlanStore(failingRepo);
   await assert.rejects(
-    async () => store.approvePlan("PLAN-PDT-CBP-004-V1"),
-    (err: Error) => err.message.includes("PLAN_APPROVAL_FAILED:PERSISTENCE_WRITE_FAILED")
+    async () => store.approvePlan(saved.planId, { injectedFailure: "BEFORE_COMMIT" }),
+    (err: Error) => err.message.includes("PLAN_APPROVAL_INJECTED_FAILURE:BEFORE_COMMIT")
   );
+
+  const after = await store.getPlan(saved.planId);
+  assert.equal(after?.status, "DRAFT", "Status must remain DRAFT after rolled back approval");
+  assert.equal(after?.approvedAt, null);
 });
 
-test("Persistence 6: DB readback mismatch blocks approval (fail closed)", async () => {
-  // Mock repository that corrupts the record on readback
-  const corruptingRepo: ProductCreationPlanRepository = {
-    async save() {},
-    async load(_id: string) {
-      return {
-        planId: "PLAN-PDT-CBP-004-V1",
-        planVersion: 1,
-        productId: "PDT-CBP-004",
-        status: "PLAN_BLOCKED", // Corrupted status!
-        planSha256: "corrupted-hash",
-        approvedAt: null,
-        qcResult: { status: "PLAN_APPROVED", passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
-        plan: createValidBasePlan()
-      };
-    },
-    async loadByProductId() { return null; },
-    async list() { return []; }
-  };
+test("Persistence 6: DB readback mismatch blocks approval and rolls back (fail closed)", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
 
-  const store = new DurableProductPlanStore(corruptingRepo);
   await assert.rejects(
-    async () => store.approvePlan("PLAN-PDT-CBP-004-V1"),
-    (err: Error) => err.message.includes("PLAN_APPROVAL_FAILED:PERSISTENCE_STATUS_MISMATCH")
+    async () => store.approvePlan(saved.planId, { injectedFailure: "SHA_MISMATCH" }),
+    (err: Error) => err.message.includes("PLAN_APPROVAL_VERIFICATION_FAILED:SHA_MISMATCH")
   );
+
+  const after = await store.getPlan(saved.planId);
+  assert.equal(after?.status, "DRAFT", "Status must remain DRAFT after rolled back approval");
 });
+
 
 test("Persistence 7: stored SHA mismatch blocks build", async () => {
   const repo = new MemoryProductCreationPlanRepository();
@@ -911,303 +885,185 @@ test("Security 31: secret keys in plan JSON throw SECURITY_SECRET_FIELD_FORBIDDE
 });
 
 // =============================================================
-// SECTION 5: BLOCKER 2 — TWO-PHASE ATOMIC APPROVAL TESTS
+// SECTION 5: BLOCKER 2 — REAL TRANSACTIONAL FAIL-CLOSED APPROVAL TESTS
 // =============================================================
 
-test("Atomic Approval 32: successful approval sets PLAN_APPROVED with all fields verified", async () => {
+test("Blocker 2 - Test 1: approved write succeeds + readback fails → DB not approved", async () => {
   const repo = new MemoryProductCreationPlanRepository();
   const store = new DurableProductPlanStore(repo);
   const plan = createValidBasePlan();
   const saved = await store.savePlan(plan);
-  const approved = await store.approvePlan(saved.planId);
 
+  await assert.rejects(
+    async () => store.approvePlan(saved.planId, { injectedFailure: "READBACK_FAIL" }),
+    (err: Error) => err.message.includes("PLAN_APPROVAL_VERIFICATION_FAILED")
+  );
+
+  const after = await store.getPlan(saved.planId);
+  assert.notEqual(after?.status, "PLAN_APPROVED", "Durable DB must NEVER be PLAN_APPROVED when readback fails");
+  assert.equal(after?.status, "DRAFT", "Durable DB must remain in previous safe status DRAFT");
+});
+
+test("Blocker 2 - Test 2: approved write succeeds + SHA mismatch → DB not approved", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
+
+  await assert.rejects(
+    async () => store.approvePlan(saved.planId, { injectedFailure: "SHA_MISMATCH" }),
+    (err: Error) => err.message.includes("PLAN_APPROVAL_VERIFICATION_FAILED:SHA_MISMATCH")
+  );
+
+  const after = await store.getPlan(saved.planId);
+  assert.notEqual(after?.status, "PLAN_APPROVED", "Durable DB must NEVER be PLAN_APPROVED when SHA mismatches");
+  assert.equal(after?.status, "DRAFT");
+});
+
+test("Blocker 2 - Test 3: approved write succeeds + product mismatch → DB not approved", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
+
+  await assert.rejects(
+    async () => store.approvePlan(saved.planId, { injectedFailure: "PRODUCT_MISMATCH" }),
+    (err: Error) => err.message.includes("PLAN_APPROVAL_VERIFICATION_FAILED:PRODUCT_MISMATCH")
+  );
+
+  const after = await store.getPlan(saved.planId);
+  assert.notEqual(after?.status, "PLAN_APPROVED", "Durable DB must NEVER be PLAN_APPROVED on product mismatch");
+  assert.equal(after?.status, "DRAFT");
+});
+
+test("Blocker 2 - Test 4: approved write succeeds + version mismatch → DB not approved", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
+
+  await assert.rejects(
+    async () => store.approvePlan(saved.planId, { injectedFailure: "VERSION_MISMATCH" }),
+    (err: Error) => err.message.includes("PLAN_APPROVAL_VERIFICATION_FAILED:VERSION_MISMATCH")
+  );
+
+  const after = await store.getPlan(saved.planId);
+  assert.notEqual(after?.status, "PLAN_APPROVED", "Durable DB must NEVER be PLAN_APPROVED on version mismatch");
+  assert.equal(after?.status, "DRAFT");
+});
+
+test("Blocker 2 - Test 5: approved write succeeds + approvedAt missing → DB not approved", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
+
+  await assert.rejects(
+    async () => store.approvePlan(saved.planId, { injectedFailure: "APPROVED_AT_MISSING" }),
+    (err: Error) => err.message.includes("PLAN_APPROVAL_VERIFICATION_FAILED:APPROVED_AT_MISSING")
+  );
+
+  const after = await store.getPlan(saved.planId);
+  assert.notEqual(after?.status, "PLAN_APPROVED", "Durable DB must NEVER be PLAN_APPROVED when approvedAt is missing");
+  assert.equal(after?.status, "DRAFT");
+});
+
+test("Blocker 2 - Test 6: injected failure before COMMIT → rollback confirmed", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
+
+  await assert.rejects(
+    async () => store.approvePlan(saved.planId, { injectedFailure: "BEFORE_COMMIT" }),
+    (err: Error) => err.message.includes("PLAN_APPROVAL_INJECTED_FAILURE:BEFORE_COMMIT")
+  );
+
+  const after = await store.getPlan(saved.planId);
+  assert.equal(after?.status, "DRAFT", "Rollback confirmed: status rolled back to DRAFT");
+  assert.equal(after?.approvedAt, null, "Rollback confirmed: approvedAt is null");
+});
+
+test("Blocker 2 - Test 7: fresh repository instance after failed approval → not approved", async () => {
+  const sharedRepo = new MemoryProductCreationPlanRepository();
+  const store1 = new DurableProductPlanStore(sharedRepo);
+  const plan = createValidBasePlan();
+  const saved = await store1.savePlan(plan);
+
+  await assert.rejects(
+    async () => store1.approvePlan(saved.planId, { injectedFailure: "BEFORE_COMMIT" }),
+    (err: Error) => err.message.includes("BEFORE_COMMIT")
+  );
+
+  // Fresh repository instance / fresh store reader
+  const freshStore = new DurableProductPlanStore(sharedRepo);
+  const freshRecord = await freshStore.getPlan(saved.planId);
+  assert.notEqual(freshRecord?.status, "PLAN_APPROVED", "Fresh instance must observe NOT APPROVED");
+  assert.equal(freshRecord?.status, "DRAFT", "Fresh instance must observe previous safe state DRAFT");
+});
+
+test("Blocker 2 - Test 8: successful transaction → PLAN_APPROVED", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
+
+  const approved = await store.approvePlan(saved.planId);
   assert.equal(approved.status, "PLAN_APPROVED");
   assert.ok(approved.approvedAt, "approvedAt must be set");
   assert.ok(approved.planSha256, "planSha256 must be set");
   assert.equal(approved.productId, plan.productId);
   assert.equal(approved.planVersion, 1);
+
+  const reloaded = await store.getPlan(saved.planId);
+  assert.equal(reloaded?.status, "PLAN_APPROVED");
+  assert.equal(reloaded?.approvedAt, approved.approvedAt);
 });
 
-test("Atomic Approval 33: pending write failure → never approved (no PLAN_APPROVED in store)", async () => {
-  // Simulate write failure on PLAN_APPROVAL_PENDING write
-  let writeCount = 0;
-  const failOnPendingRepo: ProductCreationPlanRepository = {
-    async save(record: FrozenProductPlan) {
-      writeCount++;
-      if (record.status === "PLAN_APPROVAL_PENDING") {
-        throw new Error("SIMULATED_PENDING_WRITE_FAILURE");
-      }
-    },
-    async load(_id: string) {
-      return {
-        planId: "PLAN-PDT-CBP-004-V1",
-        planVersion: 1,
-        productId: "PDT-CBP-004",
-        status: "DRAFT" as const,
-        planSha256: "initial-hash",
-        approvedAt: null,
-        qcResult: { status: "PLAN_APPROVED" as const, passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
-        plan: createValidBasePlan()
-      };
-    },
-    async loadByProductId() { return null; },
-    async list() { return []; }
-  };
+test("Blocker 2 - Test 9: concurrent approval attempts → deterministic safe result", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
 
-  const store = new DurableProductPlanStore(failOnPendingRepo);
-  await assert.rejects(
-    async () => store.approvePlan("PLAN-PDT-CBP-004-V1"),
-    (err: Error) => err.message.includes("PLAN_APPROVAL_FAILED") && err.message.includes("PENDING_WRITE_FAILED")
-  );
+  // Launch 5 concurrent approval attempts
+  const results = await Promise.allSettled([
+    store.approvePlan(saved.planId),
+    store.approvePlan(saved.planId),
+    store.approvePlan(saved.planId),
+    store.approvePlan(saved.planId),
+    store.approvePlan(saved.planId)
+  ]);
+
+  // All must either succeed with PLAN_APPROVED or reject safely
+  const fulfilled = results.filter((r): r is PromiseFulfilledResult<FrozenProductPlan> => r.status === "fulfilled");
+  assert.ok(fulfilled.length >= 1, "At least one concurrent approval must succeed");
+  for (const f of fulfilled) {
+    assert.equal(f.value.status, "PLAN_APPROVED");
+    assert.equal(f.value.productId, plan.productId);
+  }
+
+  const finalPlan = await store.getPlan(saved.planId);
+  assert.equal(finalPlan?.status, "PLAN_APPROVED", "Deterministic final state must be PLAN_APPROVED");
 });
 
-test("Atomic Approval 34: approved write failure → compensation sets PLAN_BLOCKED, not PLAN_APPROVED", async () => {
-  let savedRecords: FrozenProductPlan[] = [];
-  const failOnApprovedRepo: ProductCreationPlanRepository = {
-    async save(record: FrozenProductPlan) {
-      if (record.status === "PLAN_APPROVED") {
-        throw new Error("SIMULATED_APPROVED_WRITE_FAILURE");
-      }
-      savedRecords.push(structuredClone(record));
-    },
-    async load(_id: string) {
-      if (savedRecords.length === 0) {
-        return {
-          planId: "PLAN-PDT-CBP-004-V1",
-          planVersion: 1,
-          productId: "PDT-CBP-004",
-          status: "DRAFT" as const,
-          planSha256: "initial-hash",
-          approvedAt: null,
-          qcResult: { status: "PLAN_APPROVED" as const, passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
-          plan: createValidBasePlan()
-        };
-      }
-      return savedRecords[savedRecords.length - 1];
-    },
-    async loadByProductId() { return null; },
-    async list() { return []; }
-  };
+test("Blocker 2 - Test 10: no partial PLAN_APPROVAL_PENDING residue after rollback", async () => {
+  const repo = new MemoryProductCreationPlanRepository();
+  const store = new DurableProductPlanStore(repo);
+  const plan = createValidBasePlan();
+  const saved = await store.savePlan(plan);
 
-  const store = new DurableProductPlanStore(failOnApprovedRepo);
   await assert.rejects(
-    async () => store.approvePlan("PLAN-PDT-CBP-004-V1"),
-    (err: Error) => err.message.includes("PLAN_APPROVAL_FAILED")
+    async () => store.approvePlan(saved.planId, { injectedFailure: "SHA_MISMATCH" }),
+    (err: Error) => err.message.includes("SHA_MISMATCH")
   );
 
-  // Compensation must have set PLAN_BLOCKED (never PLAN_APPROVED)
-  const finalSaved = savedRecords[savedRecords.length - 1];
-  assert.notEqual(finalSaved?.status, "PLAN_APPROVED", "Durable state must NOT be PLAN_APPROVED after failed approval");
-  assert.equal(finalSaved?.status, "PLAN_BLOCKED", "Compensation must set PLAN_BLOCKED");
+  const after = await store.getPlan(saved.planId);
+  assert.notEqual(after?.status, "PLAN_APPROVAL_PENDING", "NO partial PLAN_APPROVAL_PENDING residue after rollback");
+  assert.notEqual(after?.status, "PLAN_APPROVED", "NO partial PLAN_APPROVED residue after rollback");
+  assert.equal(after?.status, "DRAFT", "Must be rolled back cleanly to previous status DRAFT");
 });
 
-test("Atomic Approval 35: readback missing → compensation sets PLAN_BLOCKED, not PLAN_APPROVED", async () => {
-  let approvedWritten = false;
-  let savedRecords: FrozenProductPlan[] = [];
-
-  const missingReadbackRepo: ProductCreationPlanRepository = {
-    async save(record: FrozenProductPlan) {
-      if (record.status === "PLAN_APPROVED") approvedWritten = true;
-      savedRecords.push(structuredClone(record));
-    },
-    async load(_id: string) {
-      if (!approvedWritten) {
-        return {
-          planId: "PLAN-PDT-CBP-004-V1",
-          planVersion: 1,
-          productId: "PDT-CBP-004",
-          status: "DRAFT" as const,
-          planSha256: "initial-hash",
-          approvedAt: null,
-          qcResult: { status: "PLAN_APPROVED" as const, passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
-          plan: createValidBasePlan()
-        };
-      }
-      return null; // Simulate readback returning null after PLAN_APPROVED write
-    },
-    async loadByProductId() { return null; },
-    async list() { return []; }
-  };
-
-  const store = new DurableProductPlanStore(missingReadbackRepo);
-  await assert.rejects(
-    async () => store.approvePlan("PLAN-PDT-CBP-004-V1"),
-    (err: Error) => err.message.includes("PLAN_APPROVAL_FAILED")
-  );
-
-  const finalSaved = savedRecords[savedRecords.length - 1];
-  assert.notEqual(finalSaved?.status, "PLAN_APPROVED", "Durable state must NOT be PLAN_APPROVED after missing readback");
-  assert.equal(finalSaved?.status, "PLAN_BLOCKED", "Compensation must set PLAN_BLOCKED");
-});
-
-test("Atomic Approval 36: SHA mismatch on readback → compensation sets PLAN_BLOCKED", async () => {
-  let approvedWritten = false;
-  let savedRecords: FrozenProductPlan[] = [];
-
-  const shaMismatchRepo: ProductCreationPlanRepository = {
-    async save(record: FrozenProductPlan) {
-      if (record.status === "PLAN_APPROVED") approvedWritten = true;
-      savedRecords.push(structuredClone(record));
-    },
-    async load(_id: string) {
-      if (!approvedWritten) {
-        return {
-          planId: "PLAN-PDT-CBP-004-V1", planVersion: 1, productId: "PDT-CBP-004",
-          status: "DRAFT" as const, planSha256: "initial", approvedAt: null,
-          qcResult: { status: "PLAN_APPROVED" as const, passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
-          plan: createValidBasePlan()
-        };
-      }
-      return {
-        planId: "PLAN-PDT-CBP-004-V1", planVersion: 1, productId: "PDT-CBP-004",
-        status: "PLAN_APPROVED" as const,
-        planSha256: "CORRUPTED_SHA_MISMATCH_0000000000000000000000000000000000000000", // wrong hash
-        approvedAt: new Date().toISOString(),
-        qcResult: { status: "PLAN_APPROVED" as const, passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
-        plan: createValidBasePlan()
-      };
-    },
-    async loadByProductId() { return null; },
-    async list() { return []; }
-  };
-
-  const store = new DurableProductPlanStore(shaMismatchRepo);
-  await assert.rejects(
-    async () => store.approvePlan("PLAN-PDT-CBP-004-V1"),
-    (err: Error) => err.message.includes("PLAN_APPROVAL_FAILED") && err.message.includes("SHA_MISMATCH")
-  );
-
-  const finalSaved = savedRecords[savedRecords.length - 1];
-  assert.notEqual(finalSaved?.status, "PLAN_APPROVED", "Durable state must NOT remain PLAN_APPROVED after SHA mismatch");
-  assert.equal(finalSaved?.status, "PLAN_BLOCKED", "Compensation must set PLAN_BLOCKED");
-});
-
-test("Atomic Approval 37: product mismatch on readback → compensation sets PLAN_BLOCKED", async () => {
-  let approvedWritten = false;
-  let savedRecords: FrozenProductPlan[] = [];
-  let planSha = "";
-
-  const productMismatchRepo: ProductCreationPlanRepository = {
-    async save(record: FrozenProductPlan) {
-      if (record.status === "PLAN_APPROVED") {
-        approvedWritten = true;
-        planSha = record.planSha256;
-      }
-      savedRecords.push(structuredClone(record));
-    },
-    async load(_id: string) {
-      if (!approvedWritten) {
-        return {
-          planId: "PLAN-PDT-CBP-004-V1", planVersion: 1, productId: "PDT-CBP-004",
-          status: "DRAFT" as const, planSha256: "initial", approvedAt: null,
-          qcResult: { status: "PLAN_APPROVED" as const, passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
-          plan: createValidBasePlan()
-        };
-      }
-      return {
-        planId: "PLAN-PDT-CBP-004-V1", planVersion: 1,
-        productId: "PDT-WRONG-PRODUCT-XXX", // mismatched product ID
-        status: "PLAN_APPROVED" as const,
-        planSha256: planSha, approvedAt: new Date().toISOString(),
-        qcResult: { status: "PLAN_APPROVED" as const, passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
-        plan: createValidBasePlan()
-      };
-    },
-    async loadByProductId() { return null; },
-    async list() { return []; }
-  };
-
-  const store = new DurableProductPlanStore(productMismatchRepo);
-  await assert.rejects(
-    async () => store.approvePlan("PLAN-PDT-CBP-004-V1"),
-    (err: Error) => err.message.includes("PLAN_APPROVAL_FAILED") && err.message.includes("PRODUCT_MISMATCH")
-  );
-
-  const finalSaved = savedRecords[savedRecords.length - 1];
-  assert.notEqual(finalSaved?.status, "PLAN_APPROVED");
-  assert.equal(finalSaved?.status, "PLAN_BLOCKED");
-});
-
-test("Atomic Approval 38: planVersion mismatch on readback → compensation sets PLAN_BLOCKED", async () => {
-  let approvedWritten = false;
-  let savedRecords: FrozenProductPlan[] = [];
-  let planSha = "";
-
-  const versionMismatchRepo: ProductCreationPlanRepository = {
-    async save(record: FrozenProductPlan) {
-      if (record.status === "PLAN_APPROVED") { approvedWritten = true; planSha = record.planSha256; }
-      savedRecords.push(structuredClone(record));
-    },
-    async load(_id: string) {
-      if (!approvedWritten) {
-        return {
-          planId: "PLAN-PDT-CBP-004-V1", planVersion: 1, productId: "PDT-CBP-004",
-          status: "DRAFT" as const, planSha256: "initial", approvedAt: null,
-          qcResult: { status: "PLAN_APPROVED" as const, passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
-          plan: createValidBasePlan()
-        };
-      }
-      return {
-        planId: "PLAN-PDT-CBP-004-V1",
-        planVersion: 99, // mismatched version
-        productId: "PDT-CBP-004",
-        status: "PLAN_APPROVED" as const,
-        planSha256: planSha, approvedAt: new Date().toISOString(),
-        qcResult: { status: "PLAN_APPROVED" as const, passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
-        plan: createValidBasePlan()
-      };
-    },
-    async loadByProductId() { return null; },
-    async list() { return []; }
-  };
-
-  const store = new DurableProductPlanStore(versionMismatchRepo);
-  await assert.rejects(
-    async () => store.approvePlan("PLAN-PDT-CBP-004-V1"),
-    (err: Error) => err.message.includes("PLAN_APPROVAL_FAILED") && err.message.includes("VERSION_MISMATCH")
-  );
-
-  const finalSaved = savedRecords[savedRecords.length - 1];
-  assert.notEqual(finalSaved?.status, "PLAN_APPROVED");
-  assert.equal(finalSaved?.status, "PLAN_BLOCKED");
-});
-
-test("Atomic Approval 39: failure followed by fresh store instance → still not approved", async () => {
-  const sharedRepo = new MemoryProductCreationPlanRepository();
-
-  // Save initial record
-  await sharedRepo.save({
-    planId: "PLAN-PDT-CBP-004-V1", planVersion: 1, productId: "PDT-CBP-004",
-    status: "DRAFT", planSha256: "initial", approvedAt: null,
-    qcResult: { status: "PLAN_APPROVED", passed: true, issues: [], scores: {} as any, evaluatedAt: "" },
-    plan: createValidBasePlan()
-  });
-
-  // Approval that will fail due to status mismatch on readback
-  let readbackCalled = false;
-  const failingReadbackRepo: ProductCreationPlanRepository = {
-    async save(record: FrozenProductPlan) {
-      if (record.status !== "PLAN_BLOCKED" && record.status !== "PLAN_APPROVAL_PENDING") return; // drop PLAN_APPROVED write
-      await sharedRepo.save(record);
-    },
-    async load(id: string) {
-      if (!readbackCalled) { readbackCalled = true; return sharedRepo.load(id); }
-      return null; // second read (readback after PLAN_APPROVED) returns null → triggers compensation
-    },
-    async loadByProductId() { return null; },
-    async list() { return []; }
-  };
-
-  const store = new DurableProductPlanStore(failingReadbackRepo);
-  try {
-    await store.approvePlan("PLAN-PDT-CBP-004-V1");
-  } catch { /* expected */ }
-
-  // Fresh store instance reading from shared repo must NOT see PLAN_APPROVED
-  const freshStore = new DurableProductPlanStore(sharedRepo);
-  const record = await freshStore.getPlan("PLAN-PDT-CBP-004-V1");
-  assert.notEqual(record?.status, "PLAN_APPROVED", "Fresh store must NOT see PLAN_APPROVED after failed approval");
-});
 
 // =============================================================
 // SECTION 6: BLOCKER 3 — NARROW LEGACY POLICY TESTS
@@ -1345,4 +1201,115 @@ test("Global Enforcement 54: PDT-CBEO-004 passes gate only after plan is saved a
   assert.equal(permitted.allowed, true);
   assert.equal(permitted.status, "BUILD_PERMITTED");
 });
+
+test("Global Enforcement 55: prepareNewProductCandidateWithGate blocks non-legacy product without plan", async () => {
+  const { prepareNewProductCandidateWithGate } = await import("../lib/post-reset-platform");
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+
+  const manifest = {
+    productId: "NEW-PRODUCT-001",
+    version: "V1",
+    productName: "New Product",
+    canonicalDriveFileId: "drive-file-001",
+    buyerFiles: ["buyer.xlsx"],
+    galleryFiles: ["01.png"],
+    title: "New Product Spreadsheet",
+    description: "Verified new product prepared after catalog reset.",
+    tags: Array.from({ length: 13 }, (_, i) => `tag ${i + 1}`),
+    priceUsd: 9.99,
+    productTruthVerified: true,
+    testerPass: true,
+    finalQcPass: true
+  };
+
+  // Direct orchestrator call without approved plan → throws BUILD_BLOCKED
+  await assert.rejects(
+    async () => prepareNewProductCandidateWithGate(manifest, { store }),
+    (err: Error) => err.message.includes("BUILD_BLOCKED")
+  );
+
+  // Once plan is created and approved → orchestrator succeeds
+  const plan = { ...createValidBasePlan(), productId: "NEW-PRODUCT-001" };
+  const saved = await store.savePlan(plan);
+  await store.approvePlan(saved.planId);
+
+  const candidate = await prepareNewProductCandidateWithGate(manifest, { store });
+  assert.equal(candidate.status, "PREPARED");
+  assert.equal(candidate.productId, "NEW-PRODUCT-001");
+  assert.equal(candidate.EtsyWriteCount, 0);
+});
+
+test("Global Enforcement 56: buildGatedPublishPlan blocks non-legacy product without plan", async () => {
+  const { buildGatedPublishPlan } = await import("../lib/publisher");
+  const store = new DurableProductPlanStore(new MemoryProductCreationPlanRepository());
+
+  const pack = {
+    productId: "PDT-CBEO-004",
+    title: "Cleaning Business Workbook",
+    description: "Commercial cleaning operations spreadsheet",
+    priceUsd: 14.99,
+    files: ["clean.xlsx"],
+    channels: ["etsy" as const],
+    productTruthVerified: true,
+    tags: Array.from({ length: 13 }, (_, i) => `tag ${i + 1}`),
+    etsy: {
+      taxonomyId: 1001,
+      quantity: 10,
+      whoMade: "i_did" as const,
+      whenMade: "2020_2026",
+      release: {
+        productionBuildFrozen: true,
+        testerPass: true,
+        finalQcPass: true,
+        productionAuthorized: true
+      }
+    }
+  };
+
+  // Direct orchestrator call without plan → throws BUILD_BLOCKED
+  await assert.rejects(
+    async () => buildGatedPublishPlan(pack, { store }),
+    (err: Error) => err.message.includes("BUILD_BLOCKED")
+  );
+
+  // After approval → succeeds
+  const plan = { ...createValidBasePlan(), productId: "PDT-CBEO-004" };
+  const saved = await store.savePlan(plan);
+  await store.approvePlan(saved.planId);
+
+  const publishPlan = await buildGatedPublishPlan(pack, { store });
+  assert.equal(publishPlan.productId, "PDT-CBEO-004");
+  assert.equal(publishPlan.status, "READY");
+});
+
+test("Global Enforcement 57: POST /api/products/prepare route integration blocks unapproved non-legacy candidate", async () => {
+  const { POST: prepareRoute } = await import("../app/api/products/prepare/route");
+
+  const unapprovedReq = new Request("https://autodigitalpublisher.vercel.app/api/products/prepare", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      productId: "NEW-PRODUCT-001",
+      version: "V1",
+      productName: "New Product",
+      canonicalDriveFileId: "drive-file-001",
+      buyerFiles: ["buyer.xlsx"],
+      galleryFiles: ["01.png"],
+      title: "New Product Spreadsheet",
+      description: "Verified new product prepared after catalog reset.",
+      tags: Array.from({ length: 13 }, (_, i) => `tag ${i + 1}`),
+      priceUsd: 9.99,
+      productTruthVerified: true,
+      testerPass: true,
+      finalQcPass: true
+    })
+  });
+
+  const res = await prepareRoute(unapprovedReq);
+  assert.equal(res.status, 409, "Must return HTTP 409 when plan gate fails");
+  const data = await res.json();
+  assert.equal(data.status, "BUILD_BLOCKED");
+  assert.equal(data.EtsyWriteCount, 0);
+});
+
 
