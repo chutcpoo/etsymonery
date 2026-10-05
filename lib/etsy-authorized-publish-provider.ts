@@ -77,7 +77,7 @@ export class EtsyAuthorizedPublishProvider implements AuthorizedPublishProvider 
     if (!/^\d+$/.test(normalizedShopId)) throw new Error("INVALID_ETSY_PUBLISH_SHOP_ID");
     this.shopId = normalizedShopId;
     this.fetchImpl = dependencies.fetchImpl ?? fetch;
-    this.getAccessToken = dependencies.getAccessToken ?? getValidEtsyAccessToken;
+    this.getAccessToken = dependencies.getAccessToken ?? (() => getValidEtsyAccessToken(["listings_r", "listings_w"]));
     this.readRetryOptions = dependencies.readRetryOptions ?? {};
   }
 

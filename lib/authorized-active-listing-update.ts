@@ -260,7 +260,7 @@ export async function handleAuthorizedActiveListingUpdate(
   }
 
   const fetchImpl = runtime.fetchImpl ?? fetch;
-  const getAccessToken = runtime.getAccessToken ?? getValidEtsyAccessToken;
+  const getAccessToken = runtime.getAccessToken ?? (() => getValidEtsyAccessToken(["listings_r", "listings_w"]));
   const accessToken = await getAccessToken();
   const readUrl = `https://api.etsy.com/v3/application/listings/${input.listingId}`;
   const patchUrl = `https://api.etsy.com/v3/application/shops/${input.shopId}/listings/${input.listingId}`;

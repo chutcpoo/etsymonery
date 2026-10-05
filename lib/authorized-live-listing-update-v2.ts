@@ -195,7 +195,7 @@ export async function handleGenericLiveListingUpdate(
   if (begun.status === "REPLAY" && begun.record.status === "SUCCEEDED" && begun.record.receipt) return success("REPLAY", begun.record);
 
   const fetchImpl = runtime.fetchImpl ?? fetch;
-  const accessToken = await (runtime.getAccessToken ?? getValidEtsyAccessToken)();
+  const accessToken = await (runtime.getAccessToken ?? (() => getValidEtsyAccessToken(["listings_r", "listings_w"])))();
   const readUrl = `https://api.etsy.com/v3/application/listings/${input.listingId}`;
   const patchUrl = `https://api.etsy.com/v3/application/shops/${input.shopId}/listings/${input.listingId}`;
 

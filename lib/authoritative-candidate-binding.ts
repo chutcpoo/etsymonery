@@ -81,3 +81,22 @@ export function validateAuthoritativeCandidateBinding(
     authoritativeCandidate: structuredClone(binding)
   };
 }
+
+/** Asset-source-neutral binding for manifests with optional video. Legacy Drive
+ * bindings above retain their original validation and required video contract. */
+export function validateReleaseCandidateBinding(
+  binding: { candidateId: string; candidateFingerprint: string; listingFingerprint: string; evidenceId: string },
+  input: { candidateId: string; candidateFingerprint: string; listingFingerprint: string;
+    testerPass: { pass: boolean; candidateFingerprint: string; evidenceId: string };
+    finalQcPass: { pass: boolean; candidateFingerprint: string; evidenceId: string } }
+) {
+  const errors: string[] = [];
+  if (binding.candidateId !== input.candidateId || binding.candidateFingerprint !== input.candidateFingerprint ||
+    binding.listingFingerprint !== input.listingFingerprint) errors.push("AUTHORITATIVE_FINGERPRINT_MISMATCH");
+  if (!clean(binding.evidenceId)) errors.push("AUTHORITATIVE_EVIDENCE_REQUIRED");
+  for (const pass of [input.testerPass, input.finalQcPass]) {
+    if (pass.pass !== true || pass.candidateFingerprint !== input.candidateFingerprint) errors.push("QC_FINGERPRINT_MISMATCH");
+    if (!clean(pass.evidenceId)) errors.push("QC_EVIDENCE_REQUIRED");
+  }
+  return { pass: errors.length === 0, errors };
+}

@@ -102,7 +102,7 @@ function errorResponse(error: unknown) {
 export function createDraftAssetsPostHandler(dependencies: RouteDependencies = {}) {
   const ledger = dependencies.ledger ?? new NeonOperationLedgerRepository();
   const fetchImpl = dependencies.fetchImpl ?? fetch;
-  const getAccessToken = dependencies.getAccessToken ?? getValidEtsyAccessToken;
+  const getAccessToken = dependencies.getAccessToken ?? (() => getValidEtsyAccessToken(["listings_r", "listings_w"]));
   const now = dependencies.now ?? (() => new Date().toISOString());
 
   return async function POST(request: Request) {

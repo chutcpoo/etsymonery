@@ -48,7 +48,7 @@ export async function readBackEtsyReceipt(
     }
 
     const accessToken = await (
-      dependencies.getAccessToken ?? getValidEtsyAccessToken
+      dependencies.getAccessToken ?? (() => getValidEtsyAccessToken(["transactions_r"]))
     )();
     const endpoint =
       `https://api.etsy.com/v3/application/shops/${event.shopId}` +
