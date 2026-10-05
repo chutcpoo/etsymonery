@@ -10,40 +10,40 @@
   "buyerPackage": [
     {
       "name": "Cleaning Operations Master Field Manual Printable A4.pdf",
-      "sizeBytes": 806324,
-      "sha256": "a29402bb7a35c051ee5b50b4f2393fc1d7653501dba1c4e04fa0f45f4eee84b5"
+      "sizeBytes": 835006,
+      "sha256": "11472c72ebcd6e88729576a70d393a096d6f02ea4ffd77553c3f4cd1f86b853c"
     },
     {
       "name": "Cleaning Operations Master Field Manual Printable US Letter.pdf",
-      "sizeBytes": 805815,
-      "sha256": "3b8aaed4580c6146fd1e6c72012089736060771c6129d936f60357b826cb1ea2"
+      "sizeBytes": 834475,
+      "sha256": "fe75aba6387d33cda6b8e8c700c889746a1416eefe6885d94e783e077d519ebf"
     },
     {
       "name": "Cleaning Operations Master Implementation Architecture Guide.pdf",
-      "sizeBytes": 680969,
-      "sha256": "432a664a210aa0cc7ebb577877197582a86bcccae7272f58b37c45f94ecab117"
+      "sizeBytes": 692043,
+      "sha256": "17844ee2f77aa8dca56c3c86eabf33b94b111b304b2fcfd4034b7e7c7059cb2a"
     },
     {
       "name": "Cleaning Operations Master System Example.xlsx",
-      "sizeBytes": 34988,
-      "sha256": "d3f0be6db825e840ac6cf1665384fff325fbd6fb5ed24165ae7f9616a540fab0"
+      "sizeBytes": 36247,
+      "sha256": "61d2ad5a2959d81d0539da6c2052de9b869cd86fd573fa89c4111e4965d0a102"
     },
     {
       "name": "Cleaning Operations Master System Template.xlsx",
-      "sizeBytes": 30708,
-      "sha256": "2412d3848923bcb5961e886d40cee15fefa76196f84811e377f506eb2ee0ee13"
+      "sizeBytes": 31723,
+      "sha256": "66b941ebab99ff57b33afb4ee7f134786a6023a4c289b63d524d2bf258916106"
     },
     {
       "name": "PDT-CMK-015 Buyer Package FINAL CLEAN.zip",
-      "sizeBytes": 1270943,
-      "sha256": "d0d4f5a52d5da733598eed77eb36bf35d303c028d33cf741d46270d5737ae670"
+      "sizeBytes": 1318164,
+      "sha256": "100f36fbc8ce218d86043b724f84ae9df696e9783e1b5f8ef16f6db00df278cc"
     }
   ],
   "listingImages": [
     {
       "name": "01_Hero.jpg",
-      "sizeBytes": 490510,
-      "sha256": "0109f89f2f70c49ae38b150571ad30946e3ecb583a234668fa1726f4c423bd0c"
+      "sizeBytes": 484775,
+      "sha256": "e4adb1c9621d2b097981758f4b8d537d8ba89cc39aa6cb363f1ef0a070da2da1"
     },
     {
       "name": "02_What_You_Get.jpg",
@@ -52,23 +52,23 @@
     },
     {
       "name": "03_Lifecycle_Architecture_Map.jpg",
-      "sizeBytes": 404370,
-      "sha256": "346931774e62ce2fed1573a1a118175d879530dce97045468068b30fa6e49f63"
+      "sizeBytes": 407293,
+      "sha256": "1a6d6e4e8042993d5af377231f306ece2d6a2f4920245a402203466b8384349c"
     },
     {
       "name": "04_Intake_Quoting_Engine.jpg",
-      "sizeBytes": 463609,
-      "sha256": "ce56e89a470b408d1467ff0a98d78c698efad079113bce526633a32bb7b512d9"
+      "sizeBytes": 463919,
+      "sha256": "078cd5bea5612322a12c44ac068904f3ec3fc3f3ef1a97193e91a993da096d67"
     },
     {
       "name": "05_Agreement_Dispatch_Board.jpg",
-      "sizeBytes": 484685,
-      "sha256": "cf9dcdfe1994f7b6bd7d0e9eb6ec60abfb11150bb652abf30c7103211fe5a5a7"
+      "sizeBytes": 485133,
+      "sha256": "39776d76e224dddb7e1b6add0885fb7b6c8bb66e874d6e95be3caacf497b0c3b"
     },
     {
       "name": "06_Checklists_QC_Scorecard.jpg",
-      "sizeBytes": 456118,
-      "sha256": "716bc4bf7aa034781d606a38f5d08c60d16d92a30a12ad7c393f48d2105565c0"
+      "sizeBytes": 457146,
+      "sha256": "deca399814d3a2e99e4991b71138fc5a0578a96215434e3c1f188d086623c70a"
     },
     {
       "name": "07_Invoice_Aging_Ledger.jpg",
@@ -82,22 +82,22 @@
     },
     {
       "name": "09_Compatibility_Notes.jpg",
-      "sizeBytes": 420582,
-      "sha256": "3b0a1a4deb452ca08e46d3b6eaf4ed926495aa8e0ee812a4946f22f42d34c92e"
+      "sizeBytes": 440288,
+      "sha256": "0f448a1cc9fd90c29d576e81fc0f64ef3179e0964381dc5e833b66031ebe9642"
     },
     {
       "name": "10_Collection_Cross_Sell.jpg",
-      "sizeBytes": 396348,
-      "sha256": "74dec28ed5eaf550303a4dd6b65a076d97f860beae710b7773c90a53e5e4e89f"
+      "sizeBytes": 395363,
+      "sha256": "ddab785c1c2616b39a4d414476c3eb1a1d8fc217d8c575348f071605102e7e16"
     }
   ],
   "listingVideos": [
     {
       "name": "Cleaning_Operations_Master_Kit_Listing_Video.mp4",
-      "sizeBytes": 377474,
-      "sha256": "afad7f55ac4d9a97ec1dd90e4da50025cb09204be1f177e2afd54eaf4b812c78"
+      "sizeBytes": 372592,
+      "sha256": "72de3d79faf4794e129e6525a64f96c45d6f3d137eb0fda6d954906e3e4e2b09"
     }
   ],
   "publishedToEtsy": false,
-  "lockGeneratedAt": "2026-10-05T09:10:00+07:00"
+  "lockGeneratedAt": "2026-10-05T09:35:00+07:00"
 }
