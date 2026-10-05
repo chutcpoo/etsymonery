@@ -62,6 +62,10 @@ async function listingSkus(
   return [...new Set(values)];
 }
 
+function defaultSleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function getEtsySellerStateSnapshot(input: {
   shopId: number;
   accessToken: string;
@@ -74,6 +78,7 @@ export async function getEtsySellerStateSnapshot(input: {
 
   const fetchImpl = input.dependencies?.fetchImpl ?? fetch;
   const retryOptions = input.dependencies?.retryOptions ?? {};
+  const sleepFn = retryOptions.sleep ?? defaultSleep;
   const listings: Array<ReturnType<typeof listingSummary> extends infer T ? Exclude<T, null> : never> = [];
   const counts: Record<SellerState, number> = {
     active: 0, inactive: 0, sold_out: 0, draft: 0, expired: 0
@@ -82,6 +87,9 @@ export async function getEtsySellerStateSnapshot(input: {
   const MAX_PAGES = 10;
 
   for (const state of ETSY_SELLER_STATES) {
+    if (state !== "active") {
+      await sleepFn(350);
+    }
     let returnedForState = 0;
     let providerCount: number | null = null;
     for (let page = 0; page < MAX_PAGES; page += 1) {

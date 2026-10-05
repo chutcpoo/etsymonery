@@ -1,8 +1,8 @@
 export const ETSY_READ_RETRY_POLICY_VERSION = "1.0.0" as const;
 
-const DEFAULT_MAX_ATTEMPTS = 2;
-const DEFAULT_BASE_DELAY_MS = 250;
-const DEFAULT_MAX_RETRY_DELAY_MS = 5_000;
+const DEFAULT_MAX_ATTEMPTS = 3;
+const DEFAULT_BASE_DELAY_MS = 500;
+const DEFAULT_MAX_RETRY_DELAY_MS = 10_000;
 const TRANSIENT_READ_STATUSES = new Set([429, 502, 503, 504]);
 
 type Sleep = (milliseconds: number) => Promise<void>;
