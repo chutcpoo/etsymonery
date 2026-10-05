@@ -108,6 +108,8 @@ async function parseJson(response: Response) { const t = await response.text(); 
 function records(value: unknown) { return isRec(value) && Array.isArray(value.results) ? value.results.filter(isRec) : [] as Rec[]; }
 function toObservation(value: Rec): EtsyReadBackObservation { return { title: value.title, description: value.description, price: value.price as EtsyReadBackObservation["price"], tags: value.tags, quantity: value.quantity, who_made: value.who_made, when_made: value.when_made, taxonomy_id: value.taxonomy_id, type: value.listing_type ?? value.type ?? "download", state: value.state }; }
 
+async function sleep(ms: number) { await new Promise(r => setTimeout(r, ms)); }
+
 /**
  * Baseline validation for PDT-CPR-003 draft creation.
  * Pre-condition: PDT-PCL-002 (4588681044) must be active (Product 02 published).
@@ -128,6 +130,7 @@ function sellerStateIsBaseline(state: Awaited<ReturnType<typeof getEtsySellerSta
   // PDT-PCL-002 must be active (published) before creating CPR-003
   const pcl002 = listings.find(item => item.listingId === PCL_002_LISTING_ID);
   if (!pcl002 || pcl002.state !== "active") return false;
+  if (pcl002.title !== "Professional Cleaning Checklist Template, Editable Excel & PDF, 11 Cleaning Checklists, Commercial Residential") return false;
 
   return true;
 }
@@ -137,11 +140,28 @@ function protectedFingerprint(state: Awaited<ReturnType<typeof getEtsySellerStat
   return createHash("sha256").update(payload, "utf8").digest("hex");
 }
 
-async function fetchListing(token: string, listingId: number) {
-  const r = await fetch(`https://api.etsy.com/v3/application/listings/${listingId}`, { headers: etsyApiHeaders(token), cache: "no-store" });
-  if (r.status === 404) return null;
-  if (!r.ok) throw new Error(`LISTING_READ_HTTP_${r.status}`);
-  const value = await parseJson(r); if (!isRec(value)) return null; return value;
+async function fetchListing(token: string, listingId: number, maxAttempts = 3) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const r = await fetch(`https://api.etsy.com/v3/application/listings/${listingId}`, { headers: etsyApiHeaders(token), cache: "no-store" });
+    if (r.status === 404) return null;
+    if (r.status === 429 || r.status >= 500) {
+      const retryAfter = r.headers.get("retry-after");
+      let delayMs = Math.min(8000, 1000 * 2 ** (attempt - 1));
+      if (retryAfter) {
+        const parsed = Number(retryAfter);
+        if (Number.isFinite(parsed) && parsed >= 0) delayMs = Math.min(8000, Math.ceil(parsed * 1000));
+      }
+      if (attempt < maxAttempts) {
+        await sleep(delayMs);
+        continue;
+      }
+    }
+    if (!r.ok) throw new Error(`LISTING_READ_HTTP_${r.status}`);
+    const value = await parseJson(r);
+    if (!isRec(value)) return null;
+    return value;
+  }
+  return null;
 }
 
 async function exactDraftMatches(token: string) {
@@ -150,6 +170,7 @@ async function exactDraftMatches(token: string) {
   const matches: number[] = [];
   for (const row of records(await parseJson(r))) {
     const id = Number(row.listing_id); if (!Number.isSafeInteger(id) || id <= 0) continue;
+    await sleep(350);
     const detail = await fetchListing(token, id);
     if (!detail) continue;
     const identity = verifyEtsyReadBackIdentity(LISTING_FINGERPRINT, toObservation(detail));
@@ -179,6 +200,7 @@ async function createDraft(token: string) {
   }
   const payload = await parseJson(r); const id = isRec(payload) ? Number(payload.listing_id) : NaN;
   if (!Number.isSafeInteger(id) || id <= 0) { const reconciled = await exactDraftMatches(token); if (reconciled.length === 1) return { listingId: reconciled[0], reconciled: true, reason: "POST_RECEIPT_INVALID_RECONCILED" }; throw new Error("CPR_DRAFT_RECEIPT_INVALID"); }
+  await sleep(500);
   const detail = await fetchListing(token, id);
   if (!detail) throw new Error("CPR_DRAFT_READBACK_404");
   const identity = verifyEtsyReadBackIdentity(LISTING_FINGERPRINT, toObservation(detail));
