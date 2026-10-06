@@ -1,10 +1,10 @@
 {
-  "planId": "PLAN-PDT-DCC-005-V1",
+  "planId": "PLAN-PDT-DCL-005-V1",
   "planVersion": 1,
-  "productId": "PDT-DCC-005",
+  "productId": "PDT-DCL-005",
   "status": "PLAN_APPROVED",
-  "planSha256": "c08e6fd7fec3199e8f65cdcf18149b79f7dc257a7daaab90eafa7a2a3ac92295",
-  "approvedAt": "2026-10-06T09:36:32.963Z",
+  "planSha256": "fe471c18269f5421dbb35c50933c9628a540b4368378e5dea6d307d95cba1710",
+  "approvedAt": "2026-10-06T09:46:42.537Z",
   "qcResult": {
     "issues": [],
     "passed": true,
@@ -23,7 +23,7 @@
       "buyerExpectationClarity": 100
     },
     "status": "PLAN_APPROVED",
-    "evaluatedAt": "2026-10-06T09:36:32.923Z"
+    "evaluatedAt": "2026-10-06T09:46:42.493Z"
   },
   "plan": {
     "pdfPlan": {
@@ -116,7 +116,7 @@
         "description": "Buyers might expect automated third-party accounting integration"
       }
     ],
-    "productId": "PDT-DCC-005",
+    "productId": "PDT-DCL-005",
     "videoPlan": {
       "scenes": [
         {

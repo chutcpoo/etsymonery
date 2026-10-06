@@ -32,7 +32,7 @@ export const DRAFT_CATALOG_04_15: readonly DraftProductSpec[] = Object.freeze([
     state: "draft" as const
   },
   {
-    productId: "PDT-DCC-005",
+    productId: "PDT-DCL-005",
     folder: "Product 05 - Deep Cleaning Checklist",
     title: "Professional Deep Cleaning Checklist Excel Spreadsheet & Printable PDF, Move Out Cleaning SOP, House Cleaning Business Inspection System",
     priceUsd: 4.9,

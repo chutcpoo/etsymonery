@@ -448,7 +448,7 @@ export const CANONICAL_PLANS_04_15: readonly ProductCreationPlan[] = Object.free
     ]
   },
   {
-    productId: "PDT-DCC-005",
+    productId: "PDT-DCL-005",
     productName: "Professional Deep Cleaning Checklist",
     productType: "PRINTABLE_CHECKLIST",
     targetBuyer: "Residential cleaning service owners, independent cleaners, maid service teams, and turnover cleaning crews.",
