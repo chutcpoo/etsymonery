@@ -1,0 +1,691 @@
+{
+  "planId": "PLAN-PDT-DCC-005-V1",
+  "planVersion": 1,
+  "productId": "PDT-DCC-005",
+  "status": "PLAN_APPROVED",
+  "planSha256": "c08e6fd7fec3199e8f65cdcf18149b79f7dc257a7daaab90eafa7a2a3ac92295",
+  "approvedAt": "2026-10-06T09:36:32.963Z",
+  "qcResult": {
+    "issues": [],
+    "passed": true,
+    "scores": {
+      "filePlan": 100,
+      "policyFit": 100,
+      "videoPlan": 100,
+      "buyerValue": 100,
+      "shopDnaFit": 100,
+      "overallScore": 100,
+      "productClarity": 100,
+      "workbookPdfPlan": 100,
+      "buildFeasibility": 100,
+      "listingImagePlan": 100,
+      "productArchitecture": 100,
+      "buyerExpectationClarity": 100
+    },
+    "status": "PLAN_APPROVED",
+    "evaluatedAt": "2026-10-06T09:36:32.923Z"
+  },
+  "plan": {
+    "pdfPlan": {
+      "pages": [
+        {
+          "page": 1,
+          "purpose": "Cover page with branding and deep cleaning system overview"
+        },
+        {
+          "page": 2,
+          "purpose": "Supply prep, PPE protocol, and chemical dilution guidelines"
+        },
+        {
+          "page": 3,
+          "purpose": "Kitchen intensive deep clean zone inspection checklist"
+        },
+        {
+          "page": 4,
+          "purpose": "Bathroom intensive sanitization and descaling checklist"
+        },
+        {
+          "page": 5,
+          "purpose": "Living areas and bedrooms detailing inspection checklist"
+        },
+        {
+          "page": 6,
+          "purpose": "Appliances detailing and post-construction buildup guide"
+        },
+        {
+          "page": 7,
+          "purpose": "Baseboards, vents, light fixtures, and woodwork audit"
+        },
+        {
+          "page": 8,
+          "purpose": "Supervisor quality control signoff and client walkthrough certificate"
+        }
+      ],
+      "editable": false,
+      "hasFooter": true,
+      "printable": true,
+      "orientation": "portrait",
+      "printIntent": "High-resolution clean print A4 and US Letter",
+      "hasDisclaimer": true,
+      "pageCountTarget": 8,
+      "hasPageNumbering": true
+    },
+    "etsyPlan": {
+      "taxonomyId": 12476,
+      "positioning": "Standardizes every phase of residential deep cleaning with a room-by-room inspection system and supervisor signoff protocol.",
+      "priceTarget": 4.9,
+      "thirteenTags": [
+        "deep clean checklist",
+        "cleaning checklist",
+        "house cleaning excel",
+        "cleaning business",
+        "move out cleaning",
+        "maid service form",
+        "cleaning sop",
+        "cleaning inspection",
+        "commercial cleaning",
+        "cleaning printables",
+        "deep cleaning guide",
+        "cleaning door hanger",
+        "cleaning company"
+      ],
+      "titleStrategy": "Professional Deep Cleaning Checklist Excel Spreadsheet & Printable PDF, Move Out Cleaning SOP, House Cleaning Business Inspection System",
+      "primaryKeyword": "deep clean checklist",
+      "secondaryKeywords": [
+        "cleaning checklist",
+        "house cleaning excel",
+        "cleaning business"
+      ],
+      "limitationsDisclosure": "Manual operational model. Does not connect to banking or accounting APIs.",
+      "compatibilityDisclosure": "Compatible with Microsoft Excel Desktop and Google Sheets.",
+      "digitalProductDisclosure": "Instant digital download only. No physical item will be shipped."
+    },
+    "planRisks": [
+      {
+        "category": "COMPATIBILITY",
+        "resolved": true,
+        "severity": "MEDIUM",
+        "mitigation": "Used cross-platform standard system fonts and native universal formulas",
+        "description": "Google Sheets users might experience slight layout font differences"
+      },
+      {
+        "category": "BUYER_CONFUSION",
+        "resolved": true,
+        "severity": "HIGH",
+        "mitigation": "Prominently state manual operational nature on Image 09 and in listing description",
+        "description": "Buyers might expect automated third-party accounting integration"
+      }
+    ],
+    "productId": "PDT-DCC-005",
+    "videoPlan": {
+      "scenes": [
+        {
+          "end": 4,
+          "claim": "Clear Operational Structure for Cleaning Businesses",
+          "start": 0,
+          "purpose": "Hook buyer with master system navigation and branding",
+          "evidence": "Instructions and dashboard screen capture",
+          "sourceAsset": "01_hero_video.mp4",
+          "textOverlay": "Professional Deep Cleaning Checklist"
+        },
+        {
+          "end": 9,
+          "claim": "Dynamic Native Formulas with Zero Macros",
+          "start": 4,
+          "purpose": "Demonstrate dynamic formulas and field inspection workflow",
+          "evidence": "Calculation and checklist reaction",
+          "sourceAsset": "02_formulas_video.mp4",
+          "textOverlay": "Standardize Quality & Protect Business Margins"
+        },
+        {
+          "end": 14,
+          "claim": "Complete Operational Package Ready to Deploy",
+          "start": 9,
+          "purpose": "Display package contents and instant digital download",
+          "evidence": "Buyer file inventory graphic",
+          "sourceAsset": "03_package_video.mp4",
+          "textOverlay": "Instant Digital Download • Excel & PDF"
+        }
+      ],
+      "required": true,
+      "durationTarget": 14
+    },
+    "buyerFiles": [
+      {
+        "rank": 1,
+        "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "purpose": "Pristine master operational workbook with 10 formulated worksheets and clickable navigation buttons",
+        "editable": true,
+        "filename": "Deep Cleaning Checklist Template.xlsx",
+        "required": true,
+        "printable": false
+      },
+      {
+        "rank": 2,
+        "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "purpose": "Completed fictional sample reference workbook showing a 4-bedroom residential deep clean",
+        "editable": true,
+        "filename": "Deep Cleaning Checklist Example.xlsx",
+        "required": true,
+        "printable": false
+      },
+      {
+        "rank": 3,
+        "type": "application/pdf",
+        "purpose": "8-page printable checklist formatted for international A4 clipboard binders and field technicians",
+        "editable": false,
+        "filename": "Deep Cleaning Checklist Printable A4.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 4,
+        "type": "application/pdf",
+        "purpose": "8-page printable checklist formatted for 8.5x11 North American clipboard binders",
+        "editable": false,
+        "filename": "Deep Cleaning Checklist Printable US Letter.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 5,
+        "type": "application/pdf",
+        "purpose": "6-page operational manual covering chemical dilution ratios and walkthrough etiquette",
+        "editable": false,
+        "filename": "Deep Cleaning Checklist User Guide.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 6,
+        "type": "application/pdf",
+        "purpose": "1-page printable door hanger tag bonus verifying quality inspection for clients",
+        "editable": false,
+        "filename": "Deep Cleaning Room Inspection Tag Printable - Premium Final.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 7,
+        "type": "application/zip",
+        "purpose": "Organized ZIP archive containing all 6 customer deliverable files for one-click download",
+        "editable": false,
+        "filename": "PDT-DCL-005 Buyer Package FINAL CLEAN.zip",
+        "required": true,
+        "printable": false
+      }
+    ],
+    "coreOutcome": "Standardizes every phase of residential deep cleaning with a room-by-room inspection system and supervisor signoff protocol.",
+    "limitations": [
+      "Manual spreadsheet data entry required; no automated bank account sync",
+      "Zero VBA macros included for cross-platform safety",
+      "Digital download only; no physical item will be shipped"
+    ],
+    "productName": "Professional Deep Cleaning Checklist",
+    "productType": "PRINTABLE_CHECKLIST",
+    "targetBuyer": "Residential cleaning service owners, independent cleaners, maid service teams, and turnover cleaning crews.",
+    "buyerProblem": "Cleaners frequently miss high-touch detailing areas during intensive deep cleanings, leading to client complaints, re-cleans, and missed upsell revenue.",
+    "scopeClarity": "Includes exactly 7 customer-ready files: master Excel workbook, populated example, A4 & US Letter printable PDFs, user guide, inspection tag, and clean ZIP archive.",
+    "whyBuyReason": "Gives cleaning businesses a professional inspection system that builds client confidence and trains new staff in hours.",
+    "workbookPlan": {
+      "sheets": [
+        {
+          "name": "01_Instructions",
+          "purpose": "Interactive quick-start dashboard with hyperlinked navigation to all modules",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "02_Supply_Prep_Reference",
+          "purpose": "Heavy degreasers, descalers, dilution guidelines, and PPE safety gear readiness",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "03_Kitchen_Deep_Clean",
+          "purpose": "Range hood baffle degreasing, stove pullouts, inside oven carbon stripping, and cabinets",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "04_Bathroom_Deep_Clean",
+          "purpose": "Shower glass mineral descaling, mildew eradication, toilet sanitation, and chrome polishing",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "05_Living_Bedrooms",
+          "purpose": "Ceiling fan blades, window track crevice vacuuming, baseboards, and deep upholstery care",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "06_Appliances_Detailing",
+          "purpose": "Refrigerator coils and gaskets, dishwasher seals, microwave cavities, and dryer duct lint",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "07_Baseboards_Vents_Fixtures",
+          "purpose": "Detailed woodwork hand-scrubbing, HVAC air register washing, and light switch sanitizing",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "08_Post_Construction_Heavy_Buildup",
+          "purpose": "Drywall particulate HEPA extraction, window razor scraping, adhesive removal, and grout haze",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "09_Accountability_QC_Signoff",
+          "purpose": "Lead supervisor 6-zone audit, on-site punch-list tracking, and formal client walkthrough signoff",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "10_Master_Task_Library",
+          "purpose": "Standardized task catalog with benchmark labor times in minutes and difficulty ratings",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        }
+      ],
+      "sheetCount": 10
+    },
+    "compatibility": [
+      "Microsoft Excel Desktop (Office 365, 2019, 2021) for Mac & Windows",
+      "Google Sheets (Formula-compatible)",
+      "Adobe Acrobat Reader / Standard PDF Viewer"
+    ],
+    "priceTargetUsd": 4.9,
+    "primaryUseCase": "Deployed by cleaning crews on site during initial deep cleans, seasonal spring cleanings, and move-out inspections.",
+    "shopDnaProfile": {
+      "canvas": "2000x2000",
+      "footer": "PoonthaiDigital Verified Operational System",
+      "spacing": "32px grid padding",
+      "ctaStyle": "Subtle clean text badge",
+      "profileId": "SHOP_DNA_CORE_NAVY_SLATE",
+      "background": "#0F172A",
+      "badgeStyle": "Rounded pill badge with subtle glassmorphism",
+      "typography": "Outfit, Inter, system-ui",
+      "safeMargins": "80px outer safe margin for mobile thumbnails",
+      "headlineSize": "48px bold",
+      "layoutFamily": "PRINTABLE",
+      "brandPlacement": "Top center discreet logo badge",
+      "mobileOverlaySafeZones": "Bottom 140px and Top 80px kept clear of critical text"
+    },
+    "differentiation": "Includes benchmark labor minute targets and heavy buildup detailing checklists for appliances, vents, and grout lines.",
+    "supportedClaims": [
+      {
+        "claim": "Includes 10 formulated worksheets with clean navigation buttons",
+        "status": "VERIFIED",
+        "evidenceSource": "Deep Cleaning Checklist Template.xlsx"
+      },
+      {
+        "claim": "Includes completed reference workbook with realistic sample data",
+        "status": "VERIFIED",
+        "evidenceSource": "Deep Cleaning Checklist Example.xlsx"
+      },
+      {
+        "claim": "Features high-resolution printable PDF files formatted for clipboards",
+        "status": "VERIFIED",
+        "evidenceSource": "Printable PDF deliverables"
+      },
+      {
+        "claim": "Contains 100% macro-free native spreadsheet formulas",
+        "status": "VERIFIED",
+        "evidenceSource": "Formula security audit"
+      }
+    ],
+    "automationStatus": "MANUAL",
+    "listingImagePlan": [
+      {
+        "rank": 1,
+        "headline": "Professional Deep Cleaning Checklist for Excel & PDF",
+        "keyClaim": "Standardize Room Detailing, Eliminate Missed Spots & Train Staff",
+        "objective": "Hero showcase with instant 2-3s comprehension",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Executive system mockup",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What is this tool and what key benefit does it give my cleaning business?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 2,
+        "headline": "What You Receive: 6 Operational Deliverables",
+        "keyClaim": "Master Excel Workbooks + Professional Printable PDF Guides",
+        "objective": "Package inventory breakdown",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Buyer package inspection",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Exactly what files will I be able to download after purchase?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 3,
+        "headline": "Comprehensive Field & Office Operational Architecture",
+        "keyClaim": "Formulated Worksheets with Interactive Navigation Links",
+        "objective": "Core module walkthrough",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Workbook overview screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How is the tool structured and how do the sheets function together?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 4,
+        "headline": "Eliminate Operational Guesswork and Inconsistencies",
+        "keyClaim": "Standardized Checklists & Formula-Driven Calculations",
+        "objective": "Primary functional workflow showcase",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Module detailing screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How does this make my daily business operations easier and faster?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 5,
+        "headline": "Designed for Professional Service Excellence",
+        "keyClaim": "Accountability Logs, Client Documentation & Signoffs",
+        "objective": "Secondary functional module showcase",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Field sheet screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Does this include quality verification and client signoff tools?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 6,
+        "headline": "Simple Implementation Framework for Cleaning Teams",
+        "keyClaim": "Clear 4-Step Field Protocol Anyone on Your Crew Can Follow",
+        "objective": "Step-by-step implementation workflow",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "User guide workflow diagram",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Is this easy to deploy and teach to my cleaning technicians?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 7,
+        "headline": "Built for Microsoft Excel & Google Sheets",
+        "keyClaim": "100% Native Formulas • Zero VBA Macros • Fully Compatible",
+        "objective": "Technical requirements and compatibility",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Workbook specification manifest",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Will this open cleanly and function properly on my computer or device?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 8,
+        "headline": "Includes Completed Reference Example Workbook",
+        "keyClaim": "Study Real-World Pre-Populated Calculations & Field Notes",
+        "objective": "Reference model and sample data showcase",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Example workbook screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How do I know what numbers and notes to enter into the blank sheets?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 9,
+        "headline": "Important Product Boundaries & Delivery Terms",
+        "keyClaim": "Instant Digital Download • Manual Tool • No Physical Item",
+        "objective": "Important details and digital scope disclosure",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Product Truth Manifesto",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What are the format boundaries and delivery specifications of this item?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 10,
+        "headline": "PoonthaiDigital Operations Suite Collection",
+        "keyClaim": "Coordinates Seamlessly with the Complete 15-Product Roadmap",
+        "objective": "Brand collection synergy and cross-sell",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Store catalog",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What other matching tools exist for my cleaning business?",
+        "productScreenshotRequired": true
+      }
+    ],
+    "prohibitedClaims": [
+      "Automated accounting software or live bank sync",
+      "Guaranteed revenue outcomes or certified profit guarantees",
+      "Physical planner book or binder shipped in the mail",
+      "Official OSHA legal certification or licensed engineering credential"
+    ],
+    "buyerExpectations": {
+      "automationType": "Manual spreadsheet with standard formulas (no VBA)",
+      "noPhysicalItem": true,
+      "primarySoftware": "Microsoft Excel Desktop (Office 365, 2019, 2021) or Google Sheets",
+      "expectedFileCount": 7,
+      "isDigitalDownload": true,
+      "limitationsSummary": "Manual entry workbook; does not sync to banking institutions or third-party CRM APIs",
+      "editableAreasSummary": "All data entry cells are editable; summary formulas and headers protected",
+      "printableAreasSummary": "Printable PDF files are formatted for standard A4 and US Letter printing",
+      "expectedSheetsOrPagesSummary": "10 worksheets in Excel; 8-page printable PDF documentation"
+    },
+    "acceptanceCriteria": {
+      "videoRequired": true,
+      "buyerFilesExactly": 7,
+      "missingFilesAllowed": 0,
+      "claimMismatchAllowed": 0,
+      "listingImagesExactly": 10,
+      "brokenFormulasAllowed": 0,
+      "policyCriticalIssuesAllowed": 0,
+      "highBuyerExpectationRisksAllowed": 0
+    }
+  }
+}

@@ -1,0 +1,558 @@
+{
+  "planId": "PLAN-PDT-CQE-008-V1",
+  "planVersion": 1,
+  "productId": "PDT-CQE-008",
+  "status": "PLAN_APPROVED",
+  "planSha256": "88721e539c713d2b8a2166d972fa3fb1b734322b8100e31c2051bfc861c49b8f",
+  "approvedAt": "2026-10-06T09:36:35.032Z",
+  "qcResult": {
+    "issues": [],
+    "passed": true,
+    "scores": {
+      "filePlan": 100,
+      "policyFit": 100,
+      "videoPlan": 100,
+      "buyerValue": 100,
+      "shopDnaFit": 100,
+      "overallScore": 100,
+      "productClarity": 100,
+      "workbookPdfPlan": 100,
+      "buildFeasibility": 100,
+      "listingImagePlan": 100,
+      "productArchitecture": 100,
+      "buyerExpectationClarity": 100
+    },
+    "status": "PLAN_APPROVED",
+    "evaluatedAt": "2026-10-06T09:36:34.990Z"
+  },
+  "plan": {
+    "pdfPlan": {
+      "pages": [
+        {
+          "page": 1,
+          "purpose": "Cover page with branding and estimation system overview"
+        },
+        {
+          "page": 2,
+          "purpose": "Labor rate benchmarking and supply overhead calculation guide"
+        },
+        {
+          "page": 3,
+          "purpose": "Residential room-by-room pricing formula reference guide"
+        },
+        {
+          "page": 4,
+          "purpose": "Commercial square-footage production rate guidelines and margins"
+        }
+      ],
+      "editable": false,
+      "hasFooter": true,
+      "printable": true,
+      "orientation": "portrait",
+      "printIntent": "High-resolution clean print A4 and US Letter",
+      "hasDisclaimer": true,
+      "pageCountTarget": 4,
+      "hasPageNumbering": true
+    },
+    "etsyPlan": {
+      "taxonomyId": 12476,
+      "positioning": "Provides a formula-driven pricing estimation calculator that generates instant client quote slips based on user-assumed costs and target margins.",
+      "priceTarget": 7.9,
+      "thirteenTags": [
+        "cleaning quote",
+        "cleaning estimate",
+        "cleaning price sheet",
+        "cleaning bid sheet",
+        "house cleaning quote",
+        "janitorial estimate",
+        "cleaning quote slip",
+        "commercial bid excel",
+        "quote calculator",
+        "cleaning cost sheet",
+        "pricing calculator",
+        "quote template excel",
+        "maid service quote"
+      ],
+      "titleStrategy": "Cleaning Quote & Estimate Template Excel, House Cleaning Estimator Calculator, Commercial Janitorial Bid Sheet, Client Quote Slip Printable",
+      "primaryKeyword": "cleaning quote",
+      "secondaryKeywords": [
+        "cleaning estimate",
+        "cleaning price sheet",
+        "cleaning bid sheet"
+      ],
+      "limitationsDisclosure": "Manual operational model. Does not connect to banking or accounting APIs.",
+      "compatibilityDisclosure": "Compatible with Microsoft Excel Desktop and Google Sheets.",
+      "digitalProductDisclosure": "Instant digital download only. No physical item will be shipped."
+    },
+    "planRisks": [
+      {
+        "category": "COMPATIBILITY",
+        "resolved": true,
+        "severity": "MEDIUM",
+        "mitigation": "Used cross-platform standard system fonts and native universal formulas",
+        "description": "Google Sheets users might experience slight layout font differences"
+      },
+      {
+        "category": "BUYER_CONFUSION",
+        "resolved": true,
+        "severity": "HIGH",
+        "mitigation": "Prominently state manual operational nature on Image 09 and in listing description",
+        "description": "Buyers might expect automated third-party accounting integration"
+      }
+    ],
+    "productId": "PDT-CQE-008",
+    "videoPlan": {
+      "scenes": [
+        {
+          "end": 4,
+          "claim": "Clear Operational Structure for Cleaning Businesses",
+          "start": 0,
+          "purpose": "Hook buyer with master system navigation and branding",
+          "evidence": "Instructions and dashboard screen capture",
+          "sourceAsset": "01_hero_video.mp4",
+          "textOverlay": "Cleaning Quote & Estimate Calculator"
+        },
+        {
+          "end": 9,
+          "claim": "Dynamic Native Formulas with Zero Macros",
+          "start": 4,
+          "purpose": "Demonstrate dynamic formulas and field inspection workflow",
+          "evidence": "Calculation and checklist reaction",
+          "sourceAsset": "02_formulas_video.mp4",
+          "textOverlay": "Standardize Quality & Protect Business Margins"
+        },
+        {
+          "end": 14,
+          "claim": "Complete Operational Package Ready to Deploy",
+          "start": 9,
+          "purpose": "Display package contents and instant digital download",
+          "evidence": "Buyer file inventory graphic",
+          "sourceAsset": "03_package_video.mp4",
+          "textOverlay": "Instant Digital Download • Excel & PDF"
+        }
+      ],
+      "required": true,
+      "durationTarget": 14
+    },
+    "buyerFiles": [
+      {
+        "rank": 1,
+        "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "purpose": "Master formula-driven pricing calculator with 6 formulated sheets and quote generator",
+        "editable": true,
+        "filename": "Cleaning Quote & Estimate Template.xlsx",
+        "required": true,
+        "printable": false
+      },
+      {
+        "rank": 2,
+        "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "purpose": "Completed demonstration model with realistic residential and commercial bids",
+        "editable": true,
+        "filename": "Cleaning Quote & Estimate Example.xlsx",
+        "required": true,
+        "printable": false
+      },
+      {
+        "rank": 3,
+        "type": "application/pdf",
+        "purpose": "6-page operational manual explaining labor minute benchmarks and overhead modeling",
+        "editable": false,
+        "filename": "Cleaning Quote & Estimate User Guide.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 4,
+        "type": "application/pdf",
+        "purpose": "1-page professional quote slip printable formatted for client handover",
+        "editable": false,
+        "filename": "Cleaning Quote Slip Printable.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 5,
+        "type": "application/pdf",
+        "purpose": "1-page printable on-site walkthrough assessment sheet for noting rooms and special conditions",
+        "editable": false,
+        "filename": "Pre-Quote Site Assessment Sheet Printable - Premium Final.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 6,
+        "type": "application/zip",
+        "purpose": "Organized ZIP archive containing all 5 customer deliverable files for one-click download",
+        "editable": false,
+        "filename": "PDT-CQE-008 Buyer Package FINAL CLEAN.zip",
+        "required": true,
+        "printable": false
+      }
+    ],
+    "coreOutcome": "Provides a formula-driven pricing estimation calculator that generates instant client quote slips based on user-assumed costs and target margins.",
+    "limitations": [
+      "Manual spreadsheet data entry required; no automated bank account sync",
+      "Zero VBA macros included for cross-platform safety",
+      "Digital download only; no physical item will be shipped"
+    ],
+    "productName": "Cleaning Quote & Estimate Calculator",
+    "productType": "CALCULATOR",
+    "targetBuyer": "Independent cleaning business owners, solo cleaners, residential cleaning teams, and commercial estimators.",
+    "buyerProblem": "Cleaning owners frequently underbid jobs because they rely on guesswork rather than modeling actual labor minutes, travel costs, and supply overhead.",
+    "scopeClarity": "Includes exactly 6 customer-ready files: master Excel workbook, example workbook, user guide PDF, printable quote slip PDF, site assessment sheet, and clean ZIP archive.",
+    "whyBuyReason": "Protects profitability on every job by calculating true direct costs and showing exact gross margins before quoting.",
+    "workbookPlan": {
+      "sheets": [
+        {
+          "name": "01_Instructions",
+          "purpose": "Interactive quick-start guide explaining calculator inputs and formula logic",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "02_User_Cost_Assumptions",
+          "purpose": "Configurable baseline inputs for labor hourly wage, supply percentage, and target profit margin",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "03_Residential_Estimate_Calc",
+          "purpose": "Room-by-room estimator calculating hours, supply burden, and pricing for standard and deep cleans",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "04_Commercial_Estimate_Calc",
+          "purpose": "Square-footage production rate calculator for office suites and commercial properties",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "05_Formal_Client_Quote_Slip",
+          "purpose": "Client-facing quote voucher showing itemized services, valid period, and acceptance terms",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "06_Estimate_Pipeline_Log",
+          "purpose": "Quotation tracker monitoring submitted bids, win/loss status, and expected revenue",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        }
+      ],
+      "sheetCount": 6
+    },
+    "compatibility": [
+      "Microsoft Excel Desktop (Office 365, 2019, 2021) for Mac & Windows",
+      "Google Sheets (Formula-compatible)",
+      "Adobe Acrobat Reader / Standard PDF Viewer"
+    ],
+    "priceTargetUsd": 7.9,
+    "primaryUseCase": "Used during client phone consultations, on-site walkthrough estimates, and preliminary quote generation.",
+    "shopDnaProfile": {
+      "canvas": "2000x2000",
+      "footer": "PoonthaiDigital Verified Operational System",
+      "spacing": "32px grid padding",
+      "ctaStyle": "Subtle clean text badge",
+      "profileId": "SHOP_DNA_CORE_NAVY_SLATE",
+      "background": "#0F172A",
+      "badgeStyle": "Rounded pill badge with subtle glassmorphism",
+      "typography": "Outfit, Inter, system-ui",
+      "safeMargins": "80px outer safe margin for mobile thumbnails",
+      "headlineSize": "48px bold",
+      "layoutFamily": "CALCULATOR",
+      "brandPlacement": "Top center discreet logo badge",
+      "mobileOverlaySafeZones": "Bottom 140px and Top 80px kept clear of critical text"
+    },
+    "differentiation": "Includes dedicated cost assumption modules for both residential rooms and commercial square footage, with instant client quote slips.",
+    "supportedClaims": [
+      {
+        "claim": "Includes 6 formulated worksheets with clean navigation buttons",
+        "status": "VERIFIED",
+        "evidenceSource": "Cleaning Quote & Estimate Template.xlsx"
+      },
+      {
+        "claim": "Includes completed reference workbook with realistic sample data",
+        "status": "VERIFIED",
+        "evidenceSource": "Cleaning Quote & Estimate Example.xlsx"
+      },
+      {
+        "claim": "Features high-resolution printable PDF files formatted for clipboards",
+        "status": "VERIFIED",
+        "evidenceSource": "Printable PDF deliverables"
+      },
+      {
+        "claim": "Contains 100% macro-free native spreadsheet formulas",
+        "status": "VERIFIED",
+        "evidenceSource": "Formula security audit"
+      }
+    ],
+    "automationStatus": "MANUAL",
+    "listingImagePlan": [
+      {
+        "rank": 1,
+        "headline": "Cleaning Quote & Estimate Calculator for Excel",
+        "keyClaim": "Calculate Accurate Labor Costs, Protect Margins & Quote Confidently",
+        "objective": "Hero showcase with instant 2-3s comprehension",
+        "shopDnaLayout": "CALCULATOR",
+        "evidenceSource": "Executive system mockup",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What is this tool and what key benefit does it give my cleaning business?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 2,
+        "headline": "What You Receive: 5 Operational Deliverables",
+        "keyClaim": "Master Excel Workbooks + Professional Printable PDF Guides",
+        "objective": "Package inventory breakdown",
+        "shopDnaLayout": "CALCULATOR",
+        "evidenceSource": "Buyer package inspection",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Exactly what files will I be able to download after purchase?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 3,
+        "headline": "Comprehensive Field & Office Operational Architecture",
+        "keyClaim": "Formulated Worksheets with Interactive Navigation Links",
+        "objective": "Core module walkthrough",
+        "shopDnaLayout": "CALCULATOR",
+        "evidenceSource": "Workbook overview screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How is the tool structured and how do the sheets function together?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 4,
+        "headline": "Eliminate Operational Guesswork and Inconsistencies",
+        "keyClaim": "Standardized Checklists & Formula-Driven Calculations",
+        "objective": "Primary functional workflow showcase",
+        "shopDnaLayout": "CALCULATOR",
+        "evidenceSource": "Module detailing screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How does this make my daily business operations easier and faster?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 5,
+        "headline": "Designed for Professional Service Excellence",
+        "keyClaim": "Accountability Logs, Client Documentation & Signoffs",
+        "objective": "Secondary functional module showcase",
+        "shopDnaLayout": "CALCULATOR",
+        "evidenceSource": "Field sheet screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Does this include quality verification and client signoff tools?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 6,
+        "headline": "Simple Implementation Framework for Cleaning Teams",
+        "keyClaim": "Clear 4-Step Field Protocol Anyone on Your Crew Can Follow",
+        "objective": "Step-by-step implementation workflow",
+        "shopDnaLayout": "CALCULATOR",
+        "evidenceSource": "User guide workflow diagram",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Is this easy to deploy and teach to my cleaning technicians?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 7,
+        "headline": "Built for Microsoft Excel & Google Sheets",
+        "keyClaim": "100% Native Formulas • Zero VBA Macros • Fully Compatible",
+        "objective": "Technical requirements and compatibility",
+        "shopDnaLayout": "CALCULATOR",
+        "evidenceSource": "Workbook specification manifest",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Will this open cleanly and function properly on my computer or device?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 8,
+        "headline": "Includes Completed Reference Example Workbook",
+        "keyClaim": "Study Real-World Pre-Populated Calculations & Field Notes",
+        "objective": "Reference model and sample data showcase",
+        "shopDnaLayout": "CALCULATOR",
+        "evidenceSource": "Example workbook screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How do I know what numbers and notes to enter into the blank sheets?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 9,
+        "headline": "Important Product Boundaries & Delivery Terms",
+        "keyClaim": "Instant Digital Download • Manual Tool • No Physical Item",
+        "objective": "Important details and digital scope disclosure",
+        "shopDnaLayout": "CALCULATOR",
+        "evidenceSource": "Product Truth Manifesto",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What are the format boundaries and delivery specifications of this item?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 10,
+        "headline": "PoonthaiDigital Operations Suite Collection",
+        "keyClaim": "Coordinates Seamlessly with the Complete 15-Product Roadmap",
+        "objective": "Brand collection synergy and cross-sell",
+        "shopDnaLayout": "CALCULATOR",
+        "evidenceSource": "Store catalog",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What other matching tools exist for my cleaning business?",
+        "productScreenshotRequired": true
+      }
+    ],
+    "prohibitedClaims": [
+      "Automated accounting software or live bank sync",
+      "Guaranteed revenue outcomes or certified profit guarantees",
+      "Physical planner book or binder shipped in the mail",
+      "Official OSHA legal certification or licensed engineering credential"
+    ],
+    "buyerExpectations": {
+      "automationType": "Manual spreadsheet with standard formulas (no VBA)",
+      "noPhysicalItem": true,
+      "primarySoftware": "Microsoft Excel Desktop (Office 365, 2019, 2021) or Google Sheets",
+      "expectedFileCount": 6,
+      "isDigitalDownload": true,
+      "limitationsSummary": "Manual entry workbook; does not sync to banking institutions or third-party CRM APIs",
+      "editableAreasSummary": "All data entry cells are editable; summary formulas and headers protected",
+      "printableAreasSummary": "Printable PDF files are formatted for standard A4 and US Letter printing",
+      "expectedSheetsOrPagesSummary": "6 worksheets in Excel; 4-page printable PDF documentation"
+    },
+    "acceptanceCriteria": {
+      "videoRequired": true,
+      "buyerFilesExactly": 6,
+      "missingFilesAllowed": 0,
+      "claimMismatchAllowed": 0,
+      "listingImagesExactly": 10,
+      "brokenFormulasAllowed": 0,
+      "policyCriticalIssuesAllowed": 0,
+      "highBuyerExpectationRisksAllowed": 0
+    }
+  }
+}

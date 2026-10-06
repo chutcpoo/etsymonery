@@ -1,0 +1,830 @@
+{
+  "planId": "PLAN-PDT-CMK-015-V1",
+  "planVersion": 1,
+  "productId": "PDT-CMK-015",
+  "status": "PLAN_APPROVED",
+  "planSha256": "1bf05df7c9781960aec2c61d10ea402f26df485fea5f505b446b984292ff0145",
+  "approvedAt": "2026-10-06T09:36:40.105Z",
+  "qcResult": {
+    "issues": [],
+    "passed": true,
+    "scores": {
+      "filePlan": 100,
+      "policyFit": 100,
+      "videoPlan": 100,
+      "buyerValue": 100,
+      "shopDnaFit": 100,
+      "overallScore": 100,
+      "productClarity": 100,
+      "workbookPdfPlan": 100,
+      "buildFeasibility": 100,
+      "listingImagePlan": 100,
+      "productArchitecture": 100,
+      "buyerExpectationClarity": 100
+    },
+    "status": "PLAN_APPROVED",
+    "evaluatedAt": "2026-10-06T09:36:40.068Z"
+  },
+  "plan": {
+    "pdfPlan": {
+      "pages": [
+        {
+          "page": 1,
+          "purpose": "Executive manual title page, system overview, and architecture index"
+        },
+        {
+          "page": 2,
+          "purpose": "Operational lifecycle roadmap and multi-crew dispatch architecture"
+        },
+        {
+          "page": 3,
+          "purpose": "Lead intake, property survey, and client onboarding protocols"
+        },
+        {
+          "page": 4,
+          "purpose": "Estimating logic, square-footage production rates, and margin protection"
+        },
+        {
+          "page": 5,
+          "purpose": "Service contracts, cancellation enforcement, and liability terms"
+        },
+        {
+          "page": 6,
+          "purpose": "Weekly capacity planning, technician dispatch, and routing logistics"
+        },
+        {
+          "page": 7,
+          "purpose": "Standard residential cleaning field inspection checklist"
+        },
+        {
+          "page": 8,
+          "purpose": "Intensive deep clean room-by-room detailing checklist"
+        },
+        {
+          "page": 9,
+          "purpose": "Turnover and vacate cleaning quality verification checklist"
+        },
+        {
+          "page": 10,
+          "purpose": "Commercial janitorial scope matrix and night crew checklist"
+        },
+        {
+          "page": 11,
+          "purpose": "Supervisor 10-point audit scorecard and correction punch list"
+        },
+        {
+          "page": 12,
+          "purpose": "Property turnover completion record and key return register"
+        },
+        {
+          "page": 13,
+          "purpose": "Invoicing procedures, payment terms, and receipt issuance guidelines"
+        },
+        {
+          "page": 14,
+          "purpose": "Accounts receivable collection cadence and overdue reminder notice"
+        },
+        {
+          "page": 15,
+          "purpose": "Customer retention management and quarterly service review playbook"
+        },
+        {
+          "page": 16,
+          "purpose": "Standard operating procedures for chemical dilution and microfiber color codes"
+        },
+        {
+          "page": 17,
+          "purpose": "Executive KPI reporting, gross margin tracking, and capacity benchmarks"
+        },
+        {
+          "page": 18,
+          "purpose": "Master operational policies, safety compliance disclaimers, and license terms"
+        }
+      ],
+      "editable": false,
+      "hasFooter": true,
+      "printable": true,
+      "orientation": "portrait",
+      "printIntent": "High-resolution clean print A4 and US Letter",
+      "hasDisclaimer": true,
+      "pageCountTarget": 18,
+      "hasPageNumbering": true
+    },
+    "etsyPlan": {
+      "taxonomyId": 12476,
+      "positioning": "Transforms cleaning operations into an integrated enterprise system linking intake, bidding, agreements, scheduling, QC, invoicing, and KPI dashboards.",
+      "priceTarget": 34.9,
+      "thirteenTags": [
+        "cleaning business",
+        "operations kit",
+        "cleaning spreadsheet",
+        "cleaning crm",
+        "cleaning invoice",
+        "cleaning contract",
+        "cleaning proposal",
+        "business dashboard",
+        "maid service system",
+        "commercial cleaning",
+        "scheduling board",
+        "cleaning checklist",
+        "kpi tracker"
+      ],
+      "titleStrategy": "Cleaning Business Operations Master Kit Spreadsheet Templates Invoices CRM Scheduling Proposals Contracts Executive KPI Dashboard PDF",
+      "primaryKeyword": "cleaning business",
+      "secondaryKeywords": [
+        "operations kit",
+        "cleaning spreadsheet",
+        "cleaning crm"
+      ],
+      "limitationsDisclosure": "Manual operational model. Does not connect to banking or accounting APIs.",
+      "compatibilityDisclosure": "Compatible with Microsoft Excel Desktop and Google Sheets.",
+      "digitalProductDisclosure": "Instant digital download only. No physical item will be shipped."
+    },
+    "planRisks": [
+      {
+        "category": "COMPATIBILITY",
+        "resolved": true,
+        "severity": "MEDIUM",
+        "mitigation": "Used cross-platform standard system fonts and native universal formulas",
+        "description": "Google Sheets users might experience slight layout font differences"
+      },
+      {
+        "category": "BUYER_CONFUSION",
+        "resolved": true,
+        "severity": "HIGH",
+        "mitigation": "Prominently state manual operational nature on Image 09 and in listing description",
+        "description": "Buyers might expect automated third-party accounting integration"
+      }
+    ],
+    "productId": "PDT-CMK-015",
+    "videoPlan": {
+      "scenes": [
+        {
+          "end": 4,
+          "claim": "Clear Operational Structure for Cleaning Businesses",
+          "start": 0,
+          "purpose": "Hook buyer with master system navigation and branding",
+          "evidence": "Instructions and dashboard screen capture",
+          "sourceAsset": "01_hero_video.mp4",
+          "textOverlay": "Cleaning Business Operations Master Kit"
+        },
+        {
+          "end": 9,
+          "claim": "Dynamic Native Formulas with Zero Macros",
+          "start": 4,
+          "purpose": "Demonstrate dynamic formulas and field inspection workflow",
+          "evidence": "Calculation and checklist reaction",
+          "sourceAsset": "02_formulas_video.mp4",
+          "textOverlay": "Standardize Quality & Protect Business Margins"
+        },
+        {
+          "end": 14,
+          "claim": "Complete Operational Package Ready to Deploy",
+          "start": 9,
+          "purpose": "Display package contents and instant digital download",
+          "evidence": "Buyer file inventory graphic",
+          "sourceAsset": "03_package_video.mp4",
+          "textOverlay": "Instant Digital Download • Excel & PDF"
+        }
+      ],
+      "required": true,
+      "durationTarget": 14
+    },
+    "buyerFiles": [
+      {
+        "rank": 1,
+        "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "purpose": "Flagship operational operating system with 14 integrated modules and dynamic formulas",
+        "editable": true,
+        "filename": "Cleaning Operations Master System Template.xlsx",
+        "required": true,
+        "printable": false
+      },
+      {
+        "rank": 2,
+        "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "purpose": "Completed enterprise model populated with full operations data for an 8-crew cleaning firm",
+        "editable": true,
+        "filename": "Cleaning Operations Master System Example.xlsx",
+        "required": true,
+        "printable": false
+      },
+      {
+        "rank": 3,
+        "type": "application/pdf",
+        "purpose": "12-page comprehensive systems architecture manual detailing data flows and SOPs",
+        "editable": false,
+        "filename": "Cleaning Operations Master Implementation Architecture Guide.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 4,
+        "type": "application/pdf",
+        "purpose": "18-page field operational manual formatted for international A4 binder deployment",
+        "editable": false,
+        "filename": "Cleaning Operations Master Field Manual Printable A4.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 5,
+        "type": "application/pdf",
+        "purpose": "18-page field operational manual formatted for 8.5x11 North American binder deployment",
+        "editable": false,
+        "filename": "Cleaning Operations Master Field Manual Printable US Letter.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 6,
+        "type": "application/zip",
+        "purpose": "Organized ZIP archive containing all 5 customer deliverable files for one-click download",
+        "editable": false,
+        "filename": "PDT-CMK-015 Buyer Package FINAL CLEAN.zip",
+        "required": true,
+        "printable": false
+      }
+    ],
+    "coreOutcome": "Transforms cleaning operations into an integrated enterprise system linking intake, bidding, agreements, scheduling, QC, invoicing, and KPI dashboards.",
+    "limitations": [
+      "Manual spreadsheet data entry required; no automated bank account sync",
+      "Zero VBA macros included for cross-platform safety",
+      "Digital download only; no physical item will be shipped"
+    ],
+    "productName": "Cleaning Business Operations Master Kit",
+    "productType": "SPREADSHEET_SCHEDULE",
+    "targetBuyer": "Established cleaning company owners, commercial facility executives, ambitious cleaning founders scaling multi-crew operations.",
+    "buyerProblem": "Growing cleaning businesses suffer from fragmented systems, disconnected spreadsheets, lack of KPI visibility, and operational chaos as they scale.",
+    "scopeClarity": "Includes exactly 6 customer-ready files: master Excel workbook, example workbook, architecture guide, A4 & US Letter field manuals, and clean ZIP archive.",
+    "whyBuyReason": "Delivers an enterprise-grade business management architecture for a one-time purchase without monthly software SaaS recurring fees.",
+    "workbookPlan": {
+      "sheets": [
+        {
+          "name": "01_Start_Here_Navigator",
+          "purpose": "System index, quick setup guide, and master module directory with clickable buttons",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "02_Data_Flow_Map",
+          "purpose": "Operational lifecycle sequence mapping document boundaries from intake to KPI review",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "03_Intake_Assessment",
+          "purpose": "Client onboarding register and property survey profile database",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "04_Quote_Proposal_Engine",
+          "purpose": "Formula-based quote calculator using user-entered cost assumptions and margins",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "05_Service_Agreement_Terms",
+          "purpose": "Standard service agreement template, policies, and signature blocks",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "06_Weekly_Schedule_Dispatch",
+          "purpose": "Capacity planner, weekly crew dispatch board, and vehicle routing calendar",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "07_Execution_Checklists",
+          "purpose": "4-in-1 master field checklists covering residential, deep, turnover, and commercial",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "08_QC_Inspection_Signoff",
+          "purpose": "10-point supervisor audit scorecard and deficiency punch list",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "09_Turnover_Records",
+          "purpose": "Property turnover completion record, key return log, and photo documentation register",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "10_Invoice_Generator",
+          "purpose": "Client-facing itemized invoice generator with sales tax and remittance slip",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "11_Payment_Aging_Ledger",
+          "purpose": "Accounts receivable ledger with automated 30/60/90-day overdue aging tracking",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "12_Client_Service_History",
+          "purpose": "Recurring client database, historical spend ledger, and customer lifetime value",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "13_Executive_KPI_Dashboard",
+          "purpose": "Monthly revenue, cash collections, AR aging, and operational performance KPIs",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "14_Standard_Operating_SOP",
+          "purpose": "Core cleaning standard operating procedures for chemical labels, SDS, and equipment care",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        }
+      ],
+      "sheetCount": 14
+    },
+    "compatibility": [
+      "Microsoft Excel Desktop (Office 365, 2019, 2021) for Mac & Windows",
+      "Google Sheets (Formula-compatible)",
+      "Adobe Acrobat Reader / Standard PDF Viewer"
+    ],
+    "priceTargetUsd": 34.9,
+    "primaryUseCase": "Serves as the primary operational operating system for running daily cleaning dispatches, weekly invoicing, and monthly executive reviews.",
+    "shopDnaProfile": {
+      "canvas": "2000x2000",
+      "footer": "PoonthaiDigital Verified Operational System",
+      "spacing": "32px grid padding",
+      "ctaStyle": "Subtle clean text badge",
+      "profileId": "SHOP_DNA_CORE_NAVY_SLATE",
+      "background": "#0F172A",
+      "badgeStyle": "Rounded pill badge with subtle glassmorphism",
+      "typography": "Outfit, Inter, system-ui",
+      "safeMargins": "80px outer safe margin for mobile thumbnails",
+      "headlineSize": "48px bold",
+      "layoutFamily": "SPREADSHEET",
+      "brandPlacement": "Top center discreet logo badge",
+      "mobileOverlaySafeZones": "Bottom 140px and Top 80px kept clear of critical text"
+    },
+    "differentiation": "Includes interconnected data flows across 14 master modules, comprehensive field manual, and executive management KPI dashboard.",
+    "supportedClaims": [
+      {
+        "claim": "Includes 14 formulated worksheets with clean navigation buttons",
+        "status": "VERIFIED",
+        "evidenceSource": "Cleaning Operations Master System Template.xlsx"
+      },
+      {
+        "claim": "Includes completed reference workbook with realistic sample data",
+        "status": "VERIFIED",
+        "evidenceSource": "Cleaning Operations Master System Example.xlsx"
+      },
+      {
+        "claim": "Features high-resolution printable PDF files formatted for clipboards",
+        "status": "VERIFIED",
+        "evidenceSource": "Printable PDF deliverables"
+      },
+      {
+        "claim": "Contains 100% macro-free native spreadsheet formulas",
+        "status": "VERIFIED",
+        "evidenceSource": "Formula security audit"
+      }
+    ],
+    "automationStatus": "MANUAL",
+    "listingImagePlan": [
+      {
+        "rank": 1,
+        "headline": "Cleaning Business Operations Master Kit for Excel",
+        "keyClaim": "Run Daily Dispatch, Invoicing, QC & Executive KPIs in One Master System",
+        "objective": "Hero showcase with instant 2-3s comprehension",
+        "shopDnaLayout": "SPREADSHEET",
+        "evidenceSource": "Executive system mockup",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What is this tool and what key benefit does it give my cleaning business?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 2,
+        "headline": "What You Receive: 5 Operational Deliverables",
+        "keyClaim": "Master Excel Workbooks + Professional Printable PDF Guides",
+        "objective": "Package inventory breakdown",
+        "shopDnaLayout": "SPREADSHEET",
+        "evidenceSource": "Buyer package inspection",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Exactly what files will I be able to download after purchase?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 3,
+        "headline": "Comprehensive Field & Office Operational Architecture",
+        "keyClaim": "Formulated Worksheets with Interactive Navigation Links",
+        "objective": "Core module walkthrough",
+        "shopDnaLayout": "SPREADSHEET",
+        "evidenceSource": "Workbook overview screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How is the tool structured and how do the sheets function together?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 4,
+        "headline": "Eliminate Operational Guesswork and Inconsistencies",
+        "keyClaim": "Standardized Checklists & Formula-Driven Calculations",
+        "objective": "Primary functional workflow showcase",
+        "shopDnaLayout": "SPREADSHEET",
+        "evidenceSource": "Module detailing screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How does this make my daily business operations easier and faster?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 5,
+        "headline": "Designed for Professional Service Excellence",
+        "keyClaim": "Accountability Logs, Client Documentation & Signoffs",
+        "objective": "Secondary functional module showcase",
+        "shopDnaLayout": "SPREADSHEET",
+        "evidenceSource": "Field sheet screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Does this include quality verification and client signoff tools?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 6,
+        "headline": "Simple Implementation Framework for Cleaning Teams",
+        "keyClaim": "Clear 4-Step Field Protocol Anyone on Your Crew Can Follow",
+        "objective": "Step-by-step implementation workflow",
+        "shopDnaLayout": "SPREADSHEET",
+        "evidenceSource": "User guide workflow diagram",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Is this easy to deploy and teach to my cleaning technicians?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 7,
+        "headline": "Built for Microsoft Excel & Google Sheets",
+        "keyClaim": "100% Native Formulas • Zero VBA Macros • Fully Compatible",
+        "objective": "Technical requirements and compatibility",
+        "shopDnaLayout": "SPREADSHEET",
+        "evidenceSource": "Workbook specification manifest",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Will this open cleanly and function properly on my computer or device?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 8,
+        "headline": "Includes Completed Reference Example Workbook",
+        "keyClaim": "Study Real-World Pre-Populated Calculations & Field Notes",
+        "objective": "Reference model and sample data showcase",
+        "shopDnaLayout": "SPREADSHEET",
+        "evidenceSource": "Example workbook screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How do I know what numbers and notes to enter into the blank sheets?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 9,
+        "headline": "Important Product Boundaries & Delivery Terms",
+        "keyClaim": "Instant Digital Download • Manual Tool • No Physical Item",
+        "objective": "Important details and digital scope disclosure",
+        "shopDnaLayout": "SPREADSHEET",
+        "evidenceSource": "Product Truth Manifesto",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What are the format boundaries and delivery specifications of this item?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 10,
+        "headline": "PoonthaiDigital Operations Suite Collection",
+        "keyClaim": "Coordinates Seamlessly with the Complete 15-Product Roadmap",
+        "objective": "Brand collection synergy and cross-sell",
+        "shopDnaLayout": "SPREADSHEET",
+        "evidenceSource": "Store catalog",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What other matching tools exist for my cleaning business?",
+        "productScreenshotRequired": true
+      }
+    ],
+    "prohibitedClaims": [
+      "Automated accounting software or live bank sync",
+      "Guaranteed revenue outcomes or certified profit guarantees",
+      "Physical planner book or binder shipped in the mail",
+      "Official OSHA legal certification or licensed engineering credential"
+    ],
+    "buyerExpectations": {
+      "automationType": "Manual spreadsheet with standard formulas (no VBA)",
+      "noPhysicalItem": true,
+      "primarySoftware": "Microsoft Excel Desktop (Office 365, 2019, 2021) or Google Sheets",
+      "expectedFileCount": 6,
+      "isDigitalDownload": true,
+      "limitationsSummary": "Manual entry workbook; does not sync to banking institutions or third-party CRM APIs",
+      "editableAreasSummary": "All data entry cells are editable; summary formulas and headers protected",
+      "printableAreasSummary": "Printable PDF files are formatted for standard A4 and US Letter printing",
+      "expectedSheetsOrPagesSummary": "14 worksheets in Excel; 18-page printable PDF documentation"
+    },
+    "acceptanceCriteria": {
+      "videoRequired": true,
+      "buyerFilesExactly": 6,
+      "missingFilesAllowed": 0,
+      "claimMismatchAllowed": 0,
+      "listingImagesExactly": 10,
+      "brokenFormulasAllowed": 0,
+      "policyCriticalIssuesAllowed": 0,
+      "highBuyerExpectationRisksAllowed": 0
+    }
+  }
+}

@@ -1,0 +1,628 @@
+{
+  "planId": "PLAN-PDT-CBP-004-V1",
+  "planVersion": 1,
+  "productId": "PDT-CBP-004",
+  "status": "PLAN_APPROVED",
+  "planSha256": "b249373aeb6fbd827ec100696a99b466640ae7c1d44b07d542bba70d4126982e",
+  "approvedAt": "2026-10-06T09:36:32.179Z",
+  "qcResult": {
+    "issues": [],
+    "passed": true,
+    "scores": {
+      "filePlan": 100,
+      "policyFit": 100,
+      "videoPlan": 100,
+      "buyerValue": 100,
+      "shopDnaFit": 100,
+      "overallScore": 100,
+      "productClarity": 100,
+      "workbookPdfPlan": 100,
+      "buildFeasibility": 100,
+      "listingImagePlan": 100,
+      "productArchitecture": 100,
+      "buyerExpectationClarity": 100
+    },
+    "status": "PLAN_APPROVED",
+    "evaluatedAt": "2026-10-06T09:36:32.139Z"
+  },
+  "plan": {
+    "pdfPlan": {
+      "pages": [
+        {
+          "page": 1,
+          "purpose": "Cover page with branding and operational planning system index"
+        },
+        {
+          "page": 2,
+          "purpose": "Business foundations and operating territory definition worksheet"
+        },
+        {
+          "page": 3,
+          "purpose": "Recurring revenue targets and client tier projection matrix"
+        },
+        {
+          "page": 4,
+          "purpose": "Weekly cleaner route capacity and scheduling worksheet"
+        },
+        {
+          "page": 5,
+          "purpose": "Operating expense schedule and supply consumable budget"
+        },
+        {
+          "page": 6,
+          "purpose": "Service pricing calculation matrix and gross margin targets"
+        },
+        {
+          "page": 7,
+          "purpose": "Inbound client marketing pipeline and conversion log"
+        },
+        {
+          "page": 8,
+          "purpose": "Quarterly milestone scorecard and lessons-learned review"
+        }
+      ],
+      "editable": false,
+      "hasFooter": true,
+      "printable": true,
+      "orientation": "portrait",
+      "printIntent": "High-resolution clean print A4 and US Letter",
+      "hasDisclaimer": true,
+      "pageCountTarget": 8,
+      "hasPageNumbering": true
+    },
+    "etsyPlan": {
+      "taxonomyId": 12476,
+      "positioning": "A structured operational roadmap that models quarterly revenue targets, calculates team cleaning capacity, and sets accurate service pricing.",
+      "priceTarget": 7.9,
+      "thirteenTags": [
+        "cleaning business",
+        "business planner",
+        "cleaning planner",
+        "excel business plan",
+        "cleaning price sheet",
+        "cleaning spreadsheet",
+        "commercial cleaning",
+        "cleaning capacity",
+        "revenue target model",
+        "cleaning budget",
+        "cleaning action plan",
+        "cleaner schedule",
+        "cleaning quote tool"
+      ],
+      "titleStrategy": "Cleaning Business Planning & Growth Workbook | Excel Spreadsheet and Printable PDF Planner | Revenue Modeling and Capacity Schedule System",
+      "primaryKeyword": "cleaning business",
+      "secondaryKeywords": [
+        "business planner",
+        "cleaning planner",
+        "excel business plan"
+      ],
+      "limitationsDisclosure": "Manual operational model. Does not connect to banking or accounting APIs.",
+      "compatibilityDisclosure": "Compatible with Microsoft Excel Desktop and Google Sheets.",
+      "digitalProductDisclosure": "Instant digital download only. No physical item will be shipped."
+    },
+    "planRisks": [
+      {
+        "category": "COMPATIBILITY",
+        "resolved": true,
+        "severity": "MEDIUM",
+        "mitigation": "Used cross-platform standard system fonts and native universal formulas",
+        "description": "Google Sheets users might experience slight layout font differences"
+      },
+      {
+        "category": "BUYER_CONFUSION",
+        "resolved": true,
+        "severity": "HIGH",
+        "mitigation": "Prominently state manual operational nature on Image 09 and in listing description",
+        "description": "Buyers might expect automated third-party accounting integration"
+      }
+    ],
+    "productId": "PDT-CBP-004",
+    "videoPlan": {
+      "scenes": [
+        {
+          "end": 4,
+          "claim": "Clear Operational Structure for Cleaning Businesses",
+          "start": 0,
+          "purpose": "Hook buyer with master system navigation and branding",
+          "evidence": "Instructions and dashboard screen capture",
+          "sourceAsset": "01_hero_video.mp4",
+          "textOverlay": "Cleaning Business Planning & Growth Workbook"
+        },
+        {
+          "end": 9,
+          "claim": "Dynamic Native Formulas with Zero Macros",
+          "start": 4,
+          "purpose": "Demonstrate dynamic formulas and field inspection workflow",
+          "evidence": "Calculation and checklist reaction",
+          "sourceAsset": "02_formulas_video.mp4",
+          "textOverlay": "Standardize Quality & Protect Business Margins"
+        },
+        {
+          "end": 14,
+          "claim": "Complete Operational Package Ready to Deploy",
+          "start": 9,
+          "purpose": "Display package contents and instant digital download",
+          "evidence": "Buyer file inventory graphic",
+          "sourceAsset": "03_package_video.mp4",
+          "textOverlay": "Instant Digital Download • Excel & PDF"
+        }
+      ],
+      "required": true,
+      "durationTarget": 14
+    },
+    "buyerFiles": [
+      {
+        "rank": 1,
+        "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "purpose": "Pristine master operational workbook with 8 formulated worksheets and clickable navigation buttons",
+        "editable": true,
+        "filename": "Cleaning Business Planner Template.xlsx",
+        "required": true,
+        "printable": false
+      },
+      {
+        "rank": 2,
+        "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "purpose": "Completed fictional sample reference workbook showing a realistic cleaning company model",
+        "editable": true,
+        "filename": "Cleaning Business Planner Example.xlsx",
+        "required": true,
+        "printable": false
+      },
+      {
+        "rank": 3,
+        "type": "application/pdf",
+        "purpose": "8-page printable operational planner formatted for clipboards, desk binders, and team meetings",
+        "editable": false,
+        "filename": "Cleaning Business Planner Printable.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 4,
+        "type": "application/pdf",
+        "purpose": "6-page operational manual explaining the 7-phase implementation workflow and route guidelines",
+        "editable": false,
+        "filename": "Cleaning Business Planner User Guide.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 5,
+        "type": "application/pdf",
+        "purpose": "2-page bonus quarterly sprint roadmap covering 90-day goals, monthly focus, and retrospective",
+        "editable": false,
+        "filename": "90-Day Cleaning Business Action Plan Printable - Premium Final.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 6,
+        "type": "application/zip",
+        "purpose": "Organized ZIP archive containing all 5 customer deliverable files for one-click download",
+        "editable": false,
+        "filename": "PDT-CBP-004 Buyer Package FINAL CLEAN.zip",
+        "required": true,
+        "printable": false
+      }
+    ],
+    "coreOutcome": "A structured operational roadmap that models quarterly revenue targets, calculates team cleaning capacity, and sets accurate service pricing.",
+    "limitations": [
+      "Manual spreadsheet data entry required; no automated bank account sync",
+      "Zero VBA macros included for cross-platform safety",
+      "Digital download only; no physical item will be shipped"
+    ],
+    "productName": "Cleaning Business Planning & Growth Workbook",
+    "productType": "PLANNER",
+    "targetBuyer": "Independent cleaning business owners, solo cleaners looking to expand to teams, and janitorial service founders.",
+    "buyerProblem": "Cleaning business owners struggle with inconsistent revenue, uncalculated operational capacity, chaotic client scheduling, and unclear hiring metrics.",
+    "scopeClarity": "Includes exactly 6 customer-ready files: master Excel workbook, completed reference example, printable planning worksheet PDF, user guide PDF, 90-day action plan printable PDF, and clean ZIP archive.",
+    "whyBuyReason": "Provides an all-in-one pre-built Excel framework with zero setup friction, designed specifically for commercial and residential cleaning operations.",
+    "workbookPlan": {
+      "sheets": [
+        {
+          "name": "01_Instructions",
+          "purpose": "Operational quick-start guide with clickable navigation hyperlinks to jump between sheets",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "02_Business_Profile_Goals",
+          "purpose": "Document company foundations, operating territory boundaries, service standards, and annual growth targets",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "03_Revenue_Targets",
+          "purpose": "Model recurring monthly cash flows across 5 service tiers including weekly, bi-weekly, and commercial",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "04_Weekly_Capacity_Planner",
+          "purpose": "Allocate cleaners and route clusters across Monday through Saturday schedules to prevent overtime",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "05_Expense_Supply_Budget",
+          "purpose": "Track chemical solutions, microfiber towels, vacuum filters, insurance, vehicle fuel, and budget variances",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "06_Service_Pricing_Calculator",
+          "purpose": "Calculate standard package prices using labor hours and hourly billing rates to protect profit margins",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "07_Marketing_Pipeline",
+          "purpose": "Log inbound prospects, quote amounts, lead sources, quotation stages, and follow-up deadlines",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "08_Quarterly_Milestones",
+          "purpose": "Establish 90-day benchmarks and conduct structured quarterly retrospective performance reviews",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        }
+      ],
+      "sheetCount": 8
+    },
+    "compatibility": [
+      "Microsoft Excel Desktop (Office 365, 2019, 2021) for Mac & Windows",
+      "Google Sheets (Formula-compatible)",
+      "Adobe Acrobat Reader / Standard PDF Viewer"
+    ],
+    "priceTargetUsd": 7.9,
+    "primaryUseCase": "Used during annual and quarterly business planning sessions, as well as weekly review of staffing capacity and gross profit margins.",
+    "shopDnaProfile": {
+      "canvas": "2000x2000",
+      "footer": "PoonthaiDigital Verified Operational System",
+      "spacing": "32px grid padding",
+      "ctaStyle": "Subtle clean text badge",
+      "profileId": "SHOP_DNA_CORE_NAVY_SLATE",
+      "background": "#0F172A",
+      "badgeStyle": "Rounded pill badge with subtle glassmorphism",
+      "typography": "Outfit, Inter, system-ui",
+      "safeMargins": "80px outer safe margin for mobile thumbnails",
+      "headlineSize": "48px bold",
+      "layoutFamily": "PLANNER",
+      "brandPlacement": "Top center discreet logo badge",
+      "mobileOverlaySafeZones": "Bottom 140px and Top 80px kept clear of critical text"
+    },
+    "differentiation": "Combines financial forecasting with room-by-room labor hour modeling and capacity planning instead of generic business templates.",
+    "supportedClaims": [
+      {
+        "claim": "Includes 8 formulated worksheets with clean navigation buttons",
+        "status": "VERIFIED",
+        "evidenceSource": "Cleaning Business Planner Template.xlsx"
+      },
+      {
+        "claim": "Includes completed reference workbook with realistic sample data",
+        "status": "VERIFIED",
+        "evidenceSource": "Cleaning Business Planner Example.xlsx"
+      },
+      {
+        "claim": "Features high-resolution printable PDF files formatted for clipboards",
+        "status": "VERIFIED",
+        "evidenceSource": "Printable PDF deliverables"
+      },
+      {
+        "claim": "Contains 100% macro-free native spreadsheet formulas",
+        "status": "VERIFIED",
+        "evidenceSource": "Formula security audit"
+      }
+    ],
+    "automationStatus": "MANUAL",
+    "listingImagePlan": [
+      {
+        "rank": 1,
+        "headline": "Cleaning Business Planning & Growth Workbook for Excel",
+        "keyClaim": "Plan Revenue, Team Capacity & Profit Margins with Precision",
+        "objective": "Hero showcase with instant 2-3s comprehension",
+        "shopDnaLayout": "PLANNER",
+        "evidenceSource": "Executive system mockup",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What is this tool and what key benefit does it give my cleaning business?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 2,
+        "headline": "What You Receive: 5 Operational Deliverables",
+        "keyClaim": "Master Excel Workbooks + Professional Printable PDF Guides",
+        "objective": "Package inventory breakdown",
+        "shopDnaLayout": "PLANNER",
+        "evidenceSource": "Buyer package inspection",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Exactly what files will I be able to download after purchase?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 3,
+        "headline": "Comprehensive Field & Office Operational Architecture",
+        "keyClaim": "Formulated Worksheets with Interactive Navigation Links",
+        "objective": "Core module walkthrough",
+        "shopDnaLayout": "PLANNER",
+        "evidenceSource": "Workbook overview screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How is the tool structured and how do the sheets function together?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 4,
+        "headline": "Eliminate Operational Guesswork and Inconsistencies",
+        "keyClaim": "Standardized Checklists & Formula-Driven Calculations",
+        "objective": "Primary functional workflow showcase",
+        "shopDnaLayout": "PLANNER",
+        "evidenceSource": "Module detailing screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How does this make my daily business operations easier and faster?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 5,
+        "headline": "Designed for Professional Service Excellence",
+        "keyClaim": "Accountability Logs, Client Documentation & Signoffs",
+        "objective": "Secondary functional module showcase",
+        "shopDnaLayout": "PLANNER",
+        "evidenceSource": "Field sheet screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Does this include quality verification and client signoff tools?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 6,
+        "headline": "Simple Implementation Framework for Cleaning Teams",
+        "keyClaim": "Clear 4-Step Field Protocol Anyone on Your Crew Can Follow",
+        "objective": "Step-by-step implementation workflow",
+        "shopDnaLayout": "PLANNER",
+        "evidenceSource": "User guide workflow diagram",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Is this easy to deploy and teach to my cleaning technicians?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 7,
+        "headline": "Built for Microsoft Excel & Google Sheets",
+        "keyClaim": "100% Native Formulas • Zero VBA Macros • Fully Compatible",
+        "objective": "Technical requirements and compatibility",
+        "shopDnaLayout": "PLANNER",
+        "evidenceSource": "Workbook specification manifest",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Will this open cleanly and function properly on my computer or device?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 8,
+        "headline": "Includes Completed Reference Example Workbook",
+        "keyClaim": "Study Real-World Pre-Populated Calculations & Field Notes",
+        "objective": "Reference model and sample data showcase",
+        "shopDnaLayout": "PLANNER",
+        "evidenceSource": "Example workbook screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How do I know what numbers and notes to enter into the blank sheets?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 9,
+        "headline": "Important Product Boundaries & Delivery Terms",
+        "keyClaim": "Instant Digital Download • Manual Tool • No Physical Item",
+        "objective": "Important details and digital scope disclosure",
+        "shopDnaLayout": "PLANNER",
+        "evidenceSource": "Product Truth Manifesto",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What are the format boundaries and delivery specifications of this item?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 10,
+        "headline": "PoonthaiDigital Operations Suite Collection",
+        "keyClaim": "Coordinates Seamlessly with the Complete 15-Product Roadmap",
+        "objective": "Brand collection synergy and cross-sell",
+        "shopDnaLayout": "PLANNER",
+        "evidenceSource": "Store catalog",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What other matching tools exist for my cleaning business?",
+        "productScreenshotRequired": true
+      }
+    ],
+    "prohibitedClaims": [
+      "Automated accounting software or live bank sync",
+      "Guaranteed revenue outcomes or certified profit guarantees",
+      "Physical planner book or binder shipped in the mail",
+      "Official OSHA legal certification or licensed engineering credential"
+    ],
+    "buyerExpectations": {
+      "automationType": "Manual spreadsheet with standard formulas (no VBA)",
+      "noPhysicalItem": true,
+      "primarySoftware": "Microsoft Excel Desktop (Office 365, 2019, 2021) or Google Sheets",
+      "expectedFileCount": 6,
+      "isDigitalDownload": true,
+      "limitationsSummary": "Manual entry workbook; does not sync to banking institutions or third-party CRM APIs",
+      "editableAreasSummary": "All data entry cells are editable; summary formulas and headers protected",
+      "printableAreasSummary": "Printable PDF files are formatted for standard A4 and US Letter printing",
+      "expectedSheetsOrPagesSummary": "8 worksheets in Excel; 8-page printable PDF documentation"
+    },
+    "acceptanceCriteria": {
+      "videoRequired": true,
+      "buyerFilesExactly": 6,
+      "missingFilesAllowed": 0,
+      "claimMismatchAllowed": 0,
+      "listingImagesExactly": 10,
+      "brokenFormulasAllowed": 0,
+      "policyCriticalIssuesAllowed": 0,
+      "highBuyerExpectationRisksAllowed": 0
+    }
+  }
+}

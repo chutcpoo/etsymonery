@@ -1,0 +1,602 @@
+{
+  "planId": "PLAN-PDT-ABT-013-V1",
+  "planVersion": 1,
+  "productId": "PDT-ABT-013",
+  "status": "PLAN_APPROVED",
+  "planSha256": "14da92bbde178f0bf2b52ba154da5749988d34ae5deb0bc42fd958b11bc4cd38",
+  "approvedAt": "2026-10-06T09:36:38.470Z",
+  "qcResult": {
+    "issues": [],
+    "passed": true,
+    "scores": {
+      "filePlan": 100,
+      "policyFit": 100,
+      "videoPlan": 100,
+      "buyerValue": 100,
+      "shopDnaFit": 100,
+      "overallScore": 100,
+      "productClarity": 100,
+      "workbookPdfPlan": 100,
+      "buildFeasibility": 100,
+      "listingImagePlan": 100,
+      "productArchitecture": 100,
+      "buyerExpectationClarity": 100
+    },
+    "status": "PLAN_APPROVED",
+    "evaluatedAt": "2026-10-06T09:36:38.429Z"
+  },
+  "plan": {
+    "pdfPlan": {
+      "pages": [
+        {
+          "page": 1,
+          "purpose": "Cover page with branding and STR turnover system overview"
+        },
+        {
+          "page": 2,
+          "purpose": "Property profile and turnover logistics setup worksheet"
+        },
+        {
+          "page": 3,
+          "purpose": "Room-by-room rapid turnover inspection checklist"
+        },
+        {
+          "page": 4,
+          "purpose": "Linen laundry protocols and staging standards worksheet"
+        },
+        {
+          "page": 5,
+          "purpose": "Supply par inventory restock log and amenities checklist"
+        },
+        {
+          "page": 6,
+          "purpose": "Damage reporting protocol and guest-ready verification signoff"
+        }
+      ],
+      "editable": false,
+      "hasFooter": true,
+      "printable": true,
+      "orientation": "portrait",
+      "printIntent": "High-resolution clean print A4 and US Letter",
+      "hasDisclaimer": true,
+      "pageCountTarget": 6,
+      "hasPageNumbering": true
+    },
+    "etsyPlan": {
+      "taxonomyId": 12476,
+      "positioning": "Standardizes fast-paced turnover operations with room cleaning checklists, supply par restock logs, and guest-ready signoff verification.",
+      "priceTarget": 9.9,
+      "thirteenTags": [
+        "airbnb turnover",
+        "turnover checklist",
+        "cleaning template",
+        "restock kit",
+        "short term rental",
+        "cleaning business",
+        "vacation rental crm",
+        "cleaning schedule",
+        "cleaning spreadsheet",
+        "par inventory",
+        "str turnover",
+        "laundry protocol",
+        "turnover schedule"
+      ],
+      "titleStrategy": "Airbnb Turnover Checklist Spreadsheet Restock Kit Short Term Rental Cleaning Template Vacation Rental Inventory Cleaning Schedule PDF",
+      "primaryKeyword": "airbnb turnover",
+      "secondaryKeywords": [
+        "turnover checklist",
+        "cleaning template",
+        "restock kit"
+      ],
+      "limitationsDisclosure": "Manual operational model. Does not connect to banking or accounting APIs.",
+      "compatibilityDisclosure": "Compatible with Microsoft Excel Desktop and Google Sheets.",
+      "digitalProductDisclosure": "Instant digital download only. No physical item will be shipped."
+    },
+    "planRisks": [
+      {
+        "category": "COMPATIBILITY",
+        "resolved": true,
+        "severity": "MEDIUM",
+        "mitigation": "Used cross-platform standard system fonts and native universal formulas",
+        "description": "Google Sheets users might experience slight layout font differences"
+      },
+      {
+        "category": "BUYER_CONFUSION",
+        "resolved": true,
+        "severity": "HIGH",
+        "mitigation": "Prominently state manual operational nature on Image 09 and in listing description",
+        "description": "Buyers might expect automated third-party accounting integration"
+      }
+    ],
+    "productId": "PDT-ABT-013",
+    "videoPlan": {
+      "scenes": [
+        {
+          "end": 4,
+          "claim": "Clear Operational Structure for Cleaning Businesses",
+          "start": 0,
+          "purpose": "Hook buyer with master system navigation and branding",
+          "evidence": "Instructions and dashboard screen capture",
+          "sourceAsset": "01_hero_video.mp4",
+          "textOverlay": "Airbnb Turnover & Restock Kit"
+        },
+        {
+          "end": 9,
+          "claim": "Dynamic Native Formulas with Zero Macros",
+          "start": 4,
+          "purpose": "Demonstrate dynamic formulas and field inspection workflow",
+          "evidence": "Calculation and checklist reaction",
+          "sourceAsset": "02_formulas_video.mp4",
+          "textOverlay": "Standardize Quality & Protect Business Margins"
+        },
+        {
+          "end": 14,
+          "claim": "Complete Operational Package Ready to Deploy",
+          "start": 9,
+          "purpose": "Display package contents and instant digital download",
+          "evidence": "Buyer file inventory graphic",
+          "sourceAsset": "03_package_video.mp4",
+          "textOverlay": "Instant Digital Download • Excel & PDF"
+        }
+      ],
+      "required": true,
+      "durationTarget": 14
+    },
+    "buyerFiles": [
+      {
+        "rank": 1,
+        "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "purpose": "Master STR turnover and inventory tracking workbook with 7 formulated sheets",
+        "editable": true,
+        "filename": "Airbnb Turnover & Restock Kit Template.xlsx",
+        "required": true,
+        "printable": false
+      },
+      {
+        "rank": 2,
+        "type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "purpose": "Completed reference workbook showing turnover operations for a luxury vacation villa",
+        "editable": true,
+        "filename": "Airbnb Turnover & Restock Kit Example.xlsx",
+        "required": true,
+        "printable": false
+      },
+      {
+        "rank": 3,
+        "type": "application/pdf",
+        "purpose": "6-page operational manual covering 5-star turnover timing and inventory par levels",
+        "editable": false,
+        "filename": "Airbnb Turnover & Restock Kit User Guide.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 4,
+        "type": "application/pdf",
+        "purpose": "6-page printable turnover checklist formatted for international A4 binders",
+        "editable": false,
+        "filename": "Airbnb Turnover Checklist Printable A4.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 5,
+        "type": "application/pdf",
+        "purpose": "6-page printable turnover checklist formatted for 8.5x11 North American binders",
+        "editable": false,
+        "filename": "Airbnb Turnover Checklist Printable US Letter.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 6,
+        "type": "application/pdf",
+        "purpose": "1-page printable welcome signoff door hanger verifying pristine room readiness",
+        "editable": false,
+        "filename": "Guest Welcome Turnover Signoff Tag Printable - Premium Final.pdf",
+        "required": true,
+        "printable": true
+      },
+      {
+        "rank": 7,
+        "type": "application/zip",
+        "purpose": "Organized ZIP archive containing all 6 customer deliverable files for one-click download",
+        "editable": false,
+        "filename": "PDT-ABT-013 Buyer Package FINAL CLEAN.zip",
+        "required": true,
+        "printable": false
+      }
+    ],
+    "coreOutcome": "Standardizes fast-paced turnover operations with room cleaning checklists, supply par restock logs, and guest-ready signoff verification.",
+    "limitations": [
+      "Manual spreadsheet data entry required; no automated bank account sync",
+      "Zero VBA macros included for cross-platform safety",
+      "Digital download only; no physical item will be shipped"
+    ],
+    "productName": "Airbnb Turnover & Restock Kit",
+    "productType": "PRINTABLE_CHECKLIST",
+    "targetBuyer": "Short-term rental turnover cleaners, Airbnb hosts, vacation rental co-hosts, and STR property managers.",
+    "buyerProblem": "STR cleaners risk negative 1-star reviews from guest arrivals due to missed bathroom restocks, unwashed linens, or undocumented property damage.",
+    "scopeClarity": "Includes exactly 7 customer-ready files: master Excel workbook, example workbook, user guide PDF, A4 & US Letter printable PDFs, guest welcome tag, and clean ZIP archive.",
+    "whyBuyReason": "Protects host Superhost status by guaranteeing pristine guest-ready turnovers every booking.",
+    "workbookPlan": {
+      "sheets": [
+        {
+          "name": "01_Instructions",
+          "purpose": "Interactive guide to turnover operations and inventory par levels",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "02_Property_Profile_Rules",
+          "purpose": "Property specs, lockbox codes, trash pickup days, host contacts, and house rules",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "03_Turnover_Cleaning_Checklist",
+          "purpose": "Room-by-room rapid turnover checklist covering beds, kitchen staging, and sanitizing",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "04_Linen_Laundry_Protocol",
+          "purpose": "Bedding change schedule, towel wash cycles, bleach guidelines, and linen staging",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "05_Supply_Par_Restock_Log",
+          "purpose": "Consumable inventory tracker monitoring coffee pods, soaps, toilet paper, and min par alerts",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "06_Damage_Lost_Item_Report",
+          "purpose": "Incident log recording guest damage, missing amenities, repair costs, and photo IDs",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        },
+        {
+          "name": "07_Ready_for_Guest_QC_Signoff",
+          "purpose": "Final 10-point inspection clearance certifying the property is 100% guest-ready",
+          "formulas": [
+            "SUM",
+            "IF",
+            "AVERAGE"
+          ],
+          "dropdowns": [
+            "Status",
+            "Category"
+          ],
+          "editableAreas": [
+            "Data Entries",
+            "Notes"
+          ],
+          "protectedAreas": [
+            "Formulas",
+            "Headers"
+          ],
+          "requiredColumns": [
+            "Item",
+            "Category",
+            "Status",
+            "Notes"
+          ]
+        }
+      ],
+      "sheetCount": 7
+    },
+    "compatibility": [
+      "Microsoft Excel Desktop (Office 365, 2019, 2021) for Mac & Windows",
+      "Google Sheets (Formula-compatible)",
+      "Adobe Acrobat Reader / Standard PDF Viewer"
+    ],
+    "priceTargetUsd": 9.9,
+    "primaryUseCase": "Executed during short 10am-3pm STR check-out and check-in turnover windows between departing and arriving guests.",
+    "shopDnaProfile": {
+      "canvas": "2000x2000",
+      "footer": "PoonthaiDigital Verified Operational System",
+      "spacing": "32px grid padding",
+      "ctaStyle": "Subtle clean text badge",
+      "profileId": "SHOP_DNA_CORE_NAVY_SLATE",
+      "background": "#0F172A",
+      "badgeStyle": "Rounded pill badge with subtle glassmorphism",
+      "typography": "Outfit, Inter, system-ui",
+      "safeMargins": "80px outer safe margin for mobile thumbnails",
+      "headlineSize": "48px bold",
+      "layoutFamily": "PRINTABLE",
+      "brandPlacement": "Top center discreet logo badge",
+      "mobileOverlaySafeZones": "Bottom 140px and Top 80px kept clear of critical text"
+    },
+    "differentiation": "Includes supply par level calculator, linen laundry protocol, damage photo logging, and printable guest welcome tags.",
+    "supportedClaims": [
+      {
+        "claim": "Includes 7 formulated worksheets with clean navigation buttons",
+        "status": "VERIFIED",
+        "evidenceSource": "Airbnb Turnover & Restock Kit Template.xlsx"
+      },
+      {
+        "claim": "Includes completed reference workbook with realistic sample data",
+        "status": "VERIFIED",
+        "evidenceSource": "Airbnb Turnover & Restock Kit Example.xlsx"
+      },
+      {
+        "claim": "Features high-resolution printable PDF files formatted for clipboards",
+        "status": "VERIFIED",
+        "evidenceSource": "Printable PDF deliverables"
+      },
+      {
+        "claim": "Contains 100% macro-free native spreadsheet formulas",
+        "status": "VERIFIED",
+        "evidenceSource": "Formula security audit"
+      }
+    ],
+    "automationStatus": "MANUAL",
+    "listingImagePlan": [
+      {
+        "rank": 1,
+        "headline": "Airbnb Turnover & Restock Kit for Excel & PDF",
+        "keyClaim": "Master Rapid Turnovers, Manage Supply Pars & Earn 5-Star Reviews",
+        "objective": "Hero showcase with instant 2-3s comprehension",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Executive system mockup",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What is this tool and what key benefit does it give my cleaning business?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 2,
+        "headline": "What You Receive: 6 Operational Deliverables",
+        "keyClaim": "Master Excel Workbooks + Professional Printable PDF Guides",
+        "objective": "Package inventory breakdown",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Buyer package inspection",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Exactly what files will I be able to download after purchase?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 3,
+        "headline": "Comprehensive Field & Office Operational Architecture",
+        "keyClaim": "Formulated Worksheets with Interactive Navigation Links",
+        "objective": "Core module walkthrough",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Workbook overview screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How is the tool structured and how do the sheets function together?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 4,
+        "headline": "Eliminate Operational Guesswork and Inconsistencies",
+        "keyClaim": "Standardized Checklists & Formula-Driven Calculations",
+        "objective": "Primary functional workflow showcase",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Module detailing screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How does this make my daily business operations easier and faster?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 5,
+        "headline": "Designed for Professional Service Excellence",
+        "keyClaim": "Accountability Logs, Client Documentation & Signoffs",
+        "objective": "Secondary functional module showcase",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Field sheet screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Does this include quality verification and client signoff tools?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 6,
+        "headline": "Simple Implementation Framework for Cleaning Teams",
+        "keyClaim": "Clear 4-Step Field Protocol Anyone on Your Crew Can Follow",
+        "objective": "Step-by-step implementation workflow",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "User guide workflow diagram",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Is this easy to deploy and teach to my cleaning technicians?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 7,
+        "headline": "Built for Microsoft Excel & Google Sheets",
+        "keyClaim": "100% Native Formulas • Zero VBA Macros • Fully Compatible",
+        "objective": "Technical requirements and compatibility",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Workbook specification manifest",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "Will this open cleanly and function properly on my computer or device?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 8,
+        "headline": "Includes Completed Reference Example Workbook",
+        "keyClaim": "Study Real-World Pre-Populated Calculations & Field Notes",
+        "objective": "Reference model and sample data showcase",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Example workbook screenshot",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "How do I know what numbers and notes to enter into the blank sheets?",
+        "productScreenshotRequired": true
+      },
+      {
+        "rank": 9,
+        "headline": "Important Product Boundaries & Delivery Terms",
+        "keyClaim": "Instant Digital Download • Manual Tool • No Physical Item",
+        "objective": "Important details and digital scope disclosure",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Product Truth Manifesto",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What are the format boundaries and delivery specifications of this item?",
+        "productScreenshotRequired": false
+      },
+      {
+        "rank": 10,
+        "headline": "PoonthaiDigital Operations Suite Collection",
+        "keyClaim": "Coordinates Seamlessly with the Complete 15-Product Roadmap",
+        "objective": "Brand collection synergy and cross-sell",
+        "shopDnaLayout": "PRINTABLE",
+        "evidenceSource": "Store catalog",
+        "mobileSafeZone": true,
+        "buyerQuestionAnswered": "What other matching tools exist for my cleaning business?",
+        "productScreenshotRequired": true
+      }
+    ],
+    "prohibitedClaims": [
+      "Automated accounting software or live bank sync",
+      "Guaranteed revenue outcomes or certified profit guarantees",
+      "Physical planner book or binder shipped in the mail",
+      "Official OSHA legal certification or licensed engineering credential"
+    ],
+    "buyerExpectations": {
+      "automationType": "Manual spreadsheet with standard formulas (no VBA)",
+      "noPhysicalItem": true,
+      "primarySoftware": "Microsoft Excel Desktop (Office 365, 2019, 2021) or Google Sheets",
+      "expectedFileCount": 7,
+      "isDigitalDownload": true,
+      "limitationsSummary": "Manual entry workbook; does not sync to banking institutions or third-party CRM APIs",
+      "editableAreasSummary": "All data entry cells are editable; summary formulas and headers protected",
+      "printableAreasSummary": "Printable PDF files are formatted for standard A4 and US Letter printing",
+      "expectedSheetsOrPagesSummary": "7 worksheets in Excel; 6-page printable PDF documentation"
+    },
+    "acceptanceCriteria": {
+      "videoRequired": true,
+      "buyerFilesExactly": 7,
+      "missingFilesAllowed": 0,
+      "claimMismatchAllowed": 0,
+      "listingImagesExactly": 10,
+      "brokenFormulasAllowed": 0,
+      "policyCriticalIssuesAllowed": 0,
+      "highBuyerExpectationRisksAllowed": 0
+    }
+  }
+}
