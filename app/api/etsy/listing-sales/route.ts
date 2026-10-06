@@ -81,7 +81,7 @@ export async function GET(request: Request) {
       throw new EtsyListingSalesError("TRANSACTIONS_R_SCOPE_REQUIRED", 403);
     }
 
-    const accessToken = await getValidEtsyAccessToken();
+    const accessToken = await getValidEtsyAccessToken(["transactions_r"]);
     const sales = await fetchExactListingSales({ accessToken, shopId, listingId });
 
     return NextResponse.json(

@@ -92,6 +92,11 @@ function resetResponse(pathname: string) {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const method = request.method.toUpperCase();
+  // This audit branch is exclusively mock validation: block legacy GET execute
+  // routes as well as POST/PATCH/DELETE, regardless of inherited environment gates.
+  if (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_GIT_COMMIT_REF === "feat/generic-etsy-release-engine") {
+    return NextResponse.json({ status: "BLOCKED_FAIL_CLOSED", error: "PREVIEW_REAL_ETSY_OPERATIONS_DISABLED", ETSY_WRITE_COUNT: 0 }, { status: 403 });
+  }
 
   if (pathname === "/api/internal/etsy/reset-status") {
     return NextResponse.next();

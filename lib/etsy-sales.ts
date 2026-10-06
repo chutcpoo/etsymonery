@@ -308,7 +308,7 @@ export async function getSalesControlCenterSnapshot() {
   const shopId = await getStoredEtsyShopId();
   if (!shopId) throw new Error("SHOP_IDENTITY_TEST_REQUIRED");
 
-  const accessToken = await getValidEtsyAccessToken();
+  const accessToken = await getValidEtsyAccessToken(["listings_r", "transactions_r"]);
   const stored = await loadEtsyTokens();
   const grantedScopes = normalizeScope(stored?.scope);
   const transactionScopeGranted = grantedScopes.has("transactions_r");

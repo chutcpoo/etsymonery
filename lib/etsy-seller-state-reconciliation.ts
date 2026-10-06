@@ -10,6 +10,7 @@ type Rec = Record<string, unknown>;
 
 type Dependencies = {
   fetchImpl?: typeof fetch;
+  apiHeaders?: typeof etsyApiHeaders;
   retryOptions?: EtsyReadRetryOptions;
 };
 
@@ -44,12 +45,13 @@ async function listingSkus(
   listingId: number,
   accessToken: string,
   fetchImpl: typeof fetch,
-  retryOptions: EtsyReadRetryOptions
+  retryOptions: EtsyReadRetryOptions,
+  headersFactory: typeof etsyApiHeaders
 ) {
   const response = await fetchEtsyReadWithRetry(
     fetchImpl,
     `https://api.etsy.com/v3/application/listings/${listingId}/inventory`,
-    { method: "GET", headers: etsyApiHeaders(accessToken), cache: "no-store" },
+    { method: "GET", headers: headersFactory(accessToken), cache: "no-store" },
     retryOptions
   );
   if (!response.ok) throw new Error(`ETSY_SELLER_INVENTORY_READBACK_HTTP_${response.status}`);
@@ -77,6 +79,7 @@ export async function getEtsySellerStateSnapshot(input: {
   if (!input.accessToken.trim()) throw new Error("ETSY_ACCESS_TOKEN_REQUIRED");
 
   const fetchImpl = input.dependencies?.fetchImpl ?? fetch;
+  const headersFactory = input.dependencies?.apiHeaders ?? etsyApiHeaders;
   const retryOptions = input.dependencies?.retryOptions ?? {};
   const sleepFn = retryOptions.sleep ?? defaultSleep;
   const listings: Array<ReturnType<typeof listingSummary> extends infer T ? Exclude<T, null> : never> = [];
@@ -97,7 +100,7 @@ export async function getEtsySellerStateSnapshot(input: {
       const response = await fetchEtsyReadWithRetry(
         fetchImpl,
         `https://api.etsy.com/v3/application/shops/${input.shopId}/listings?state=${state}&limit=${PAGE_LIMIT}&offset=${offset}`,
-        { method: "GET", headers: etsyApiHeaders(input.accessToken), cache: "no-store" },
+        { method: "GET", headers: headersFactory(input.accessToken), cache: "no-store" },
         retryOptions
       );
       const payload = await json(response);
@@ -114,7 +117,7 @@ export async function getEtsySellerStateSnapshot(input: {
         }
         const listingId = Number(item.listing_id);
         if (!Number.isSafeInteger(listingId) || listingId <= 0) continue;
-        const skus = await listingSkus(listingId, input.accessToken, fetchImpl, retryOptions);
+        const skus = await listingSkus(listingId, input.accessToken, fetchImpl, retryOptions, headersFactory);
         const normalized = listingSummary(item, state, skus);
         if (normalized) listings.push(normalized);
       }

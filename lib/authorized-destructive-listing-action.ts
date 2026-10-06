@@ -217,7 +217,7 @@ export async function handleDestructiveListingAction(
   }
 
   const fetchImpl = runtime.fetchImpl ?? fetch;
-  const accessToken = await (runtime.getAccessToken ?? getValidEtsyAccessToken)();
+  const accessToken = await (runtime.getAccessToken ?? (() => getValidEtsyAccessToken(input.operation === "DELETE_LISTING" ? ["listings_r", "listings_d"] : ["listings_r", "listings_w"])))();
   if (begun.status === "REPLAY") {
     if (begun.record.status !== "RECONCILIATION_REQUIRED") {
       return NextResponse.json({ error: "ETSY_DESTRUCTIVE_ALREADY_CLAIMED", operationId: input.operationId,
