@@ -3,138 +3,71 @@ import { getControlCenterV3Snapshot } from "../lib/control-center-v3";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const workflow = [
-  ["01", "Product Truth", "Verify canonical product identity and buyer-facing claims"],
-  ["02", "Plan & QC", "Review scope, deliverables, pricing and safety boundaries"],
-  ["03", "Approve", "Owner authorization required before build"],
-  ["04", "Build", "Create buyer package and listing assets"],
-  ["05", "Listing QC", "Check gallery, copy, tags, video and package counts"],
-  ["06", "Release Review", "Cross-system evidence before marketplace authorization"],
-  ["07", "Etsy Authorization", "Exact-operation approval before any marketplace write"]
+const setup = [
+  ["1", "Connect your Etsy shop", "Securely connect your shop to bring listings and sales signals into one workspace.", "/connect/etsy", "Connect Etsy"],
+  ["2", "Add your first product", "Create a product workspace and keep files, listing details and readiness checks organized.", "/factory", "Open Products"],
+  ["3", "Check listing readiness", "Review images, copy, tags, pricing and release checks before anything goes live.", "/factory", "Run checks"],
+  ["4", "Track what sells", "Use sales, order and shop-stat evidence to decide what to improve next.", "/sales", "View performance"]
+];
+
+const benefits = [
+  ["Organize products", "Keep every digital product moving through a clear preparation and review process."],
+  ["Prepare better listings", "See listing readiness and quality checks before publishing to your shop."],
+  ["Understand performance", "Bring sales, orders and shop evidence together without mixing it with product source data."],
+  ["Publish with control", "Marketplace changes stay locked until you explicitly authorize the exact action."]
 ];
 
 export default async function Home() {
   const control = await getControlCenterV3Snapshot();
-  const latest = control.production.latestPublish;
   const attention = control.operations.needsAttention.length;
+  const connected = control.live.status === "PASS";
 
   return (
-    <main className="sellerShell">
-      <header className="sellerNav">
-        <a className="brandMark" href="/">
-          <span className="brandIcon">P</span>
-          <span><strong>PoonthaiDigital</strong><small>Seller Workspace</small></span>
-        </a>
-        <nav className="navLinks" aria-label="Primary navigation">
-          <a href="/factory">Products</a>
-          <a href="/sales">Sales</a>
-          <a href="/commerce">Orders</a>
-          <a href="/events">Activity</a>
-        </nav>
-        <a className="outlineButton" href="/connect/etsy">Etsy connection</a>
+    <main className="saasShell">
+      <header className="saasNav">
+        <a className="brandMark" href="/"><span className="brandIcon">P</span><span><strong>PoonthaiDigital</strong><small>Seller Workspace</small></span></a>
+        <nav className="navLinks" aria-label="Primary navigation"><a href="/factory">Products</a><a href="/sales">Listings</a><a href="/commerce">Orders</a><a href="/stats-evidence">Analytics</a></nav>
+        <a className="outlineButton" href="/connect/etsy">{connected ? "Shop connected" : "Connect Etsy"}</a>
       </header>
 
-      <section className="sellerHero">
+      <section className="customerHero">
         <div>
-          <p className="sellerEyebrow">DIGITAL PRODUCT SELLER OPERATIONS</p>
-          <h1>Run your Etsy product pipeline with confidence.</h1>
-          <p className="sellerLede">
-            One workspace for product readiness, listing quality, sales evidence and controlled Etsy publishing.
-            Product Truth stays separate from marketplace state, and every write remains authorization-gated.
-          </p>
-          <div className="heroActions">
-            <a className="primaryButton" href="/factory">Open product workspace</a>
-            <a className="secondaryButton" href="/sales">View Etsy performance</a>
-          </div>
+          <span className="trustPill">Built for digital product sellers</span>
+          <h1>Your Etsy seller command center.</h1>
+          <p>Plan products, prepare stronger listings, check quality, understand sales and keep publishing decisions under your control.</p>
+          <div className="heroActions"><a className="primaryButton" href="/connect/etsy">{connected ? "View Etsy connection" : "Connect your Etsy shop"}</a><a className="secondaryButton" href="#getting-started">See how it works</a></div>
+          <div className="microTrust"><span>✓ No automatic publishing</span><span>✓ Seller-authorized changes</span><span>✓ Read-first workflow</span></div>
         </div>
-        <aside className="readinessCard">
-          <div className="readinessTop"><span>SELLER SYSTEM</span><strong className="statusDot">LIVE</strong></div>
-          <h2>Release readiness</h2>
-          <div className="readinessRow"><span>Etsy channel</span><strong>{control.live.status}</strong></div>
-          <div className="readinessRow"><span>Production capability</span><strong>{control.production.capability}</strong></div>
-          <div className="readinessRow"><span>Needs attention</span><strong>{attention}</strong></div>
-          <p>Marketplace mutations are locked until an exact operation is authorized.</p>
+        <aside className="productMock">
+          <div className="mockTop"><div><small>YOUR SHOP</small><strong>{connected ? "Connected" : "Setup in progress"}</strong></div><span className={connected ? "livePill" : "setupPill"}>{connected ? "LIVE DATA" : "GET STARTED"}</span></div>
+          <div className="mockMetrics"><div><span>Active listings</span><strong>{control.live.activeCount ?? "—"}</strong></div><div><span>Products tracked</span><strong>{control.live.catalogTrackedCount}</strong></div></div>
+          <div className="mockTask"><span>01</span><div><strong>Prepare products</strong><small>Files, listing details and quality checks</small></div><b>→</b></div>
+          <div className="mockTask"><span>02</span><div><strong>Review before publishing</strong><small>Know what is ready and what needs attention</small></div><b>→</b></div>
+          <div className="mockTask"><span>03</span><div><strong>Learn from sales</strong><small>Orders, revenue and shop evidence</small></div><b>→</b></div>
+          <div className="safeStrip"><strong>Publishing protection</strong><span>Changes require your authorization</span></div>
         </aside>
       </section>
 
-      <section className="sellerMetrics" aria-label="Seller overview">
-        <article><span>Active on Etsy</span><strong>{control.live.activeCount ?? "—"}</strong><small>live listings</small></article>
-        <article><span>Catalog tracked</span><strong>{control.live.catalogTrackedCount}</strong><small>canonical products</small></article>
-        <article><span>Channel gap</span><strong>{control.live.liveOnlyCount ?? "—"}</strong><small>needs reconciliation</small></article>
-        <article><span>Release health</span><strong>{attention ? "REVIEW" : "CLEAR"}</strong><small>{attention ? `${attention} item(s) need attention` : "no ledger alerts"}</small></article>
+      <section className="valueStrip"><span>PRODUCTS</span><i>→</i><span>LISTING CHECKS</span><i>→</i><span>SALES</span><i>→</i><span>IMPROVEMENTS</span><i>→</i><span>CONTROLLED PUBLISHING</span></section>
+
+      <section className="benefitSection">
+        <div className="centerHeading"><p className="sellerEyebrow">ONE WORKSPACE</p><h2>Less tab switching. Clearer next steps.</h2><p>Designed around the day-to-day work of running a digital product shop.</p></div>
+        <div className="benefitGrid">{benefits.map(([title,description],i)=><article key={title}><span>0{i+1}</span><h3>{title}</h3><p>{description}</p></article>)}</div>
       </section>
 
-      {control.live.status !== "PASS" ? (
-        <section className="sellerAlert">
-          <div><strong>Etsy live read needs attention</strong><p>{control.live.error ?? "Current Etsy state is temporarily unavailable."}</p></div>
-          <a href="/connect/etsy">Check connection</a>
-        </section>
-      ) : null}
-
-      <section className="sellerGrid">
-        <article className="sellerPanel workflowPanel">
-          <div className="sectionHeading">
-            <div><p className="sellerEyebrow">RELEASE PIPELINE</p><h2>From Product Truth to Etsy</h2></div>
-            <span className="safeBadge">Writes gated</span>
-          </div>
-          <div className="sellerFlow">
-            {workflow.map(([number, title, description]) => (
-              <div className="sellerStep" key={number}>
-                <span>{number}</span><div><strong>{title}</strong><p>{description}</p></div>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <aside className="sellerPanel quickPanel">
-          <p className="sellerEyebrow">SELLER TOOLS</p>
-          <h2>Daily workspace</h2>
-          <div className="quickLinks">
-            <a href="/factory"><span>Product Factory</span><small>Plan, QC and release state</small></a>
-            <a href="/sales"><span>Sales Dashboard</span><small>Listings and channel diagnosis</small></a>
-            <a href="/commerce"><span>Orders & Revenue</span><small>Receipts, fees and reviews</small></a>
-            <a href="/stats-evidence"><span>Shop Stats</span><small>Capture views, visits and search evidence</small></a>
-          </div>
-        </aside>
+      <section className="onboardingSection" id="getting-started">
+        <div className="onboardingIntro"><p className="sellerEyebrow">GET STARTED</p><h2>Set up your seller workspace in four steps.</h2><p>Start read-only. Review your shop and product setup first. Publishing remains locked until you approve an exact marketplace action.</p><div className="securityNote"><strong>Safe by default</strong><span>This Preview does not expose a direct Etsy publish action.</span></div></div>
+        <div className="setupList">{setup.map(([n,title,description,href,cta])=><article key={n}><span className="stepNumber">{n}</span><div><h3>{title}</h3><p>{description}</p></div><a href={href}>{cta} →</a></article>)}</div>
       </section>
 
-      <section className="sellerPanel">
-        <div className="sectionHeading">
-          <div><p className="sellerEyebrow">CONTROLLED CAPABILITIES</p><h2>What the seller system can do</h2></div>
-          <a className="textLink" href="/events">View activity ledger</a>
-        </div>
-        <div className="capabilityGrid">
-          {control.capabilities.map((item) => (
-            <article key={item.capability}>
-              <div className="capabilityIcon">✓</div>
-              <div><strong>{item.capability}</strong><p>{item.owner}</p></div>
-              <span>{item.status}</span>
-            </article>
-          ))}
-        </div>
+      <section className="workspacePreview">
+        <div className="sectionHeading"><div><p className="sellerEyebrow">YOUR WORKSPACE</p><h2>Everything important, without the internal jargon.</h2></div><a className="textLink" href="/factory">Open workspace →</a></div>
+        <div className="customerMetrics"><article><span>Active on Etsy</span><strong>{control.live.activeCount ?? "—"}</strong><small>currently live</small></article><article><span>Products tracked</span><strong>{control.live.catalogTrackedCount}</strong><small>in your workspace</small></article><article><span>Needs review</span><strong>{attention}</strong><small>items to check</small></article><article><span>Shop connection</span><strong>{connected ? "Connected" : "Check setup"}</strong><small>{connected ? "live shop data available" : "finish connection to continue"}</small></article></div>
+        <div className="toolCards"><a href="/factory"><strong>Products</strong><span>Prepare products and check readiness.</span><b>Open →</b></a><a href="/sales"><strong>Listings</strong><span>Review live listing and sales signals.</span><b>Open →</b></a><a href="/commerce"><strong>Orders & revenue</strong><span>See order, fee and review evidence.</span><b>Open →</b></a><a href="/stats-evidence"><strong>Shop analytics</strong><span>Add shop stats Etsy does not expose here.</span><b>Open →</b></a></div>
       </section>
 
-      {attention ? (
-        <section className="sellerPanel attentionPanel">
-          <div className="sectionHeading"><div><p className="sellerEyebrow">ACTION REQUIRED</p><h2>{attention} operation(s) need review</h2></div></div>
-          <div className="attentionList">
-            {control.operations.needsAttention.slice(0, 6).map((operation) => (
-              <div key={operation.operationId}><div><strong>{operation.operationId}</strong><p>{operation.recoveryPoint ?? operation.updatedAt}</p></div><span>{operation.attentionState}</span></div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="sellerPanel publishPanel">
-        <div>
-          <p className="sellerEyebrow">PRODUCTION EVIDENCE</p>
-          <h2>{latest ? `${latest.status} · Etsy #${latest.listingId ?? "UNKNOWN"}` : "No publish proof observed"}</h2>
-          <p>{latest ? `Latest operation ${latest.operationId} · authorization ${latest.authorizationState ?? "UNKNOWN"}.` : "No successful publish transaction is currently visible in the operation ledger."}</p>
-        </div>
-        <div className="publishLock"><span>ETSY WRITE</span><strong>Authorization required</strong><small>No direct publish button is exposed here.</small></div>
-      </section>
-
-      <footer className="sellerFooter"><strong>PoonthaiDigital Seller Workspace</strong><span>Evidence first · mutation last</span></footer>
+      <section className="ctaPanel"><div><p className="sellerEyebrow">READY TO START?</p><h2>Connect your shop. Keep publishing under your control.</h2><p>Explore the workspace with read-first seller tools before authorizing any marketplace change.</p></div><a className="primaryButton" href="/connect/etsy">{connected ? "Review Etsy connection" : "Connect Etsy shop"}</a></section>
+      <footer className="sellerFooter"><strong>PoonthaiDigital Seller Workspace</strong><span>Seller tools for digital product operations</span></footer>
     </main>
   );
 }
