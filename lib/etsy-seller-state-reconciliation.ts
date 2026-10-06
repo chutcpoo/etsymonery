@@ -1,7 +1,7 @@
 import { etsyApiHeaders } from "./etsy";
 import { fetchEtsyReadWithRetry, type EtsyReadRetryOptions } from "./etsy-http";
 
-export const ETSY_SELLER_STATE_RECONCILIATION_VERSION = "1.0.0" as const;
+export const ETSY_SELLER_STATE_RECONCILIATION_VERSION = "1.1.0" as const;
 export const ETSY_SELLER_STATE_WRITE_COUNT = 0 as const;
 export const ETSY_SELLER_STATES = ["active", "inactive", "sold_out", "draft", "expired"] as const;
 
@@ -29,6 +29,15 @@ function listingSummary(value: Rec, state: SellerState, skus: string[]) {
     shopId: Number.isSafeInteger(Number(value.shop_id)) ? Number(value.shop_id) : null,
     state: typeof value.state === "string" ? value.state : state,
     title: typeof value.title === "string" ? value.title : null,
+    price: isRec(value.price) && Number.isFinite(Number(value.price.amount)) && Number.isFinite(Number(value.price.divisor))
+      ? Number(value.price.amount) / Number(value.price.divisor)
+      : null,
+    currencyCode: isRec(value.price) && typeof value.price.currency_code === "string"
+      ? value.price.currency_code
+      : null,
+    tags: Array.isArray(value.tags)
+      ? value.tags.filter((tag): tag is string => typeof tag === "string")
+      : [],
     url: typeof value.url === "string" ? value.url : null,
     skus
   };
