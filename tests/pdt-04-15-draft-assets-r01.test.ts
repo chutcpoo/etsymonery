@@ -11,6 +11,9 @@ test("PDT 04-15 draft asset operation is exact-scope and fail-closed", () => {
   assert.match(source, /TARGET_NOT_DRAFT/);
   assert.match(source, /PROTECTED_LISTING_DRIFT_/);
   assert.match(source, /PLAN_BUILD_GATE_BLOCKED/);
+  assert.match(source, /sync-approved-plans/);
+  assert.match(source, /APPROVED_PLANS_SYNCED_TO_DURABLE_STORE/);
+  assert.match(source, /PLAN_SYNC_EXISTING_DRIFT/);
   const middleware = readFileSync("middleware.ts", "utf8");
   assert.match(middleware, /POST_RESET_V2_PDT_04_15_DRAFT_ASSETS_R01_ROUTE/);
   assert.match(middleware, /pdt-04-15-draft-assets-r01/);
