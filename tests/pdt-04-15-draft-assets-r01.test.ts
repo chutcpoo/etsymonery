@@ -9,7 +9,8 @@ test("PDT 04-15 draft asset operation is exact-scope and fail-closed", () => {
   assert.match(source, /AUTHORIZE_ETSY_DRAFT_UPDATE_PRODUCTS_04_15_KEEP_DRAFT_NO_PUBLISH/);
   assert.match(source, /EXACT_OPERATION_AUTHORIZATION_INVALID/);
   assert.match(source, /TARGET_NOT_DRAFT/);
-  assert.match(source, /PROTECTED_LISTING_DRIFT_/);
+  assert.match(source, /PROTECTED_LISTING_TARGET_REJECTED/);
+  assert.match(source, /GET_\$\{path\}_RETRY_EXHAUSTED/);
   assert.match(source, /PLAN_BUILD_GATE_BLOCKED/);
   assert.match(source, /sync-approved-plans/);
   assert.match(source, /APPROVED_PLANS_SYNCED_TO_DURABLE_STORE/);
