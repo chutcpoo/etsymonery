@@ -11,6 +11,9 @@ test("PDT 04-15 draft asset operation is exact-scope and fail-closed", () => {
   assert.match(source, /TARGET_NOT_DRAFT/);
   assert.match(source, /PROTECTED_LISTING_DRIFT_/);
   assert.match(source, /PLAN_BUILD_GATE_BLOCKED/);
+  const middleware = readFileSync("middleware.ts", "utf8");
+  assert.match(middleware, /POST_RESET_V2_PDT_04_15_DRAFT_ASSETS_R01_ROUTE/);
+  assert.match(middleware, /pdt-04-15-draft-assets-r01/);
 });
 
 test("operation never requests Etsy active state", () => {
