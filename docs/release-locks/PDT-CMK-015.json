@@ -1,95 +1,31 @@
 {
   "productId": "PDT-CMK-015",
   "productName": "Cleaning Business Operations Master Kit (Flagship Operational Suite)",
-  "status": "BUILD_READY",
+  "status": "WITHDRAWN_FROM_RELEASE",
   "sheetCount": 14,
   "userGuidePageCount": 16,
   "fieldManualPageCount": 32,
   "buyerFilesCount": 5,
   "driveSourceFolder": "Product 15 - Cleaning Operations Master Kit",
   "buyerPackage": [
-    {
-      "name": "Cleaning Operations Master Field Manual Printable A4.pdf",
-      "sizeBytes": 835006,
-      "sha256": "11472c72ebcd6e88729576a70d393a096d6f02ea4ffd77553c3f4cd1f86b853c"
-    },
-    {
-      "name": "Cleaning Operations Master Field Manual Printable US Letter.pdf",
-      "sizeBytes": 834475,
-      "sha256": "fe75aba6387d33cda6b8e8c700c889746a1416eefe6885d94e783e077d519ebf"
-    },
-    {
-      "name": "Cleaning Operations Master Implementation Architecture Guide.pdf",
-      "sizeBytes": 53680,
-      "sha256": "4ccb51de256bfccebe08e8e227c8503798bd803279d891140bf6728e4d31bf16"
-    },
-    {
-      "name": "Cleaning Operations Master System Example.xlsx",
-      "sizeBytes": 35097,
-      "sha256": "c69e79e1bc5c51452574d7094c41c492113ec34c2366c093537e7d396a68fcaf"
-    },
-    {
-      "name": "Cleaning Operations Master System Template.xlsx",
-      "sizeBytes": 30294,
-      "sha256": "94810b3d2899043231ca12ad418ff2d5b9d8867ceeaa34e8842c3c5984f04633"
-    },
-    {
-      "name": "PDT-CMK-015 Buyer Package FINAL CLEAN.zip",
-      "sizeBytes": 958278,
-      "sha256": "745e1cff12767e34a07f3483855f390a56cf2611657713b0b5af9a666a995d16"
-    }
+    {"name":"Cleaning Operations Master Field Manual Printable A4.pdf","sizeBytes":835006,"sha256":"11472c72ebcd6e88729576a70d393a096d6f02ea4ffd77553c3f4cd1f86b853c"},
+    {"name":"Cleaning Operations Master Field Manual Printable US Letter.pdf","sizeBytes":834475,"sha256":"fe75aba6387d33cda6b8e8c700c889746a1416eefe6885d94e783e077d519ebf"},
+    {"name":"Cleaning Operations Master Implementation Architecture Guide.pdf","sizeBytes":53680,"sha256":"4ccb51de256bfccebe08e8e227c8503798bd803279d891140bf6728e4d31bf16"},
+    {"name":"Cleaning Operations Master System Example.xlsx","sizeBytes":35097,"sha256":"c69e79e1bc5c51452574d7094c41c492113ec34c2366c093537e7d396a68fcaf"},
+    {"name":"Cleaning Operations Master System Template.xlsx","sizeBytes":30294,"sha256":"94810b3d2899043231ca12ad418ff2d5b9d8867ceeaa34e8842c3c5984f04633"},
+    {"name":"PDT-CMK-015 Buyer Package FINAL CLEAN.zip","sizeBytes":958278,"sha256":"745e1cff12767e34a07f3483855f390a56cf2611657713b0b5af9a666a995d16"}
   ],
   "listingImages": [
-    {
-      "name": "01_Hero.jpg",
-      "sizeBytes": 370504,
-      "sha256": "1688600192f34c7a62eff37170aacec15b75835bfc0dbdb0f1359a0d1f6a209b"
-    },
-    {
-      "name": "02_What_You_Get.jpg",
-      "sizeBytes": 344013,
-      "sha256": "84d146cdcbe4f5e88f175928bac2d705a3c21d6a5bc5d6111480154c7fa727f8"
-    },
-    {
-      "name": "03_Lifecycle_Architecture_Map.jpg",
-      "sizeBytes": 437672,
-      "sha256": "06c84a48da08b0819d80d7c36bc914ba33588706ea54672257029d0db0ef3835"
-    },
-    {
-      "name": "04_Intake_Quoting_Engine.jpg",
-      "sizeBytes": 482838,
-      "sha256": "5429b567abfb37fa53bdeb3f894e82bf3de18831475ae1939013ea89fbe91de8"
-    },
-    {
-      "name": "05_Agreement_Dispatch_Board.jpg",
-      "sizeBytes": 490878,
-      "sha256": "29ed3de122647c0071b8e58d0955d250020e2109c9259ab3e95185281cb681bc"
-    },
-    {
-      "name": "06_Checklists_QC_Scorecard.jpg",
-      "sizeBytes": 466819,
-      "sha256": "0f76ce2f858a37958585067d0041add8ed31c0b9d76890ecb0bc3545de7f80a1"
-    },
-    {
-      "name": "07_Invoice_Aging_Ledger.jpg",
-      "sizeBytes": 456476,
-      "sha256": "9436851b3099ed8f2c14ccedb14e0e5c67da9ee63009498a53eb45441704c365"
-    },
-    {
-      "name": "08_Customer_Retention_Dashboard.jpg",
-      "sizeBytes": 482761,
-      "sha256": "917d2716c6c3fe4a9e00bc108107dce48049770d1e582f3ec624c3203b56c647"
-    },
-    {
-      "name": "09_Compatibility_Notes.jpg",
-      "sizeBytes": 337373,
-      "sha256": "307de2310c8f576d20c01f392a1395015634ac42615790d5dafb3335b6fbec1d"
-    },
-    {
-      "name": "10_Collection_Cross_Sell.jpg",
-      "sizeBytes": 395363,
-      "sha256": "ddab785c1c2616b39a4d414476c3eb1a1d8fc217d8c575348f071605102e7e16"
-    }
+    {"name":"01_Hero.jpg","sizeBytes":370504,"sha256":"1688600192f34c7a62eff37170aacec15b75835bfc0dbdb0f1359a0d1f6a209b"},
+    {"name":"02_What_You_Get.jpg","sizeBytes":344013,"sha256":"84d146cdcbe4f5e88f175928bac2d705a3c21d6a5bc5d6111480154c7fa727f8"},
+    {"name":"03_Lifecycle_Architecture_Map.jpg","sizeBytes":437672,"sha256":"06c84a48da08b0819d80d7c36bc914ba33588706ea54672257029d0db0ef3835"},
+    {"name":"04_Intake_Quoting_Engine.jpg","sizeBytes":482838,"sha256":"5429b567abfb37fa53bdeb3f894e82bf3de18831475ae1939013ea89fbe91de8"},
+    {"name":"05_Agreement_Dispatch_Board.jpg","sizeBytes":490878,"sha256":"29ed3de122647c0071b8e58d0955d250020e2109c9259ab3e95185281cb681bc"},
+    {"name":"06_Checklists_QC_Scorecard.jpg","sizeBytes":466819,"sha256":"0f76ce2f858a37958585067d0041add8ed31c0b9d76890ecb0bc3545de7f80a1"},
+    {"name":"07_Invoice_Aging_Ledger.jpg","sizeBytes":456476,"sha256":"9436851b3099ed8f2c14ccedb14e0e5c67da9ee63009498a53eb45441704c365"},
+    {"name":"08_Customer_Retention_Dashboard.jpg","sizeBytes":482761,"sha256":"917d2716c6c3fe4a9e00bc108107dce48049770d1e582f3ec624c3203b56c647"},
+    {"name":"09_Compatibility_Notes.jpg","sizeBytes":337373,"sha256":"307de2310c8f576d20c01f392a1395015634ac42615790d5dafb3335b6fbec1d"},
+    {"name":"10_Collection_Cross_Sell.jpg","sizeBytes":395363,"sha256":"ddab785c1c2616b39a4d414476c3eb1a1d8fc217d8c575348f071605102e7e16"}
   ],
   "listingImagesZip": {
     "name": "PDT-CMK-015_Listing_Images_FINAL.zip",
@@ -105,8 +41,13 @@
   ],
   "publishedToEtsy": false,
   "lockGeneratedAt": "2026-10-05T12:04:00+07:00",
-  "etsyListingId": 4589551011,
-  "etsyListingUrl": "https://www.etsy.com/listing/4589551011/cleaning-business-operations-master-kit",
-  "etsyState": "draft",
-  "draftCreatedAt": "2026-10-06T09:17:31Z"
+  "etsyListingId": null,
+  "etsyListingUrl": null,
+  "etsyState": "absent",
+  "historicalEtsyListingId": 4589551011,
+  "historicalEtsyListingUrl": "https://www.etsy.com/listing/4589551011/cleaning-business-operations-master-kit",
+  "artifactStatus": "HISTORICAL_WITHDRAWN",
+  "releaseBlocked": true,
+  "withdrawalReason": "Owner withdrew Products 05-15 after buyer-file QC found recurring Excel recovery/compatibility failures and additional defects.",
+  "reconciledAt": "2026-10-08T10:00:00Z"
 }
