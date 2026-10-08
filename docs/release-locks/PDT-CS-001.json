@@ -1,98 +1,38 @@
 {
   "productId": "PDT-CS-001",
   "productName": "Cleaning Schedule",
-  "status": "BUILD_READY",
+  "status": "FINAL_QC_PASS",
   "sheetCount": 7,
   "userGuidePageCount": 4,
   "jobSheetPageCount": 1,
   "buyerFilesCount": 4,
   "driveSourceFolder": "Product 01 - Cleaning Schedule",
   "buyerPackage": [
-    {
-      "name": "Cleaning Schedule Daily Job Sheet Printable - Premium Final.pdf",
-      "sizeBytes": 295188,
-      "sha256": "fd888105a86f05e95e49188cd04bc0b18490359e467d59bb1da723dfb6e52315"
-    },
-    {
-      "name": "Cleaning Schedule Example.xlsx",
-      "sizeBytes": 37887,
-      "sha256": "5bcde173b334c4c2d947e505d06a4be91320ac27d838f96be99bbe80c3e4b64a"
-    },
-    {
-      "name": "Cleaning Schedule Template.xlsx",
-      "sizeBytes": 28808,
-      "sha256": "b88fda146c21e7cb4bdcb6d319124a4ed13a396f8a570a0112d25c8c2c7e0832"
-    },
-    {
-      "name": "Cleaning Schedule User Guide.pdf",
-      "sizeBytes": 148361,
-      "sha256": "5f015dda7253af807e6497e3b89491d75d2287208539c4f6d040e813780efc88"
-    },
-    {
-      "name": "PDT-CS-001 Buyer Package FINAL CLEAN.zip",
-      "sizeBytes": 287591,
-      "sha256": "19daac1eb44b9cf83f1c693cce225c68e2bdad4710478468c53d4390d78fc853"
-    }
+    {"name":"Cleaning Schedule Daily Job Sheet Printable - Premium Final.pdf","sizeBytes":295188,"sha256":"fd888105a86f05e95e49188cd04bc0b18490359e467d59bb1da723dfb6e52315"},
+    {"name":"Cleaning Schedule Example.xlsx","sizeBytes":37887,"sha256":"5bcde173b334c4c2d947e505d06a4be91320ac27d838f96be99bbe80c3e4b64a"},
+    {"name":"Cleaning Schedule Template.xlsx","sizeBytes":28808,"sha256":"b88fda146c21e7cb4bdcb6d319124a4ed13a396f8a570a0112d25c8c2c7e0832"},
+    {"name":"Cleaning Schedule User Guide.pdf","sizeBytes":148361,"sha256":"5f015dda7253af807e6497e3b89491d75d2287208539c4f6d040e813780efc88"},
+    {"name":"PDT-CS-001 Buyer Package FINAL CLEAN.zip","sizeBytes":287591,"sha256":"19daac1eb44b9cf83f1c693cce225c68c53d4390d78fc853"}
   ],
   "listingImages": [
-    {
-      "name": "01_Hero.jpg",
-      "sizeBytes": 633369,
-      "sha256": "263aa46a8cd85dd28a8ee138b93f83963033f4c2970ce783ebd77060624c392a"
-    },
-    {
-      "name": "02_What_You_Get.jpg",
-      "sizeBytes": 530694,
-      "sha256": "f5643284b6759b8df1b8b76cb5cba2851eb134de8eb28946b11d6bf9803fb5ff"
-    },
-    {
-      "name": "03_Before_After_Schedule.jpg",
-      "sizeBytes": 571178,
-      "sha256": "fb458be25e1045f84c8c8aa1069f2335159b396f0673dab6b99b141d12b40908"
-    },
-    {
-      "name": "04_Before_After_Dashboard.jpg",
-      "sizeBytes": 509896,
-      "sha256": "1a3af3860586a766ca66e4a6848abdc8fce30a79db834383e1c5eaf85597e4af"
-    },
-    {
-      "name": "05_Before_After_Reports.jpg",
-      "sizeBytes": 673593,
-      "sha256": "c8a3c2dcc3cdb0d2ddb435ffe52cd8d62f8638cac4d79a0cf8f5d46629f8e426"
-    },
-    {
-      "name": "06_Setup.jpg",
-      "sizeBytes": 549611,
-      "sha256": "74f44d5e3cf9dba64ff7bd46379d0b927c83bcbe1592ecc53c0b9939217487ff"
-    },
-    {
-      "name": "07_How_It_Works.jpg",
-      "sizeBytes": 718896,
-      "sha256": "79b6bc2de23714848b84369c3fdb7de3969d5fc97db35d539afe980ce696796b"
-    },
-    {
-      "name": "08_Who_Its_For.jpg",
-      "sizeBytes": 619306,
-      "sha256": "6f13bee09888f29e39d53bcdbde728e5fa05599d650783a8ad6ab9f7eaed2359"
-    },
-    {
-      "name": "09_Compatibility_Notes.jpg",
-      "sizeBytes": 512825,
-      "sha256": "ee3af8a1b6ac5b30ca4de59803679808d7dbb9e149a3e0e9484a30f514ec8db3"
-    },
-    {
-      "name": "10_Collection_Cross_Sell.jpg",
-      "sizeBytes": 702533,
-      "sha256": "98fd21ec9a0f04206e46a6cb4b21a2a06914785a16ea7c8ad6e4b5d5c4426698"
-    }
+    {"name":"01_Hero.jpg","sizeBytes":633369,"sha256":"263aa46a8cd85dd28a8ee138b93f83963033f4c2970ce783ebd77060624c392a"},
+    {"name":"02_What_You_Get.jpg","sizeBytes":530694,"sha256":"f5643284b6759b8df1b8b76cb5cba2851eb134de8eb28946b11d6bf9803fb5ff"},
+    {"name":"03_Before_After_Schedule.jpg","sizeBytes":571178,"sha256":"fb458be25e1045f84c8c8aa1069f2335159b396f0673dab6b99b141d12b40908"},
+    {"name":"04_Before_After_Dashboard.jpg","sizeBytes":509896,"sha256":"1a3af3860586a766ca66e4a6848abdc8fce30a79db834383e1c5eaf85597e4af"},
+    {"name":"05_Before_After_Reports.jpg","sizeBytes":673593,"sha256":"c8a3c2dcc3cdb0d2ddb435ffe52cd8d62f8638cac4d79a0cf8f5d46629f8e426"},
+    {"name":"06_Setup.jpg","sizeBytes":549611,"sha256":"74f44d5e3cf9dba64ff7bd46379d0b927c83bcbe1592ecc53c0b9939217487ff"},
+    {"name":"07_How_It_Works.jpg","sizeBytes":718896,"sha256":"79b6bc2de23714848b84369c3fdb7de3969d5fc97db35d539afe980ce696796b"},
+    {"name":"08_Who_Its_For.jpg","sizeBytes":619306,"sha256":"6f13bee09888f29e39d53bcdbde728e5fa05599d650783a8ad6ab9f7eaed2359"},
+    {"name":"09_Compatibility_Notes.jpg","sizeBytes":512825,"sha256":"ee3af8a1b6ac5b30ca4de59803679808d7dbb9e149a3e0e9484a30f514ec8db3"},
+    {"name":"10_Collection_Cross_Sell.jpg","sizeBytes":702533,"sha256":"98fd21ec9a0f04206e46a6cb4b21a2a06914785a16ea7c8ad6e4b5d5c4426698"}
   ],
   "listingVideos": [
-    {
-      "name": "Cleaning_Schedule_Listing_Video.mp4",
-      "sizeBytes": 1159059,
-      "sha256": "daae7a7590f7e9a4c74eca40803e5f2a0ef25b259306f42789da3a394037c9e6"
-    }
+    {"name":"Cleaning_Schedule_Listing_Video.mp4","sizeBytes":1159059,"sha256":"daae7a7590f7e9a4c74eca40803e5f2a0ef25b259306f42789da3a394037c9e6"}
   ],
-  "publishedToEtsy": false,
-  "lockGeneratedAt": "2026-10-04T22:05:00+07:00"
+  "etsyListingId": 4587646332,
+  "etsyListingUrl": "https://www.etsy.com/listing/4587646332/cleaning-schedule-template-for-cleaning",
+  "etsyState": "active",
+  "publishedToEtsy": true,
+  "lockGeneratedAt": "2026-10-04T22:05:00+07:00",
+  "reconciledAt": "2026-10-08T10:00:00Z"
 }
