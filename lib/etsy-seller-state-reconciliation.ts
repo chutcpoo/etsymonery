@@ -30,7 +30,8 @@ function listingSummary(value: Rec, state: SellerState, skus: string[]) {
     state: typeof value.state === "string" ? value.state : state,
     title: typeof value.title === "string" ? value.title : null,
     url: typeof value.url === "string" ? value.url : null,
-    skus
+    skus,
+    productIds: [...new Set(`${value.title ?? ""}\n${value.description ?? ""}`.match(/(?<![A-Z0-9-])PDT-[A-Z0-9]+-\d{3}(?![A-Z0-9-])/g) ?? [])]
   };
 }
 
@@ -70,6 +71,8 @@ export async function getEtsySellerStateSnapshot(input: {
   shopId: number;
   accessToken: string;
   dependencies?: Dependencies;
+  // Reconciliation needs only shop-listing metadata, never protected inventory.
+  summaryOnly?: boolean;
 }) {
   if (!Number.isSafeInteger(input.shopId) || input.shopId <= 0) {
     throw new Error("INVALID_ETSY_SELLER_STATE_SHOP_ID");
@@ -104,23 +107,46 @@ export async function getEtsySellerStateSnapshot(input: {
       if (!response.ok || !isRec(payload) || !Array.isArray(payload.results)) {
         throw new Error(`ETSY_SELLER_STATE_READBACK_HTTP_${state}_${response.status}`);
       }
+      if (input.summaryOnly && (typeof payload.count !== "number" ||
+        !Number.isSafeInteger(payload.count) || payload.count < 0 || payload.results.length > PAGE_LIMIT)) {
+        throw new Error("ETSY_SELLER_STATE_INVALID_PAGE");
+      }
       if (providerCount === null && Number.isSafeInteger(Number(payload.count))) {
         providerCount = Number(payload.count);
       }
 
+      if (payload.results.some((item) => !isRec(item))) {
+        throw new Error("ETSY_SELLER_STATE_INVALID_LISTING");
+      }
       for (const item of payload.results.filter(isRec)) {
         if (Number(item.shop_id) !== input.shopId) {
           throw new Error("ETSY_SELLER_STATE_SHOP_ID_MISMATCH");
         }
+        if (input.summaryOnly && (typeof item.title !== "string" || !item.title.trim() ||
+          typeof item.state !== "string" || !item.state.trim())) {
+          throw new Error("ETSY_SELLER_STATE_INVALID_LISTING");
+        }
         const listingId = Number(item.listing_id);
-        if (!Number.isSafeInteger(listingId) || listingId <= 0) continue;
-        const skus = await listingSkus(listingId, input.accessToken, fetchImpl, retryOptions);
+        if (!Number.isSafeInteger(listingId) || listingId <= 0) {
+          throw new Error("ETSY_SELLER_STATE_INVALID_LISTING_ID");
+        }
+        const skus = input.summaryOnly
+          ? []
+          : await listingSkus(listingId, input.accessToken, fetchImpl, retryOptions);
         const normalized = listingSummary(item, state, skus);
         if (normalized) listings.push(normalized);
       }
 
       returnedForState += payload.results.length;
-      if (payload.results.length < PAGE_LIMIT) break;
+      if (input.summaryOnly && providerCount !== null && returnedForState > providerCount) {
+        throw new Error("ETSY_SELLER_STATE_INVALID_PAGE");
+      }
+      if (payload.results.length < PAGE_LIMIT) {
+        if (providerCount !== null && returnedForState < providerCount) {
+          throw new Error(`ETSY_SELLER_STATE_TRUNCATED_${state}`);
+        }
+        break;
+      }
       if (providerCount !== null && returnedForState >= providerCount) break;
       if (page === MAX_PAGES - 1) throw new Error(`ETSY_SELLER_STATE_TRUNCATED_${state}`);
     }
