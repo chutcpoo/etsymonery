@@ -134,7 +134,7 @@ test("unknown provider state is preserved as evidence instead of inferred from q
   const result = await readOnlyReconciliation(undefined, { loadTokens: async () => token(), fetchImpl: mock.fetchImpl, now });
   assert.equal(result.products[0].state, "edit");
   assert.equal(result.truthInputs.mode, "DRIVE_SNAPSHOT");
-  assert.equal(result.truthInputs.unresolvedLifecycleConflict, true);
+  assert.equal(result.truthInputs.unresolvedLifecycleConflict, false);
 });
 
 test("durable registry pointers are read only for selected targets and verified against Etsy identity", async () => {

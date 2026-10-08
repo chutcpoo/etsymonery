@@ -145,7 +145,7 @@ export async function readOnlyReconciliation(productIds?: readonly string[], dep
     mode: "READ_ONLY", generatedAt: new Date((dependencies.now ?? Date.now)()).toISOString(),
     shop: { shopId, shopName: "PoonthaiDigital" },
     truthInputs: { mode: "DRIVE_SNAPSHOT", masterDriveFileId: "108WmUQjOQ4BR_PkTJUznGXzDHaFwIwIkDJOCdjnl7QM",
-      masterModifiedTime: "2026-10-07T10:15:05.273Z", unresolvedLifecycleConflict: true,
+      masterModifiedTime: "2026-10-07T16:47:29.553Z", unresolvedLifecycleConflict: false,
       products: products.map((p) => ({ productId: p.productId, lifecycle: p.lifecycle,
         listingId: p.listingId, listingUrl: p.listingUrl, expectedTitle: p.expectedTitle, source: p.source })) },
     // A source constant is not a live observation of all write gates.

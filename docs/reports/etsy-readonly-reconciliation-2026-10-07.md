@@ -4,7 +4,7 @@ Implementation verified locally. Live Etsy reconciliation BLOCKED; no marketplac
 ## PASS
 - LIVE Google Drive Master and all 12 canonical Product Truth files read before source edits.
 - Verified clean isolated clone of chutcpoo/etsymonery; branch chore/etsy-readonly-reconciliation.
-- Base and GitHub remote main: 9b531fd10ef49ea832fb70bcd8a98f4d089ee09a.
+- Base and GitHub remote main: fd7ab2ea190a565f06d92de530e4acc524e60d8b.
 - Existing OAuth, encrypted token store, scope gate, GET retry helper, seller-state reader, registry SELECT load, PR #257, middleware and protected-product guards inspected.
 - GET /api/etsy/reconcile-listings implemented; only exact Product 04–15 IDs accepted.
 - Explicit 405 method handlers; no body/write token/nonce/authorization-secret inputs.
@@ -18,7 +18,7 @@ Implementation verified locally. Live Etsy reconciliation BLOCKED; no marketplac
 - Duplicate candidates -> CONFLICT_AMBIGUOUS; wrong pointer/identity/title/state -> CONFLICT.
 - No save/seed/project calls to registry; no truth/lifecycle updates.
 - Provider fields allowlisted; credentials redacted from successful responses; only fixed safe errors returned; no logger calls.
-- npm test: 458 tests passed, 0 failed, 0 skipped.
+- npm test: 460 tests passed, 0 failed, 0 skipped.
 - npm run typecheck: passed.
 - Local Next build verification recorded separately in build log; this is not a deployment.
 - git diff --check: passed.
@@ -34,33 +34,33 @@ HTTP 200/mock results/build success are not marketplace evidence or Release Revi
    Live scope/shop/token expiry have not been determined. Do not label missing credentials ETSY_READ_SCOPE_MISSING.
 2. Actual local route smoke returned HTTP 503:
    {"mode":"READ_ONLY","status":"BLOCKED","error":"DATABASE_URL_NOT_CONFIGURED","writeStateObserved":"UNKNOWN","etsyMutationPerformed":false,"ETSY_WRITE_COUNT":0}
-3. LIVE Master still says Products 04–15 DRAFT / LISTING-QC; every canonical Product Truth says BUILD_READY and Etsy ID/URL null.
-   This task is specifically permitted to gather read-only evidence while that conflict remains. No Drive document was edited.
+3. LIVE Master and canonical Product Truth for Products 04–15 are reconciled to LISTING_QC; Etsy ID/URL remain null until exact authenticated listing identity is established.
+   No Drive document is edited by this endpoint; the embedded snapshot is matching input only.
 4. Original cloud checkout was on codex/pdt-fcmp-002-publish-r01 at 573f035b16d40ffc78b93761396c9f5130026e31, behind its fetched branch with unrelated .gitignore and next-env.d.ts changes.
    Code mutation stopped in that checkout. Changes were preserved. Implementation uses a separate verified clean clone at /Users/chutcpoo/Projects/etsymonery-readonly-reconciliation.
 5. writeStateObserved remains UNKNOWN. A source constant is not evidence of live runtime gates. No lock was altered.
 
 ## LIVE source inputs
 Master: https://docs.google.com/document/d/108WmUQjOQ4BR_PkTJUznGXzDHaFwIwIkDJOCdjnl7QM/edit
-Master modified: 2026-10-07T10:15:05.273Z
+Master modified: 2026-10-07T16:47:29.553Z
 All expected titles below are null because no explicit listing title is defined in the canonical manifest.
 Canonical Product Name is used only for exact matching; SEO/fuzzy aliases are not inferred from GitHub.
 The endpoint labels these inputs DRIVE_SNAPSHOT with source IDs/timestamps; it does not claim to fetch Drive on each request.
 
 | Product ID | Canonical name | Lifecycle | Etsy ID / URL | Truth file ID | Modified |
 |---|---|---|---|---|---|
-| PDT-CBP-004 | Cleaning Business Planning & Growth Workbook | BUILD_READY | null / null | 1D92ijG5_erktYJCRp0uCharqBrMt8k3U | 2026-10-05T01:50:25.095Z |
-| PDT-DCL-005 | Professional Deep Cleaning Checklist | BUILD_READY | null / null | 1MN3n3PoJkUGSdi96KnGI_UiA5UE3BbKN | 2026-10-05T01:50:25.096Z |
-| PDT-MCL-006 | Move-In / Move-Out Cleaning Checklist Pack | BUILD_READY | null / null | 1KuRGz-3hiQ8QOhoKD__KLFGJjwrpb-XS | 2026-10-05T01:50:25.096Z |
-| PDT-CCP-007 | Commercial Cleaning Proposal & Facility Bid System | BUILD_READY | null / null | 1YMfOGw8IFqFiJEqOHls9KYJChQn85-Qz | 2026-10-05T01:50:25.097Z |
-| PDT-CQE-008 | Cleaning Quote & Estimate Calculator | BUILD_READY | null / null | 1pw0lwzqVqldYSJE7d8fHHlzGPayNynHl | 2026-10-05T01:50:25.097Z |
-| PDT-CSC-009 | Cleaning Service Agreement System | BUILD_READY | null / null | 11IRrlQRg4PaNYbpdcgdo15yXTsHkjy53 | 2026-10-05T01:50:25.097Z |
-| PDT-CIF-010 | Cleaning Client Intake & Assessment Form | BUILD_READY | null / null | 1f-yRoGXnZ81uyN3KXQVUhSWAPVOI1Vu7 | 2026-10-05T01:50:25.098Z |
-| PDT-CIP-011 | Cleaning Invoice & Payment Tracker | BUILD_READY | null / null | 13FtWiQQLsxCDIkK-k4VtytsgxAtNZDln | 2026-10-05T01:50:25.098Z |
-| PDT-CRM-012 | Cleaning Client CRM & Service History Tracker | BUILD_READY | null / null | 1dB9tOODNs0znvYv1_QVHuNwbPf863uBR | 2026-10-05T01:50:25.099Z |
-| PDT-ABT-013 | Airbnb Turnover & Restock Kit | BUILD_READY | null / null | 1SJRadf36vRALQPMNZs0BePnpC0LAkY08 | 2026-10-05T01:50:25.099Z |
-| PDT-CFB-014 | Cleaning Business Forms Bundle (14 Essential Operational Forms) | BUILD_READY | null / null | 1tSvUG2gecK-pnQDgytabaj1e3HG97F6a | 2026-10-05T05:02:41.581Z |
-| PDT-CMK-015 | Cleaning Business Operations Master Kit (Flagship Operational Suite) | BUILD_READY | null / null | 1pme15-ZbjCaYVP7dmKm1CeI0a_lPDsII | 2026-10-06T07:08:54.141Z |
+| PDT-CBP-004 | Cleaning Business Planning & Growth Workbook | LISTING_QC | null / null | 1D92ijG5_erktYJCRp0uCharqBrMt8k3U | 2026-10-07T16:19:11.693Z |
+| PDT-DCL-005 | Professional Deep Cleaning Checklist | LISTING_QC | null / null | 1MN3n3PoJkUGSdi96KnGI_UiA5UE3BbKN | 2026-10-07T16:39:25.616Z |
+| PDT-MCL-006 | Move-In / Move-Out Cleaning Checklist Pack | LISTING_QC | null / null | 1KuRGz-3hiQ8QOhoKD__KLFGJjwrpb-XS | 2026-10-07T16:39:55.559Z |
+| PDT-CCP-007 | Commercial Cleaning Proposal & Facility Bid System | LISTING_QC | null / null | 1YMfOGw8IFqFiJEqOHls9KYJChQn85-Qz | 2026-10-07T16:40:24.900Z |
+| PDT-CQE-008 | Cleaning Quote & Estimate Calculator | LISTING_QC | null / null | 1pw0lwzqVqldYSJE7d8fHHlzGPayNynHl | 2026-10-07T16:40:53.719Z |
+| PDT-CSC-009 | Cleaning Service Agreement System | LISTING_QC | null / null | 11IRrlQRg4PaNYbpdcgdo15yXTsHkjy53 | 2026-10-07T16:41:19.425Z |
+| PDT-CIF-010 | Cleaning Client Intake & Assessment Form | LISTING_QC | null / null | 1f-yRoGXnZ81uyN3KXQVUhSWAPVOI1Vu7 | 2026-10-07T16:41:46.299Z |
+| PDT-CIP-011 | Cleaning Invoice & Payment Tracker | LISTING_QC | null / null | 13FtWiQQLsxCDIkK-k4VtytsgxAtNZDln | 2026-10-07T16:42:10.597Z |
+| PDT-CRM-012 | Cleaning Client CRM & Service History Tracker | LISTING_QC | null / null | 1dB9tOODNs0znvYv1_QVHuNwbPf863uBR | 2026-10-07T16:46:27.050Z |
+| PDT-ABT-013 | Airbnb Turnover & Restock Kit | LISTING_QC | null / null | 1SJRadf36vRALQPMNZs0BePnpC0LAkY08 | 2026-10-07T16:44:20.682Z |
+| PDT-CFB-014 | Cleaning Business Forms Bundle (14 Essential Operational Forms) | LISTING_QC | null / null | 1tSvUG2gecK-pnQDgytabaj1e3HG97F6a | 2026-10-07T16:44:54.568Z |
+| PDT-CMK-015 | Cleaning Business Operations Master Kit (Flagship Operational Suite) | LISTING_QC | null / null | 1pme15-ZbjCaYVP7dmKm1CeI0a_lPDsII | 2026-10-07T16:45:57.865Z |
 
 ## ETSY RECONCILIATION — NOT VERIFIED
 No authenticated live listing response was obtained. Dashes below are unknown fields, not evidence of absent listings.
