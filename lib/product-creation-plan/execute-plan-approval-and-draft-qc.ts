@@ -119,9 +119,16 @@ async function run() {
       noPublishEnforced: matchedDraft?.state !== "active",
       titleLengthCompliant: (plan.etsyPlan.titleStrategy.length <= 140),
       singleAmpersandPolicy: ((plan.etsyPlan.titleStrategy.match(/&/g) || []).length <= 1),
-      priceMatchesPlan: matchedDraft ? true : false, // checked via catalog launch price
-      tagsCountExact13: plan.etsyPlan.thirteenTags.length === 13,
-      allTagsUnder20Chars: plan.etsyPlan.thirteenTags.every((t: string) => t.length <= 20),
+      titleMatchesPlan: matchedDraft?.title?.trim() === plan.etsyPlan.titleStrategy.trim(),
+      priceMatchesPlan: typeof matchedDraft?.price === "number" &&
+        Math.abs(matchedDraft.price - plan.priceTargetUsd) < 0.001,
+      currencyIsUsd: matchedDraft?.currencyCode === "USD",
+      tagsCountExact13: Array.isArray(matchedDraft?.tags) && matchedDraft.tags.length === 13,
+      tagsMatchPlan: Array.isArray(matchedDraft?.tags) &&
+        matchedDraft.tags.map((t: string) => t.trim().toLowerCase()).sort().join("|") ===
+        [...plan.etsyPlan.thirteenTags].map((t: string) => t.trim().toLowerCase()).sort().join("|"),
+      allLiveTagsUnder20Chars: Array.isArray(matchedDraft?.tags) &&
+        matchedDraft.tags.every((t: string) => t.length <= 20),
       buyerFilesAligned: plan.buyerFiles.length === plan.acceptanceCriteria.buyerFilesExactly,
       zeroBrokenFormulas: plan.acceptanceCriteria.brokenFormulasAllowed === 0,
       zeroMissingFiles: plan.acceptanceCriteria.missingFilesAllowed === 0,
@@ -148,7 +155,8 @@ async function run() {
       Product: r.productId,
       EtsyListingId: r.etsyListingId,
       State: r.etsyState,
-      Price: `$${r.planPrice.toFixed(2)}`,
+      Price: `${r.planPrice.toFixed(2)}`,
+      LivePrice: draftListings.find((d: any) => d.listingId === r.etsyListingId)?.price ?? "MISSING",
       Verdict: r.verdict
     }))
   );
