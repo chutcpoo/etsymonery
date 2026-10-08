@@ -7,10 +7,10 @@ import { handleReconciliationGet } from "../lib/etsy-reconciliation-api";
 import * as route from "../app/api/etsy/reconcile-listings/route";
 import { POST_RESET_PLATFORM_STATE } from "../lib/post-reset-platform";
 
-const previous = { key: process.env.ETSY_API_KEY, secret: process.env.ETSY_SHARED_SECRET };
-before(() => { process.env.ETSY_API_KEY = "private-api-key"; process.env.ETSY_SHARED_SECRET = "private-api-secret"; });
+const previous = { key: process.env.ETSY_API_KEY, secret: process.env.ETSY_SHARED_SECRET, reconciliationReadToken: process.env.ETSY_RECONCILIATION_READ_TOKEN };
+before(() => { process.env.ETSY_API_KEY = "private-api-key"; process.env.ETSY_SHARED_SECRET = "private-api-secret"; process.env.ETSY_RECONCILIATION_READ_TOKEN = "reconciliation-read-secret"; });
 after(() => {
-  for (const [key, value] of [["ETSY_API_KEY", previous.key], ["ETSY_SHARED_SECRET", previous.secret]]) {
+  for (const [key, value] of [["ETSY_API_KEY", previous.key], ["ETSY_SHARED_SECRET", previous.secret], ["ETSY_RECONCILIATION_READ_TOKEN", previous.reconciliationReadToken]]) {
     if (value === undefined) delete process.env[key!]; else process.env[key!] = value;
   }
 });
@@ -44,10 +44,36 @@ function provider(options: { shopName?: string; status?: number; count?: number;
   return { calls, fetchImpl };
 }
 
+test("anonymous and wrong caller credentials fail closed before seller-read dependency", async () => {
+  let calls = 0;
+  const read = async () => { calls++; throw new Error("SHOULD_NOT_READ"); };
+  for (const headers of [undefined, { authorization: "Bearer wrong-secret" }, { authorization: "Basic reconciliation-read-secret" }]) {
+    const response = await handleReconciliationGet(new Request("https://local.test/api/etsy/reconcile-listings", { headers }), read);
+    assert.equal(response.status, 401);
+    assert.equal(response.headers.get("www-authenticate"), "Bearer");
+    assert.equal((await response.json()).error, "ETSY_RECONCILIATION_READ_UNAUTHORIZED");
+  }
+  assert.equal(calls, 0);
+});
+
+test("missing caller-auth configuration fails closed before seller-read dependency", async () => {
+  const configured = process.env.ETSY_RECONCILIATION_READ_TOKEN;
+  delete process.env.ETSY_RECONCILIATION_READ_TOKEN;
+  let calls = 0;
+  try {
+    const response = await handleReconciliationGet(new Request("https://local.test/api/etsy/reconcile-listings"), async () => { calls++; throw new Error("SHOULD_NOT_READ"); });
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).error, "ETSY_RECONCILIATION_READ_AUTH_NOT_CONFIGURED");
+    assert.equal(calls, 0);
+  } finally {
+    if (configured !== undefined) process.env.ETSY_RECONCILIATION_READ_TOKEN = configured;
+  }
+});
+
 test("GET returns authenticated read-only evidence for exactly Products 04–15", async () => {
   const mock = provider();
   const stateBefore = structuredClone(POST_RESET_PLATFORM_STATE);
-  const response = await handleReconciliationGet(new Request("https://local.test/api/etsy/reconcile-listings"),
+  const response = await handleReconciliationGet(new Request("https://local.test/api/etsy/reconcile-listings", { headers: { authorization: "Bearer reconciliation-read-secret" } }),
     (ids) => readOnlyReconciliation(ids, { loadTokens: async () => token(), fetchImpl: mock.fetchImpl, now }));
   assert.equal(response.status, 200);
   const body = await response.json();
@@ -76,10 +102,10 @@ test("arbitrary/protected IDs and write credentials rejected before read depende
   let calls = 0;
   const read = async () => { calls++; throw new Error("SHOULD_NOT_READ"); };
   for (const query of ["?productId=PDT-FCMP-002", "?productId=PDT-PCL-002", "?productId=PDT-UNKNOWN-999", "?nonce=private", "?listingId=123"]) {
-    assert.equal((await handleReconciliationGet(new Request(`https://local.test/${query}`), read)).status, 400);
+    assert.equal((await handleReconciliationGet(new Request(`https://local.test/${query}`, { headers: { authorization: "Bearer reconciliation-read-secret" } }), read)).status, 400);
   }
-  for (const key of ["Authorization", "x-write-token", "x-nonce", "x-authorization-secret"]) {
-    assert.equal((await handleReconciliationGet(new Request("https://local.test/", { headers: { [key]: "private" } }), read)).status, 400);
+  for (const key of ["x-write-token", "x-nonce", "x-authorization-secret"]) {
+    assert.equal((await handleReconciliationGet(new Request("https://local.test/", { headers: { authorization: "Bearer reconciliation-read-secret", [key]: "private" } }), read)).status, 400);
   }
   assert.equal(calls, 0);
   assert.throws(() => reconcileListings([{ ...truth[0], productId: "PDT-FCMP-002" }], []));
@@ -120,7 +146,7 @@ test("durable registry pointers are read only for selected targets and verified 
   });
   assert.deepEqual(requested, [truth[0].productId]);
   assert.equal(result.products[0].match, "CONFLICT");
-  const failed = await handleReconciliationGet(new Request("https://local.test/"), (ids) => readOnlyReconciliation(ids, {
+  const failed = await handleReconciliationGet(new Request("https://local.test/", { headers: { authorization: "Bearer reconciliation-read-secret" } }), (ids) => readOnlyReconciliation(ids, {
     loadTokens: async () => token(), fetchImpl: provider().fetchImpl, now,
     loadMappings: async () => { throw new Error("PRIVATE_DB_FAILURE"); }
   }));
@@ -172,7 +198,7 @@ test("missing scope, missing tokens, expired tokens and wrong shop fail before l
 test("read failure, rate limit, forbidden scope, malformed or incomplete pagination fail closed", async () => {
   for (const options of [{ status: 429 }, { status: 500 }, { status: 403 }, { count: 101 }, { count: 0 }, { results: [null] }]) {
     const mock = provider(options);
-    const response = await handleReconciliationGet(new Request("https://local.test/"),
+    const response = await handleReconciliationGet(new Request("https://local.test/", { headers: { authorization: "Bearer reconciliation-read-secret" } }),
       (ids) => readOnlyReconciliation(ids, { loadTokens: async () => token(), fetchImpl: mock.fetchImpl, now }));
     assert.equal(response.status, 503);
     const body = await response.json();
@@ -192,7 +218,7 @@ test("secrets never appear in response or logs, including provider error echo", 
       title: "123.private-access-token private-refresh-token private-api-secret", description: "PDT-CBP-004",
       url: "https://www.etsy.com/private-api-key" }] });
     const result = await readOnlyReconciliation(undefined, { loadTokens: async () => token(), fetchImpl: mock.fetchImpl, now });
-    const response = await handleReconciliationGet(new Request("https://local.test/"), async () => {
+    const response = await handleReconciliationGet(new Request("https://local.test/", { headers: { authorization: "Bearer reconciliation-read-secret" } }), async () => {
       throw new Error("private-refresh-token private-api-secret");
     });
     const text = JSON.stringify(result) + await response.text() + JSON.stringify(logs);
