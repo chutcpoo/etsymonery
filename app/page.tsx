@@ -24,8 +24,8 @@ export default async function Home() {
     <main className="shell">
       <section className="hero">
         <div>
-          <p className="eyebrow">GLOBAL AI DIGITAL PRODUCT FACTORY OS</p>
-          <h1>Control Center V3</h1>
+          <p className="eyebrow">CONTROL CENTER V3</p>
+          <h1>PoonthaiDigital Publisher</h1>
           <p className="lede">
             Live Etsy channel state, canonical Catalog identity and proven
             production execution are shown as separate read models. Marketplace mutations remain gated. This dashboard now also exposes executor capabilities and operation-ledger attention states without enabling direct UI writes.
