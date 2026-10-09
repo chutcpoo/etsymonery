@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import { ETSY_CHANNEL_INDEX } from "./catalog-channel-index";
+import { CONTROL_CENTER_ETSY_CHANNEL_INDEX } from "./control-center-etsy-channel-index";
 import { getControlCenterV2Snapshot } from "./control-center-v2";
 
 export const CONTROL_CENTER_V3_VERSION = "3.2.0" as const;
@@ -42,7 +42,9 @@ function productIdFromOperationId(operationId: string) {
 export function classifyOperationScope(productId: string | null): OperationScope {
   if (
     productId &&
-    ETSY_CHANNEL_INDEX.some((entry) => entry.productId === productId)
+    CONTROL_CENTER_ETSY_CHANNEL_INDEX.some(
+      (entry) => entry.productId === productId
+    )
   ) {
     return "CURRENT";
   }
