@@ -1,10 +1,15 @@
 /**
- * Read-only Etsy identifier projection used only by Control Center.
+ * Read-only migration bootstrap used only by Control Center.
  *
  * AUTHORITY: latest Google Drive `00 - Master Project Brief` plus canonical
- * Product Truth for the three ACTIVE & PROTECTED products. This projection
- * does not authorize any Etsy mutation and must not replace the broader
- * public/catalog projection in `catalog-channel-index.ts`.
+ * Product Truth for the three ACTIVE & PROTECTED products that predate the
+ * dynamic post-reset registry evidence flow.
+ *
+ * IMPORTANT: do NOT append future products here. Product 04+ Etsy identities
+ * must enter Control Center through verified canonical-registry evidence or a
+ * successful exact-authorized publish + authenticated readback receipt.
+ * This bootstrap does not authorize Etsy mutation and must not replace the
+ * broader public/catalog projection in `catalog-channel-index.ts`.
  */
 export const CONTROL_CENTER_ETSY_SOURCE = {
   driveId: "108WmUQjOQ4BR_PkTJUznGXzDHaFwIwIkDJOCdjnl7QM",
