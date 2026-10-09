@@ -1,10 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { currentProductIdFromOperationId } from "../lib/control-center-v2";
+import {
+  classifyPublishProofScope,
+  productIdFromOperationId
+} from "../lib/control-center-v2";
 import {
   classifyLedgerStatus,
   classifyOperationScope
 } from "../lib/control-center-v3";
+
+const currentProductIds = new Set([
+  "PDT-CSCH-001",
+  "PDT-PCL-002",
+  "PDT-CPR-003"
+]);
 
 test("control center V3 classifies operation ledger attention without inventing authorization", () => {
   assert.equal(classifyLedgerStatus("SUCCEEDED"), "COMPLETE");
@@ -17,24 +26,48 @@ test("control center V3 classifies operation ledger attention without inventing 
   assert.equal(classifyLedgerStatus("UNKNOWN"), "PENDING");
 });
 
-test("control center scopes current Product Truth operations separately from historical ledger records", () => {
-  assert.equal(classifyOperationScope("PDT-CSCH-001"), "CURRENT");
-  assert.equal(classifyOperationScope("PDT-PCL-002"), "CURRENT");
-  assert.equal(classifyOperationScope("PDT-CPR-003"), "CURRENT");
+test("control center scopes operations from the authenticated live tracked product set", () => {
   assert.equal(
-    classifyOperationScope("PDT-FCMP-002"),
+    classifyOperationScope("PDT-CSCH-001", currentProductIds),
+    "CURRENT"
+  );
+  assert.equal(
+    classifyOperationScope("PDT-PCL-002", currentProductIds),
+    "CURRENT"
+  );
+  assert.equal(
+    classifyOperationScope("PDT-CPR-003", currentProductIds),
+    "CURRENT"
+  );
+  assert.equal(
+    classifyOperationScope("PDT-FCMP-002", currentProductIds),
     "HISTORICAL_SUPERSEDED"
   );
-  assert.equal(classifyOperationScope(null), "HISTORICAL_SUPERSEDED");
+  assert.equal(
+    classifyOperationScope(null, currentProductIds),
+    "HISTORICAL_SUPERSEDED"
+  );
 });
 
-test("publish operation IDs resolve only against the current Drive-backed projection", () => {
+test("missing live marketplace evidence leaves operations unverified instead of misclassifying them historical", () => {
+  assert.equal(classifyOperationScope("PDT-CPR-003", null), "UNVERIFIED");
+  assert.equal(classifyOperationScope("PDT-FCMP-002", null), "UNVERIFIED");
+  assert.equal(classifyOperationScope(null, null), "UNVERIFIED");
+  assert.equal(classifyPublishProofScope("PDT-CPR-003", null), "UNVERIFIED");
+});
+
+test("operation IDs provide a generic product hint while live evidence determines current scope", () => {
   assert.equal(
-    currentProductIdFromOperationId("PDT-CPR-003-V1-ETSY-PUBLISH-R01"),
+    productIdFromOperationId("PDT-CPR-003-V1-ETSY-PUBLISH-R01"),
     "PDT-CPR-003"
   );
   assert.equal(
-    currentProductIdFromOperationId("PDT-FCMP-002-V1-ETSY-PUBLISH-R01"),
-    null
+    productIdFromOperationId("PDT-FCMP-002-V1-ETSY-PUBLISH-R01"),
+    "PDT-FCMP-002"
+  );
+  assert.equal(productIdFromOperationId("OP-WITHOUT-PRODUCT"), null);
+  assert.equal(
+    classifyPublishProofScope("PDT-FCMP-002", currentProductIds),
+    "HISTORICAL_SUPERSEDED"
   );
 });
