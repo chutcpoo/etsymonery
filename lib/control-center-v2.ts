@@ -4,7 +4,7 @@ import { etsyApiHeaders } from "./etsy";
 import { getValidEtsyAccessToken } from "./etsy-auth";
 import { getStoredEtsyShopId } from "./token-store";
 
-export const CONTROL_CENTER_V2_VERSION = "2.0.0" as const;
+export const CONTROL_CENTER_V2_VERSION = "2.1.0" as const;
 
 type EtsyListing = {
   listing_id?: number;
@@ -29,6 +29,8 @@ export type LiveListingSummary = {
   productId: string | null;
 };
 
+export type PublishProofScope = "CURRENT" | "HISTORICAL_SUPERSEDED";
+
 export type LatestPublishProof = {
   operationId: string;
   requestHash: string;
@@ -38,6 +40,8 @@ export type LatestPublishProof = {
   authorizationState: string | null;
   expectedListingFingerprint: string | null;
   actualListingFingerprint: string | null;
+  productId: string | null;
+  scope: PublishProofScope;
   updatedAt: string;
 };
 
@@ -52,6 +56,16 @@ function asString(value: unknown) {
 function trackedProductId(listingId: number) {
   const entry = ETSY_CHANNEL_INDEX.find((item) => item.listingId === listingId);
   return entry?.productId ?? null;
+}
+
+export function currentProductIdFromOperationId(operationId: string) {
+  return (
+    ETSY_CHANNEL_INDEX.find((entry) =>
+      operationId === entry.productId ||
+      operationId.startsWith(`${entry.productId}-`) ||
+      operationId.startsWith(`${entry.productId}:`)
+    )?.productId ?? null
+  );
 }
 
 async function readLiveListings() {
@@ -120,9 +134,42 @@ async function readLiveListings() {
   }
 }
 
-async function readLatestPublishProof(): Promise<LatestPublishProof | null> {
+function publishProofFromRow(row: Record<string, unknown>): LatestPublishProof {
+  const receipt = isRecord(row.receipt) ? row.receipt : {};
+  const operationId = String(row.operation_id ?? "");
+  const productId =
+    asString(receipt.productId) ?? currentProductIdFromOperationId(operationId);
+  const scope: PublishProofScope =
+    productId != null && ETSY_CHANNEL_INDEX.some((entry) => entry.productId === productId)
+      ? "CURRENT"
+      : "HISTORICAL_SUPERSEDED";
+  const updatedAtValue = row.updated_at;
+  const updatedAt =
+    updatedAtValue instanceof Date
+      ? updatedAtValue.toISOString()
+      : new Date(String(updatedAtValue)).toISOString();
+
+  return {
+    operationId,
+    requestHash: String(row.request_hash ?? ""),
+    status: String(row.status ?? "UNKNOWN"),
+    listingId: asString(receipt.listingId),
+    state: asString(receipt.state),
+    authorizationState: asString(receipt.authorizationState),
+    expectedListingFingerprint: asString(receipt.expectedListingFingerprint),
+    actualListingFingerprint: asString(receipt.actualListingFingerprint),
+    productId,
+    scope,
+    updatedAt
+  };
+}
+
+async function readPublishProofs(): Promise<{
+  latestCurrent: LatestPublishProof | null;
+  latestHistorical: LatestPublishProof | null;
+}> {
   const databaseUrl = process.env.DATABASE_URL?.trim();
-  if (!databaseUrl) return null;
+  if (!databaseUrl) return { latestCurrent: null, latestHistorical: null };
 
   try {
     const sql = neon(databaseUrl);
@@ -131,42 +178,30 @@ async function readLatestPublishProof(): Promise<LatestPublishProof | null> {
       FROM channel_operation_ledger
       WHERE operation_id LIKE ${"%PUBLISH%"}
       ORDER BY updated_at DESC
-      LIMIT 1
+      LIMIT 50
     `;
-    const row = rows[0] as Record<string, unknown> | undefined;
-    if (!row) return null;
-
-    const receipt = isRecord(row.receipt) ? row.receipt : {};
-    const updatedAtValue = row.updated_at;
-    const updatedAt =
-      updatedAtValue instanceof Date
-        ? updatedAtValue.toISOString()
-        : new Date(String(updatedAtValue)).toISOString();
-
+    const proofs = rows.map((row) =>
+      publishProofFromRow(row as Record<string, unknown>)
+    );
     return {
-      operationId: String(row.operation_id ?? ""),
-      requestHash: String(row.request_hash ?? ""),
-      status: String(row.status ?? "UNKNOWN"),
-      listingId: asString(receipt.listingId),
-      state: asString(receipt.state),
-      authorizationState: asString(receipt.authorizationState),
-      expectedListingFingerprint: asString(receipt.expectedListingFingerprint),
-      actualListingFingerprint: asString(receipt.actualListingFingerprint),
-      updatedAt
+      latestCurrent: proofs.find((proof) => proof.scope === "CURRENT") ?? null,
+      latestHistorical:
+        proofs.find((proof) => proof.scope === "HISTORICAL_SUPERSEDED") ?? null
     };
   } catch {
-    return null;
+    return { latestCurrent: null, latestHistorical: null };
   }
 }
 
 export async function getControlCenterV2Snapshot() {
-  const [live, latestPublish] = await Promise.all([
+  const [live, publishProofs] = await Promise.all([
     readLiveListings(),
-    readLatestPublishProof()
+    readPublishProofs()
   ]);
   const secureWriteTokenConfigured = Boolean(
     process.env.ETSY_DRAFT_WRITE_TOKEN?.trim()
   );
+  const trackedLiveListings = live.listings.filter((listing) => listing.catalogTracked);
   const liveOnlyListings = live.listings.filter((listing) => !listing.catalogTracked);
 
   return {
@@ -178,7 +213,9 @@ export async function getControlCenterV2Snapshot() {
       error: live.error,
       shopId: live.shopId,
       activeCount: live.status === "PASS" ? live.listings.length : null,
-      catalogTrackedCount: ETSY_CHANNEL_INDEX.length,
+      catalogProjectionCount: ETSY_CHANNEL_INDEX.length,
+      catalogTrackedCount:
+        live.status === "PASS" ? trackedLiveListings.length : null,
       liveOnlyCount: live.status === "PASS" ? liveOnlyListings.length : null,
       listings: live.listings
     },
@@ -191,7 +228,8 @@ export async function getControlCenterV2Snapshot() {
       directUiWrite: false,
       executionPolicy: "AUTHORIZED_ACTIONS_ONLY",
       executor: "GitHub Actions secure runner",
-      latestPublish
+      latestPublish: publishProofs.latestCurrent,
+      latestHistoricalPublish: publishProofs.latestHistorical
     }
   };
 }
