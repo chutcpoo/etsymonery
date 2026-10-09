@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import { ETSY_CHANNEL_INDEX } from "./catalog-channel-index";
+import { CONTROL_CENTER_ETSY_CHANNEL_INDEX } from "./control-center-etsy-channel-index";
 import { etsyApiHeaders } from "./etsy";
 import { getValidEtsyAccessToken } from "./etsy-auth";
 import { getStoredEtsyShopId } from "./token-store";
@@ -54,13 +54,15 @@ function asString(value: unknown) {
 }
 
 function trackedProductId(listingId: number) {
-  const entry = ETSY_CHANNEL_INDEX.find((item) => item.listingId === listingId);
+  const entry = CONTROL_CENTER_ETSY_CHANNEL_INDEX.find(
+    (item) => item.listingId === listingId
+  );
   return entry?.productId ?? null;
 }
 
 export function currentProductIdFromOperationId(operationId: string) {
   return (
-    ETSY_CHANNEL_INDEX.find((entry) =>
+    CONTROL_CENTER_ETSY_CHANNEL_INDEX.find((entry) =>
       operationId === entry.productId ||
       operationId.startsWith(`${entry.productId}-`) ||
       operationId.startsWith(`${entry.productId}:`)
@@ -140,7 +142,10 @@ function publishProofFromRow(row: Record<string, unknown>): LatestPublishProof {
   const productId =
     asString(receipt.productId) ?? currentProductIdFromOperationId(operationId);
   const scope: PublishProofScope =
-    productId != null && ETSY_CHANNEL_INDEX.some((entry) => entry.productId === productId)
+    productId != null &&
+    CONTROL_CENTER_ETSY_CHANNEL_INDEX.some(
+      (entry) => entry.productId === productId
+    )
       ? "CURRENT"
       : "HISTORICAL_SUPERSEDED";
   const updatedAtValue = row.updated_at;
@@ -201,8 +206,12 @@ export async function getControlCenterV2Snapshot() {
   const secureWriteTokenConfigured = Boolean(
     process.env.ETSY_DRAFT_WRITE_TOKEN?.trim()
   );
-  const trackedLiveListings = live.listings.filter((listing) => listing.catalogTracked);
-  const liveOnlyListings = live.listings.filter((listing) => !listing.catalogTracked);
+  const trackedLiveListings = live.listings.filter(
+    (listing) => listing.catalogTracked
+  );
+  const liveOnlyListings = live.listings.filter(
+    (listing) => !listing.catalogTracked
+  );
 
   return {
     version: CONTROL_CENTER_V2_VERSION,
@@ -213,7 +222,7 @@ export async function getControlCenterV2Snapshot() {
       error: live.error,
       shopId: live.shopId,
       activeCount: live.status === "PASS" ? live.listings.length : null,
-      catalogProjectionCount: ETSY_CHANNEL_INDEX.length,
+      catalogProjectionCount: CONTROL_CENTER_ETSY_CHANNEL_INDEX.length,
       catalogTrackedCount:
         live.status === "PASS" ? trackedLiveListings.length : null,
       liveOnlyCount: live.status === "PASS" ? liveOnlyListings.length : null,
