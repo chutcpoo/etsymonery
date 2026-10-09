@@ -1,15 +1,23 @@
 import { neon } from "@neondatabase/serverless";
-import { CONTROL_CENTER_ETSY_CHANNEL_INDEX } from "./control-center-etsy-channel-index";
-import { getControlCenterV2Snapshot } from "./control-center-v2";
+import {
+  activeProductIdsFromListings,
+  getControlCenterV2Snapshot,
+  productIdFromOperationId
+} from "./control-center-v2";
 
-export const CONTROL_CENTER_V3_VERSION = "3.2.0" as const;
+export const CONTROL_CENTER_V3_VERSION = "3.3.0" as const;
 
 export type OperationAttentionState =
   | "COMPLETE"
   | "NEEDS_RECONCILIATION"
   | "FAILED"
   | "PENDING";
-export type OperationScope = "CURRENT" | "HISTORICAL_SUPERSEDED";
+
+export type OperationScope =
+  | "CURRENT"
+  | "HISTORICAL_SUPERSEDED"
+  | "UNVERIFIED";
+
 export type OperationSummary = {
   operationId: string;
   status: string;
@@ -25,9 +33,11 @@ export type OperationSummary = {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
 function asString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
+
 export function classifyLedgerStatus(status: string): OperationAttentionState {
   if (status === "SUCCEEDED") return "COMPLETE";
   if (status === "RECONCILIATION_REQUIRED") return "NEEDS_RECONCILIATION";
@@ -35,23 +45,19 @@ export function classifyLedgerStatus(status: string): OperationAttentionState {
   return "PENDING";
 }
 
-function productIdFromOperationId(operationId: string) {
-  return operationId.match(/^PDT-[A-Z0-9]+-\d+/)?.[0] ?? null;
-}
-
-export function classifyOperationScope(productId: string | null): OperationScope {
-  if (
-    productId &&
-    CONTROL_CENTER_ETSY_CHANNEL_INDEX.some(
-      (entry) => entry.productId === productId
-    )
-  ) {
-    return "CURRENT";
-  }
+export function classifyOperationScope(
+  productId: string | null,
+  currentProductIds: ReadonlySet<string> | null
+): OperationScope {
+  if (currentProductIds === null) return "UNVERIFIED";
+  if (productId && currentProductIds.has(productId)) return "CURRENT";
   return "HISTORICAL_SUPERSEDED";
 }
 
-async function readRecentOperations(limit = 30): Promise<OperationSummary[]> {
+async function readRecentOperations(
+  currentProductIds: ReadonlySet<string> | null,
+  limit = 30
+): Promise<OperationSummary[]> {
   const databaseUrl = process.env.DATABASE_URL?.trim();
   if (!databaseUrl) return [];
   try {
@@ -75,7 +81,7 @@ async function readRecentOperations(limit = 30): Promise<OperationSummary[]> {
         operationId,
         status: String(row.status ?? "UNKNOWN"),
         attentionState: classifyLedgerStatus(String(row.status ?? "UNKNOWN")),
-        scope: classifyOperationScope(productId),
+        scope: classifyOperationScope(productId, currentProductIds),
         recoveryPoint: asString(row.recovery_point),
         listingId:
           asString(receipt.listingId) ?? asString(receipt.providerResourceId),
@@ -90,10 +96,12 @@ async function readRecentOperations(limit = 30): Promise<OperationSummary[]> {
 }
 
 export async function getControlCenterV3Snapshot() {
-  const [base, operations] = await Promise.all([
-    getControlCenterV2Snapshot(),
-    readRecentOperations()
-  ]);
+  const base = await getControlCenterV2Snapshot();
+  const currentProductIds = activeProductIdsFromListings(
+    base.live.status,
+    base.live.listings
+  );
+  const operations = await readRecentOperations(currentProductIds);
   const needsAttention = operations.filter(
     (operation) =>
       operation.scope === "CURRENT" && operation.attentionState !== "COMPLETE"
@@ -101,13 +109,17 @@ export async function getControlCenterV3Snapshot() {
   const historical = operations.filter(
     (operation) => operation.scope === "HISTORICAL_SUPERSEDED"
   );
+  const unverified = operations.filter(
+    (operation) => operation.scope === "UNVERIFIED"
+  );
+
   return {
     version: CONTROL_CENTER_V3_VERSION,
     mode: "GATED_OPERATOR_CONTROL_PLANE",
     generatedAt: new Date().toISOString(),
     live: base.live,
     production: base.production,
-    operations: { recent: operations, needsAttention, historical },
+    operations: { recent: operations, needsAttention, historical, unverified },
     capabilities: [
       {
         capability: "Product Truth",
