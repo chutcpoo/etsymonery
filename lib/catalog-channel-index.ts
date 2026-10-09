@@ -1,25 +1,21 @@
 /**
- * Derived, read-only Etsy channel identifier projection for the current
- * ACTIVE & PROTECTED PoonthaiDigital listings.
+ * Derived, read-only Etsy channel identifier projection from the canonical
+ * POONTHAIDIGITAL_PRODUCT_REGISTRY Google Drive document.
  *
- * AUTHORITY: latest Google Drive `00 - Master Project Brief` plus the
- * canonical Product Truth records for Products 01-03.
- * This file is NOT Product Truth and must never override Google Drive.
- * It contains only Product_ID <-> Etsy Listing_ID identifiers required for
- * runtime reconciliation.
+ * AUTHORITY: Google Drive Product Registry only.
+ * This file is NOT Product Truth and must never be used to override the Registry.
+ * It contains only Product_ID <-> Etsy Listing_ID identifiers needed for runtime
+ * reconciliation. Refresh it only from a fresh read of the exact canonical Drive
+ * object recorded below.
  */
 export const CANONICAL_CATALOG_SOURCE = {
-  driveId: "108WmUQjOQ4BR_PkTJUznGXzDHaFwIwIkDJOCdjnl7QM",
-  title: "00 - Master Project Brief",
-  snapshotModifiedAt: "2026-10-09T05:24:41.885Z",
-  snapshotRevisionId: "27",
-  authority: "MASTER_PLUS_PRODUCT_TRUTH_IDENTIFIER_PROJECTION",
-  projectionScope: "ACTIVE_PROTECTED_PRODUCT_ID_ETSY_LISTING_ID_ONLY",
-  productTruthDriveIds: {
-    "PDT-CSCH-001": "1dCdQ8kvRDVH_qynLljAynLKxOp_a5WH-9aUva5oitCc",
-    "PDT-PCL-002": "1G_zXzW1e1MIfAKdIf618VXMZKUWWR0Hq7qRFBoUj1tU",
-    "PDT-CPR-003": "18xSNFCFmFzLveI54ELCjrZLABOPQ0lLe"
-  }
+  driveId: "1WGL_VFGW0DdqxGUdQAzZnjshGEEVCr0ZMeOdAU-KMWQ",
+  title: "POONTHAIDIGITAL_PRODUCT_REGISTRY",
+  snapshotModifiedAt: "2026-09-27T10:58:42.116Z",
+  snapshotRevisionId:
+    "ANLCKQnMbncF0UrEz2QBRwRwxQSCEuNxq5BYkkjSMgpB1F3nahcQbVaRmjsRl6hIRCkaFQhUBxD9PqW3l_Tosk8hAy1ZxoaNSohePDb-QFM",
+  authority: "IDENTIFIER_PROJECTION_ONLY",
+  projectionScope: "PRODUCT_ID_ETSY_LISTING_ID_ONLY"
 } as const;
 
 export type EtsyChannelIndexEntry = {
@@ -28,15 +24,15 @@ export type EtsyChannelIndexEntry = {
 };
 
 /**
- * Refreshed from Google Drive authority on 2026-10-09 after authenticated
- * Etsy seller-state readback confirmed exactly three ACTIVE listings.
+ * Freshly derived from the canonical Google Drive registry on 2026-09-23.
  *
- * Products 01-03 are ACTIVE & PROTECTED / NO CHANGES. This projection does
- * not authorize Etsy mutation; it only binds current Product IDs to current
- * live listing IDs for read-only Control Center reconciliation.
+ * Do not add a listing because it merely appears live on Etsy. The Product_ID
+ * <-> Listing_ID pair must exist in the canonical Drive registry first.
  */
 export const ETSY_CHANNEL_INDEX: readonly EtsyChannelIndexEntry[] = [
-  { productId: "PDT-CSCH-001", listingId: 4587646332 },
-  { productId: "PDT-PCL-002", listingId: 4588681044 },
-  { productId: "PDT-CPR-003", listingId: 4588738623 }
+  { productId: "PDT-CBEO-004", listingId: 4580126260 },
+  { productId: "PDT-FCMP-002", listingId: 4579068925 },
+  { productId: "PDT-HBOP-001", listingId: 4581821318 },
+  { productId: "PDT-IPT-001", listingId: 4578945050 },
+  { productId: "PDT-RPT-003", listingId: 4580303015 }
 ] as const;
