@@ -24,7 +24,7 @@ export type ControlCenterEtsyProjection = {
   errors: string[];
 };
 
-type PublishLedgerRow = {
+export type PublishLedgerRow = {
   operation_id?: unknown;
   receipt?: unknown;
   updated_at?: unknown;
@@ -62,7 +62,8 @@ function addMapping(
     );
   }
 
-  // Prefer canonical Product Registry evidence over ledger/bootstrap for the same identity.
+  // Prefer canonical Product Registry evidence over verified ledger/bootstrap
+  // when the product/listing identity itself agrees.
   const rank: Record<ControlCenterEtsyMappingSource, number> = {
     DRIVE_BOOTSTRAP: 1,
     VERIFIED_PUBLISH_LEDGER: 2,
@@ -79,9 +80,10 @@ export function projectCanonicalRegistryEtsyMappings(
   const byListingId = new Map<number, ControlCenterEtsyMapping>();
   for (const record of records) {
     const productId = normalizedProductId(record.productId);
-    if (!productId) {
-      throw new Error(`CONTROL_CENTER_INVALID_REGISTRY_PRODUCT_ID:${record.productId}`);
-    }
+    // The canonical registry can hold records outside the Poonthai PDT namespace.
+    // Those records are out of scope for this Control Center and are ignored.
+    if (!productId) continue;
+
     for (const listing of record.references.listings) {
       if (listing.channel.normalize("NFC").trim().toLowerCase() !== "etsy") continue;
       const listingId = numericListingId(listing.listingId);
@@ -108,13 +110,31 @@ export function projectVerifiedPublishLedgerMappings(
     const receipt = isRecord(row.receipt) ? row.receipt : {};
     const productId = normalizedProductId(receipt.productId);
     const listingId = numericListingId(receipt.listingId);
+    const candidateId =
+      typeof receipt.candidateId === "string"
+        ? receipt.candidateId.normalize("NFC").trim()
+        : "";
+    const authorizationState =
+      typeof receipt.authorizationState === "string"
+        ? receipt.authorizationState.normalize("NFC").trim().toUpperCase()
+        : "";
     const state =
       typeof receipt.state === "string"
         ? receipt.state.normalize("NFC").trim().toLowerCase()
         : "";
-    if (!productId || !listingId || (state !== "active" && state !== "published")) {
+
+    // Only a successful post-reset publish receipt with consumed exact-operation
+    // authorization and active/published readback may create a future mapping.
+    if (
+      !productId ||
+      !listingId ||
+      !candidateId.startsWith(`POSTRESET-${productId}-`) ||
+      authorizationState !== "CONSUMED" ||
+      (state !== "active" && state !== "published")
+    ) {
       continue;
     }
+
     addMapping(byListingId, {
       productId,
       listingId,
@@ -154,11 +174,23 @@ async function readVerifiedPublishLedgerRows(databaseUrl: string) {
     SELECT operation_id, receipt, updated_at
     FROM channel_operation_ledger
     WHERE status = 'SUCCEEDED'
-      AND operation_id LIKE ${"%PUBLISH%"}
+      AND receipt->>'productId' IS NOT NULL
+      AND receipt->>'authorizationState' = 'CONSUMED'
+      AND receipt->>'candidateId' LIKE ${"POSTRESET-%"}
+      AND lower(receipt->>'state') IN ('active', 'published')
     ORDER BY updated_at DESC
     LIMIT 200
   `;
   return rows as PublishLedgerRow[];
+}
+
+function blockedProjection(errors: string[]): ControlCenterEtsyProjection {
+  return {
+    status: "BLOCKED",
+    source: "BLOCKED_CONFLICT",
+    mappings: [],
+    errors
+  };
 }
 
 export async function readControlCenterEtsyProjection(options?: {
@@ -184,7 +216,14 @@ export async function readControlCenterEtsyProjection(options?: {
   try {
     const repository =
       options?.repository ?? new NeonCanonicalProductRegistryRepository();
-    registryMappings = projectCanonicalRegistryEtsyMappings(await repository.list());
+    const records = await repository.list();
+    try {
+      registryMappings = projectCanonicalRegistryEtsyMappings(records);
+    } catch (error) {
+      return blockedProjection([
+        `REGISTRY_MAPPING_INTEGRITY_FAILED:${error instanceof Error ? error.message : "UNKNOWN"}`
+      ]);
+    }
   } catch (error) {
     errors.push(
       `REGISTRY_READ_FAILED:${error instanceof Error ? error.message : "UNKNOWN"}`
@@ -195,7 +234,14 @@ export async function readControlCenterEtsyProjection(options?: {
     const rows =
       options?.ledgerRows ??
       (databaseUrl ? await readVerifiedPublishLedgerRows(databaseUrl) : []);
-    ledgerMappings = projectVerifiedPublishLedgerMappings(rows);
+    try {
+      ledgerMappings = projectVerifiedPublishLedgerMappings(rows);
+    } catch (error) {
+      return blockedProjection([
+        ...errors,
+        `PUBLISH_LEDGER_MAPPING_INTEGRITY_FAILED:${error instanceof Error ? error.message : "UNKNOWN"}`
+      ]);
+    }
   } catch (error) {
     errors.push(
       `PUBLISH_LEDGER_READ_FAILED:${error instanceof Error ? error.message : "UNKNOWN"}`
@@ -215,14 +261,9 @@ export async function readControlCenterEtsyProjection(options?: {
       errors
     };
   } catch (error) {
-    return {
-      status: "BLOCKED",
-      source: "BLOCKED_CONFLICT",
-      mappings: [],
-      errors: [
-        ...errors,
-        error instanceof Error ? error.message : "CONTROL_CENTER_ETSY_MAPPING_CONFLICT"
-      ]
-    };
+    return blockedProjection([
+      ...errors,
+      error instanceof Error ? error.message : "CONTROL_CENTER_ETSY_MAPPING_CONFLICT"
+    ]);
   }
 }
