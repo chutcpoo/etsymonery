@@ -1,10 +1,15 @@
 import { neon } from "@neondatabase/serverless";
-import { CONTROL_CENTER_ETSY_CHANNEL_INDEX } from "./control-center-etsy-channel-index";
+import {
+  productIdForEtsyListing,
+  readControlCenterEtsyProjection,
+  type ControlCenterEtsyMapping,
+  type ControlCenterEtsyProjection
+} from "./control-center-etsy-registry";
 import { etsyApiHeaders } from "./etsy";
 import { getValidEtsyAccessToken } from "./etsy-auth";
 import { getStoredEtsyShopId } from "./token-store";
 
-export const CONTROL_CENTER_V2_VERSION = "2.1.0" as const;
+export const CONTROL_CENTER_V2_VERSION = "2.2.0" as const;
 
 type EtsyListing = {
   listing_id?: number;
@@ -29,7 +34,10 @@ export type LiveListingSummary = {
   productId: string | null;
 };
 
-export type PublishProofScope = "CURRENT" | "HISTORICAL_SUPERSEDED";
+export type PublishProofScope =
+  | "CURRENT"
+  | "HISTORICAL_SUPERSEDED"
+  | "UNVERIFIED";
 
 export type LatestPublishProof = {
   operationId: string;
@@ -50,34 +58,37 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function asString(value: unknown) {
-  return typeof value === "string" ? value : null;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function trackedProductId(listingId: number) {
-  const entry = CONTROL_CENTER_ETSY_CHANNEL_INDEX.find(
-    (item) => item.listingId === listingId
-  );
-  return entry?.productId ?? null;
+export function productIdFromOperationId(operationId: string) {
+  return operationId.match(/^PDT-[A-Z0-9]+-\d+/)?.[0] ?? null;
 }
 
-export function currentProductIdFromOperationId(operationId: string) {
-  return (
-    CONTROL_CENTER_ETSY_CHANNEL_INDEX.find((entry) =>
-      operationId === entry.productId ||
-      operationId.startsWith(`${entry.productId}-`) ||
-      operationId.startsWith(`${entry.productId}:`)
-    )?.productId ?? null
-  );
-}
+async function readLiveListings(
+  projection: ControlCenterEtsyProjection
+): Promise<{
+  status: "PASS" | "BLOCKED";
+  error: string | null;
+  shopId: number | null;
+  listings: LiveListingSummary[];
+}> {
+  if (projection.status === "BLOCKED") {
+    return {
+      status: "BLOCKED",
+      error: `CATALOG_PROJECTION_BLOCKED:${projection.errors.join("|")}`,
+      shopId: null,
+      listings: []
+    };
+  }
 
-async function readLiveListings() {
   const shopId = await getStoredEtsyShopId();
   if (!shopId) {
     return {
-      status: "BLOCKED" as const,
+      status: "BLOCKED",
       error: "SHOP_IDENTITY_TEST_REQUIRED",
       shopId: null,
-      listings: [] as LiveListingSummary[]
+      listings: []
     };
   }
 
@@ -95,10 +106,10 @@ async function readLiveListings() {
 
     if (!response.ok || !Array.isArray(payload.results)) {
       return {
-        status: "BLOCKED" as const,
+        status: "BLOCKED",
         error: payload.error ?? `ETSY_LISTINGS_LOOKUP_HTTP_${response.status}`,
         shopId,
-        listings: [] as LiveListingSummary[]
+        listings: []
       };
     }
 
@@ -106,14 +117,17 @@ async function readLiveListings() {
     for (const listing of payload.results) {
       if (listing.shop_id != null && listing.shop_id !== shopId) {
         return {
-          status: "BLOCKED" as const,
+          status: "BLOCKED",
           error: "LISTING_SHOP_ID_MISMATCH",
           shopId,
-          listings: [] as LiveListingSummary[]
+          listings: []
         };
       }
       if (typeof listing.listing_id !== "number") continue;
-      const productId = trackedProductId(listing.listing_id);
+      const productId = productIdForEtsyListing(
+        projection.mappings,
+        listing.listing_id
+      );
       listings.push({
         listingId: listing.listing_id,
         title: listing.title ?? null,
@@ -125,29 +139,34 @@ async function readLiveListings() {
     }
 
     listings.sort((left, right) => right.listingId - left.listingId);
-    return { status: "PASS" as const, error: null, shopId, listings };
+    return { status: "PASS", error: null, shopId, listings };
   } catch (error) {
     return {
-      status: "BLOCKED" as const,
+      status: "BLOCKED",
       error: error instanceof Error ? error.message : "ETSY_LIVE_READ_FAILED",
       shopId,
-      listings: [] as LiveListingSummary[]
+      listings: []
     };
   }
 }
 
-function publishProofFromRow(row: Record<string, unknown>): LatestPublishProof {
+export function classifyPublishProofScope(
+  productId: string | null,
+  currentProductIds: ReadonlySet<string> | null
+): PublishProofScope {
+  if (currentProductIds === null) return "UNVERIFIED";
+  if (productId && currentProductIds.has(productId)) return "CURRENT";
+  return "HISTORICAL_SUPERSEDED";
+}
+
+function publishProofFromRow(
+  row: Record<string, unknown>,
+  currentProductIds: ReadonlySet<string> | null
+): LatestPublishProof {
   const receipt = isRecord(row.receipt) ? row.receipt : {};
   const operationId = String(row.operation_id ?? "");
   const productId =
-    asString(receipt.productId) ?? currentProductIdFromOperationId(operationId);
-  const scope: PublishProofScope =
-    productId != null &&
-    CONTROL_CENTER_ETSY_CHANNEL_INDEX.some(
-      (entry) => entry.productId === productId
-    )
-      ? "CURRENT"
-      : "HISTORICAL_SUPERSEDED";
+    asString(receipt.productId) ?? productIdFromOperationId(operationId);
   const updatedAtValue = row.updated_at;
   const updatedAt =
     updatedAtValue instanceof Date
@@ -164,17 +183,26 @@ function publishProofFromRow(row: Record<string, unknown>): LatestPublishProof {
     expectedListingFingerprint: asString(receipt.expectedListingFingerprint),
     actualListingFingerprint: asString(receipt.actualListingFingerprint),
     productId,
-    scope,
+    scope: classifyPublishProofScope(productId, currentProductIds),
     updatedAt
   };
 }
 
-async function readPublishProofs(): Promise<{
+async function readPublishProofs(
+  currentProductIds: ReadonlySet<string> | null
+): Promise<{
   latestCurrent: LatestPublishProof | null;
   latestHistorical: LatestPublishProof | null;
+  latestUnverified: LatestPublishProof | null;
 }> {
   const databaseUrl = process.env.DATABASE_URL?.trim();
-  if (!databaseUrl) return { latestCurrent: null, latestHistorical: null };
+  if (!databaseUrl) {
+    return {
+      latestCurrent: null,
+      latestHistorical: null,
+      latestUnverified: null
+    };
+  }
 
   try {
     const sql = neon(databaseUrl);
@@ -186,23 +214,47 @@ async function readPublishProofs(): Promise<{
       LIMIT 50
     `;
     const proofs = rows.map((row) =>
-      publishProofFromRow(row as Record<string, unknown>)
+      publishProofFromRow(
+        row as Record<string, unknown>,
+        currentProductIds
+      )
     );
     return {
       latestCurrent: proofs.find((proof) => proof.scope === "CURRENT") ?? null,
       latestHistorical:
-        proofs.find((proof) => proof.scope === "HISTORICAL_SUPERSEDED") ?? null
+        proofs.find((proof) => proof.scope === "HISTORICAL_SUPERSEDED") ?? null,
+      latestUnverified:
+        proofs.find((proof) => proof.scope === "UNVERIFIED") ?? null
     };
   } catch {
-    return { latestCurrent: null, latestHistorical: null };
+    return {
+      latestCurrent: null,
+      latestHistorical: null,
+      latestUnverified: null
+    };
   }
 }
 
+export function activeProductIdsFromListings(
+  status: "PASS" | "BLOCKED",
+  listings: readonly LiveListingSummary[]
+): ReadonlySet<string> | null {
+  if (status !== "PASS") return null;
+  return new Set(
+    listings
+      .map((listing) => listing.productId)
+      .filter((productId): productId is string => productId != null)
+  );
+}
+
 export async function getControlCenterV2Snapshot() {
-  const [live, publishProofs] = await Promise.all([
-    readLiveListings(),
-    readPublishProofs()
-  ]);
+  const projection = await readControlCenterEtsyProjection();
+  const live = await readLiveListings(projection);
+  const currentProductIds = activeProductIdsFromListings(
+    live.status,
+    live.listings
+  );
+  const publishProofs = await readPublishProofs(currentProductIds);
   const secureWriteTokenConfigured = Boolean(
     process.env.ETSY_DRAFT_WRITE_TOKEN?.trim()
   );
@@ -222,7 +274,10 @@ export async function getControlCenterV2Snapshot() {
       error: live.error,
       shopId: live.shopId,
       activeCount: live.status === "PASS" ? live.listings.length : null,
-      catalogProjectionCount: CONTROL_CENTER_ETSY_CHANNEL_INDEX.length,
+      catalogProjectionStatus: projection.status,
+      catalogProjectionSource: projection.source,
+      catalogProjectionErrors: projection.errors,
+      catalogProjectionCount: projection.mappings.length,
       catalogTrackedCount:
         live.status === "PASS" ? trackedLiveListings.length : null,
       liveOnlyCount: live.status === "PASS" ? liveOnlyListings.length : null,
@@ -238,7 +293,8 @@ export async function getControlCenterV2Snapshot() {
       executionPolicy: "AUTHORIZED_ACTIONS_ONLY",
       executor: "GitHub Actions secure runner",
       latestPublish: publishProofs.latestCurrent,
-      latestHistoricalPublish: publishProofs.latestHistorical
+      latestHistoricalPublish: publishProofs.latestHistorical,
+      latestUnverifiedPublish: publishProofs.latestUnverified
     }
   };
 }
