@@ -66,6 +66,10 @@ const POST_RESET_V2_BATCH_DRAFT_CREATE_ROUTE =
   "/api/internal/etsy/post-reset-v2/batch-draft-create-04-15";
 const POST_RESET_V2_PDT_04_15_DRAFT_ASSETS_R01_ROUTE =
   "/api/internal/etsy/post-reset-v2/pdt-04-15-draft-assets-r01";
+const POST_RESET_V2_PDT_CQE_008_FRESH_V2_R01_ROUTE =
+  "/api/internal/etsy/post-reset-v2/pdt-cqe-008/fresh-v2-r01";
+const POST_RESET_V2_PDT_CQE_008_FRESH_V2_ASSETS_R01_ROUTE =
+  "/api/internal/etsy/post-reset-v2/pdt-cqe-008/fresh-v2-assets-r01";
 
 const BLOCKED_PUBLIC_PREFIXES = [
   "/api/etsy/active-listing-update",
@@ -135,7 +139,9 @@ export function middleware(request: NextRequest) {
     pathname === POST_RESET_V2_PDT_CPR_DRAFT_CREATE_R01_ROUTE ||
     pathname === POST_RESET_V2_PDT_CPR_COMPLETE_R01_ROUTE ||
     pathname === POST_RESET_V2_BATCH_DRAFT_CREATE_ROUTE ||
-    pathname === POST_RESET_V2_PDT_04_15_DRAFT_ASSETS_R01_ROUTE
+    pathname === POST_RESET_V2_PDT_04_15_DRAFT_ASSETS_R01_ROUTE ||
+    pathname === POST_RESET_V2_PDT_CQE_008_FRESH_V2_R01_ROUTE ||
+    pathname === POST_RESET_V2_PDT_CQE_008_FRESH_V2_ASSETS_R01_ROUTE
   ) {
     return NextResponse.next();
   }
