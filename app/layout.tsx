@@ -143,7 +143,7 @@ function analyticsBootstrap() {
         if (!(url.hostname === "etsy.com" || url.hostname.endsWith(".etsy.com"))) return;
 
         var container = anchor.closest("[data-analytics-product-id]");
-        var listingMatch = url.pathname.match(/\/listing\/(\d+)/);
+        var listingMatch = url.pathname.match(/\\/listing\\/(\\d+)/);
         if (window.autodigitalpublisherTrack) {
           window.autodigitalpublisherTrack("click_to_etsy", {
             product_id: container ? container.getAttribute("data-analytics-product-id") : undefined,
