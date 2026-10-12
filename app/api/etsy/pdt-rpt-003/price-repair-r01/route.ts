@@ -93,7 +93,6 @@ function protectedFp(s:Awaited<ReturnType<typeof snapshot>>){
   files:[...s.files].sort((a,b)=>(int(a,"rank")??0)-(int(b,"rank")??0)).map(r=>({id:int(r,"listing_file_id"),rank:int(r,"rank"),name:txt(r,"filename"),size:Number(r.size_bytes??0)})),
   seller:{counts:s.seller.counts,total:s.seller.total,listings:s.seller.listings.map(x=>({id:x.listingId,state:x.state,title:x.title})).sort((a,b)=>a.id-b.id)}
  });
- const {createHash}=require("node:crypto");
  return createHash("sha256").update(payload,"utf8").digest("hex");
 }
 
