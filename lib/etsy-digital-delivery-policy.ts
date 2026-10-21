@@ -33,6 +33,12 @@ export function buyerFilenameIssue(filename: unknown): string | null {
   const dot = filename.lastIndexOf(".");
   const extension = dot > 0 ? filename.slice(dot + 1).toLowerCase() : "";
   if (!FILE_TYPES.has(extension)) return "BUYER_FILE_TYPE_NOT_SUPPORTED_BY_ETSY";
+  // The buyer-facing name must remain stable across internal product revisions.
+  // Internal manifests and working files may use version suffixes; buyer files may not.
+  const stem = filename.slice(0, dot);
+  if (/(?:^|[._-])v\d+(?:[._-]\d+)*$/i.test(stem)) {
+    return "BUYER_FILE_NAME_VERSION_SUFFIX_NOT_ALLOWED";
+  }
   return null;
 }
 
