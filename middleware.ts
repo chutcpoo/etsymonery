@@ -67,6 +67,16 @@ const POST_RESET_V2_BATCH_DRAFT_CREATE_ROUTE =
 const POST_RESET_V2_PDT_04_15_DRAFT_ASSETS_R01_ROUTE =
   "/api/internal/etsy/post-reset-v2/pdt-04-15-draft-assets-r01";
 
+// ONLY routes whose own POST handlers enforce exact authentication and fail-closed
+// write gates are allowed past the legacy catalog-reset middleware.
+// Adding a path here does NOT authorize Etsy writes.
+const EXACT_POST_GATE_ROUTES = new Set([
+  "/api/etsy/chat-assets/source-preflight",
+  "/api/etsy/chat-assets",
+  "/api/etsy/drafts",
+  "/api/etsy/release"
+]);
+
 const BLOCKED_PUBLIC_PREFIXES = [
   "/api/etsy/active-listing-update",
   "/api/etsy/authorized-destructive-action",
@@ -153,6 +163,12 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/api/etsy/") && !["GET", "HEAD", "OPTIONS"].includes(method)) {
+    // The four exact, post-reset endpoints have independent server-side gates:
+    // source-preflight is read-only; others require exact QC/approval + write flags.
+    // Unknown routes, all legacy routes and other mutation methods stay blocked.
+    if (method === "POST" && EXACT_POST_GATE_ROUTES.has(pathname)) {
+      return NextResponse.next();
+    }
     return resetResponse(pathname);
   }
 
