@@ -8,6 +8,31 @@ const SHA = /^[a-f0-9]{64}$/;
 const GIT_SHA = /^[a-f0-9]{40}$/;
 const POSITIVE_ID = /^[1-9]\d*$/;
 
+const P01_SHOP_ID = '23582741';
+const P01_BUYER_FILES = Object.freeze([
+  'Home_Maintenance_Starter_A4.pdf',
+  'Home_Maintenance_Starter_US_Letter.pdf'
+]);
+function canonicalNames(names) {
+  if (!Array.isArray(names) || names.some(name => typeof name !== 'string' || !name.trim())) {
+    return null;
+  }
+  return JSON.stringify(names.map(name => name.normalize('NFC').trim()).sort());
+}
+/** Fail closed on P01-only scope before contacting Vercel/Etsy. */
+export function verifyP01ReleaseScope(request) {
+  if (request.productId !== 'P01') return true;
+  if (String(request.shopId) !== P01_SHOP_ID ||
+      request.expectedImageCount !== 7 ||
+      canonicalNames(request.expectedBuyerFileNames) !== canonicalNames(P01_BUYER_FILES) ||
+      request.authorization?.schemaVersion !== '1.0.0' ||
+      request.authorization?.authorization?.channel !== 'etsy') {
+    throw new Error('P01_EXACT_SHOP_OR_ASSET_SCOPE_MISMATCH');
+  }
+  return true;
+}
+
+
 export function validateExactRelease(env) {
   const required = ['RELEASE_PRODUCT_ID', 'RELEASE_LISTING_ID', 'APPROVED_DEPLOYMENT_SHA',
     'ETSY_RELEASE_OPERATOR_TOKEN', 'ETSY_RELEASE_REQUEST_JSON', 'ETSY_RELEASE_ASSET_SET_SHA256'];
@@ -38,6 +63,7 @@ export function validateExactRelease(env) {
     String(request?.authorization?.draftListingId) !== String(request.draftListingId)) {
     throw new Error('EXACT_PUBLISH_AUTHORIZATION_OR_IDENTITY_MISMATCH');
   }
+  verifyP01ReleaseScope(request);
   return Object.freeze({ ...request });
 }
 
@@ -68,6 +94,7 @@ export async function releaseExactListing(env = process.env, fetchImpl = fetch) 
     preflight.draftListingId !== frozen.draftListingId ||
     preflight.assetSetSha256 !== env.ETSY_RELEASE_ASSET_SET_SHA256 ||
     preflight.imageCount !== frozen.expectedImageCount ||
+    canonicalNames(preflight.buyerFileNames) !== canonicalNames(frozen.expectedBuyerFileNames) ||
     preflight.publishAuthorized !== false) throw new Error('PREFLIGHT_IDENTITY_OR_ASSET_SET_MISMATCH');
   const result = await getJson(fetchImpl, URL, {
     method: 'POST', headers, body: JSON.stringify(frozen), redirect: 'error'
