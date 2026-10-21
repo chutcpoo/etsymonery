@@ -94,6 +94,35 @@ Source policies, verified 2026-10-21:
 - https://www.etsy.com/legal/creativity
 - https://www.etsy.com/legal/sellers/
 
+## Byte-level inspection added to existing authorized source intake
+
+The existing ChatGPT source-intake routes
+`POST /api/etsy/chat-assets/source-preflight` and
+`POST /api/etsy/chat-assets` now reject malformed PDF header/EOF markers
+and ZIP archives with invalid directory records, corrupted member CRCs,
+unsafe traversal/absolute Windows paths, duplicate member names, encrypted
+members, symlinks, unsupported compression, overlapping members, and large
+unpacked payloads. ZIP checks use a bounded DEFLATE implementation and
+verify **actual decompressed bytes**, never merely a supplied filename or CRC.
+
+A passing PDF byte check is deliberately reported as
+`PDF_HEADER_EOF_ONLY`. **It does NOT parse all PDF pages, render pages,
+inspect links or embedded JavaScript, prove readable text, or prove print
+dimensions.** The actual PDF must still be rendered and inspected by an
+independent reviewer before any product is marked QC_PASSED.
+
+A ZIP `ZIP_CRC_PATH_AND_SIZE` result is evidence that the container
+and its members are structurally intact and bounded, **not** evidence
+that nested XLSX formulas, PDF pages, copyrights, or listing promises
+are correct. ZIP members need their own document-specific QC.
+
+The existing private source handler is limited to 3 MiB per file.
+These checks are a fail-closed **additional safeguard**, not a new public
+upload endpoint, and not a substitute for seller approval. Unit tests include
+valid ZIPs, CRC corruption, truncated central directory, traversal, casefold
+duplicates, encrypted files, symlinks, decompression limits, and PDF
+header/EOF failures.
+
 ## Actual buyer delivery: independent QC checklist
 
 All these must be independently checked **on the final immutable files**,
