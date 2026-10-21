@@ -1,56 +1,56 @@
 import { NextResponse } from "next/server";
-import {
-  ETSY_SCOPES,
-  ETSY_SELLER_READ_SCOPES,
-  ETSY_SELLER_WRITE_SCOPES,
-  getEtsyCredentials,
-  getMissingEtsyScopes,
-  parseEtsyGrantedScopes
-} from "../../../../lib/etsy";
+import { getEtsyCredentials } from "../../../../lib/etsy";
+import { buildEtsyOAuthStatus } from "../../../../lib/etsy-status";
 import {
   getStoredEtsyGrantMetadata,
   hasStoredEtsyTokens,
   isTokenStoreConfigured
 } from "../../../../lib/token-store";
-import { POST_RESET_PLATFORM_STATE } from "../../../../lib/post-reset-platform";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+// GET is metadata-only: no token refresh, Etsy HTTP call or listing mutation.
 export async function GET() {
-  const credentials = getEtsyCredentials();
-  const persistenceConfigured = isTokenStoreConfigured();
-  const oauthConnected = persistenceConfigured ? await hasStoredEtsyTokens() : false;
-  const grant = persistenceConfigured ? await getStoredEtsyGrantMetadata() : null;
-  const grantedScopes = parseEtsyGrantedScopes(grant?.scope);
-  const scopeMetadataPresent = Boolean(grant?.scope?.trim());
-  const missingSellerReadScopes = getMissingEtsyScopes(
-    grant?.scope,
-    ETSY_SELLER_READ_SCOPES
-  );
-  const missingSellerWriteScopes = getMissingEtsyScopes(
-    grant?.scope,
-    ETSY_SELLER_WRITE_SCOPES
-  );
+  try {
+    const credentials = getEtsyCredentials();
+    const persistenceConfigured = isTokenStoreConfigured();
+    const oauthConnected = persistenceConfigured ? await hasStoredEtsyTokens() : false;
+    const grant = persistenceConfigured ? await getStoredEtsyGrantMetadata() : null;
 
-  return NextResponse.json({
-    ...POST_RESET_PLATFORM_STATE,
-    service: "etsy-open-api-v3",
-    apiCredentialsConfigured: credentials.configured,
-    oauthConnected,
-    tokenStorage: persistenceConfigured ? "persistent-encrypted" : "not-configured",
-    refreshLifecycle: persistenceConfigured ? "enabled" : "blocked",
-    scopes: ETSY_SCOPES,
-    requestedScopes: ETSY_SCOPES,
-    grantedScopes,
-    scopeMetadataPresent,
-    missingSellerReadScopes,
-    missingSellerWriteScopes,
-    sellerReadGrantReady:
-      oauthConnected && scopeMetadataPresent && missingSellerReadScopes.length === 0,
-    sellerWriteGrantReady:
-      oauthConnected && scopeMetadataPresent && missingSellerWriteScopes.length === 0,
-    redirectUriConfigured: Boolean(process.env.ETSY_REDIRECT_URI),
-    shopIdConfigured: Boolean(process.env.ETSY_SHOP_ID)
-  });
+    return NextResponse.json(
+      buildEtsyOAuthStatus({
+        apiCredentialsConfigured: credentials.configured,
+        tokenStoreConfigured: persistenceConfigured,
+        tokensStored: oauthConnected,
+        grantScope: grant?.scope,
+        grantExpiresAt: grant?.expiresAt,
+        redirectUriConfigured: Boolean(process.env.ETSY_REDIRECT_URI?.trim()),
+        shopIdConfigured: Boolean(process.env.ETSY_SHOP_ID?.trim()),
+        writeGates: {
+          draftWritesEnabled: process.env.ETSY_DRAFT_WRITES_ENABLED === "true",
+          publishWritesEnabled: process.env.PUBLISH_WRITES_ENABLED === "true",
+          postResetV2WritesEnabled:
+            process.env.ETSY_POST_RESET_V2_WRITES_ENABLED === "true"
+        }
+      }),
+      { headers: { "cache-control": "no-store" } }
+    );
+  } catch {
+    // Do not expose database details, OAuth tokens or secret values to callers.
+    return NextResponse.json(
+      {
+        status: "BLOCKED",
+        mode: "READ_ONLY",
+        service: "etsy-open-api-v3",
+        error: "OAUTH_STATUS_STORE_UNAVAILABLE",
+        etsyApiLiveVerification: "NOT_TESTED",
+        ETSY_WRITE_COUNT: 0
+      },
+      {
+        status: 503,
+        headers: { "cache-control": "no-store" }
+      }
+    );
+  }
 }

@@ -31,6 +31,10 @@ export default async function EtsyConnectPage() {
     connected &&
     scopeMetadataPresent &&
     getMissingEtsyScopes(grant?.scope, ETSY_SELLER_WRITE_SCOPES).length === 0;
+  const transactionsReadGrantReady =
+    connected &&
+    scopeMetadataPresent &&
+    getMissingEtsyScopes(grant?.scope, ["transactions_r"]).length === 0;
 
   return (
     <main className="shell">
@@ -65,7 +69,9 @@ export default async function EtsyConnectPage() {
             {scopeMetadataPresent ? grantedScopes.join(", ") : "UNKNOWN"}. Seller
             Draft read grant: {sellerReadGrantReady ? "READY" : "BLOCKED"}. Seller
             Draft write grant: {sellerWriteGrantReady ? "READY" : "BLOCKED"}.
-            OAuth tokens are stored server-side with application-layer encryption.
+            Transactions read grant: {transactionsReadGrantReady ? "READY" : "BLOCKED"}.
+            These statuses come from stored OAuth metadata, not a live Etsy API
+            verification. OAuth tokens are stored server-side with application-layer encryption.
             Marketplace writes remain secure-gated: exact candidate/QC/protected-state/
             authorization evidence is required before execution.
           </p>
