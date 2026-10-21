@@ -1,5 +1,16 @@
 # Chat → Google Drive → Etsy: asset bridge v2 (2026-10-21)
 
+> **Update 2026-10-21 — no Service Account required for the ChatGPT-connected path.**
+> The service-account steps below apply only to the legacy/backend-pull
+> `/api/etsy/drive-assets` mode. The new `/api/etsy/chat-assets` route
+> accepts exact bytes downloaded through the user's **existing connected
+> Google Drive** and transmitted by an authorized operator. See
+> [CHAT_CONNECTED_DRIVE_ASSET_HANDOFF.md](./CHAT_CONNECTED_DRIVE_ASSET_HANDOFF.md).
+> The separate operator transport is still necessary: in ordinary Chat mode,
+> connected Google Drive tools can read files but cannot submit authenticated
+> multipart POST requests to the private Vercel backend. Writes remain OFF.
+>
+
 ## Current implementation (additive, not a replacement)
 
 Existing systems remain authoritative:
