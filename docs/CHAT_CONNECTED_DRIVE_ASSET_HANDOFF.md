@@ -69,3 +69,26 @@ The current implementation is staged on a feature branch. Validate CI,
 Preview GET, read-only upload-rejection tests and a real source-byte
 preflight via an authenticated transport. Do not make the branch a
 general-purpose unauthenticated file upload service.
+
+## Source-only preflight (new)
+
+`GET /api/etsy/chat-assets/source-preflight` reports readiness and whether
+operator authentication and the source root are configured. It does not
+read files or make Etsy calls.
+
+`POST /api/etsy/chat-assets/source-preflight` is an **authenticated read-only**
+multipart endpoint for P01 before a Candidate Fingerprint or Etsy Draft ID exists.
+The `manifest` JSON requires only:
+`action="SOURCE_PREFLIGHT"`, `sourceRootId`, `productId`, `driveFileId`,
+`assetName`, `expectedSha256`, `expectedBytes`, `kind` and `rank`.
+The `asset` field contains the exact original PDF/JPG bytes.
+The route validates operator auth, pre-approved configured root, file identity,
+filename, byte count, declared MIME, magic number and SHA-256. It **never** calls
+Etsy, never stages a draft, and always reports `ETSY_WRITE_COUNT=0`.
+The Drive file ID is **client asserted**, not API-verified by Vercel.
+Run this from a properly authenticated Work/connector operator. A Google Drive
+Service Account is not needed.
+
+Operator token must be set separately as a Vercel secret, never sent to ChatGPT
+or stored in the bundle. The ordinary Chat Mode connector still cannot call
+arbitrary authenticated multipart endpoints, so a capable operator is required.

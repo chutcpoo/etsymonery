@@ -36,7 +36,10 @@ function operatorAuth(req: Request) {
   if (!actual || !secureEqual(actual, expected)) return reply(401, "ETSY_OPERATOR_TOKEN_INVALID");
   return null;
 }
-function formatError(input: DriveBridgeRequest, file: File, bytes: Uint8Array) {
+export function validateChatSourceBytes(
+  input: Pick<DriveBridgeRequest, "driveFileId" | "assetName" | "expectedSha256" | "expectedBytes" | "kind">,
+  file: File, bytes: Uint8Array
+) {
   if (!ID.test(input.driveFileId)) return "INVALID_ASSERTED_DRIVE_FILE_ID";
   if (!input.assetName || input.assetName.length > 150 ||
       input.assetName.includes("/") || input.assetName.includes("\\") ||
@@ -146,7 +149,7 @@ export function createEtsyChatAssetHandler(deps: IntakeDependencies = {}) {
     let bytes: Uint8Array;
     try { bytes = new Uint8Array(await asset.arrayBuffer()); }
     catch { return reply(400, "CHAT_ASSET_READ_FAILED"); }
-    const invalid = formatError(input, asset, bytes);
+    const invalid = validateChatSourceBytes(input, asset, bytes);
     if (invalid) return reply(409, invalid);
     const evidence = {
       action: input.action, productId: input.productId,
