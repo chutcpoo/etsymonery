@@ -89,3 +89,14 @@ This file is a release-state record only.
 Do not place Canva owner edit URLs, credentials, private Drive URLs, Etsy secrets, API keys, or Vercel secrets in this repository.
 
 Any Etsy publish action remains a separate seller-side release action and should be verified against the live listing before publication.
+
+
+## Later independent QC — release HOLD
+
+The record above preserves historical owner confirmation. It is not evidence of a non-owner Canva Free test. Current verdict: NOT READY / HOLD.
+
+Live buyer-link mapping and A4/Mobile displayed dimensions verified. START_HERE PDF has 7 pages and correct three link annotations. Current Letter physical PDF export remains untested (Canva shows 816 x 1056 px). No non-owner Free copy/edit/photo replacement/payment-free export/master-protection test evidence was recovered.
+
+Etsy draft 4594365366 prepared at owner-selected USD 6.90 with title, description, 13 tags and digital download settings. No publish. Full-resolution listing images and asset/font licensing/AI-origin evidence remain blockers. Provisional editorial buyer score 3/5; no actual purchase performed.
+
+All critical gates must pass before final Publish approval. No product binaries, buyer guide, new access links, account data or credentials are added by this audit update. This documentation branch does not authorize production merge or deployment.
