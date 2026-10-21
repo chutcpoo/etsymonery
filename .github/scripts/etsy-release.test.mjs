@@ -12,8 +12,9 @@ const request = {
   shopId: 23582741, draftListingId, expectedImageCount: 7,
   expectedBuyerFileNames: ['Home_Maintenance_Starter_A4.pdf', 'Home_Maintenance_Starter_US_Letter.pdf'],
   authorization: {
+    schemaVersion: '1.0.0',
     shopId: '23582741', draftListingId: String(draftListingId),
-    authorization: { scope: 'PUBLISH', state: 'ACTIVE', authorizationId: 'exact-release-approved',
+    authorization: { scope: 'PUBLISH', state: 'ACTIVE', authorizationId: 'exact-release-approved', channel: 'etsy',
       candidateId: 'P01-V1.2.1', candidateFingerprint: fp }
   }
 };
@@ -32,7 +33,8 @@ function mock(options = {}) {
     if (method === 'GET') return Response.json({ publishWritesEnabled: options.gate ?? true,
       deployedCommitSha: options.commit ?? commit, deployedEnvironment: 'production' });
     if (body?.action === 'PREFLIGHT') return Response.json({ status: 'READY_FOR_SELLER_REVIEW',
-      draftListingId, imageCount: 7, publishAuthorized: false,
+      draftListingId, imageCount: 7, buyerFileNames: options.buyerFileNames ?? request.expectedBuyerFileNames,
+      publishAuthorized: false,
       assetSetSha256: options.assetSetSha256 ?? assetFp });
     if (body?.action === 'PUBLISH') return Response.json({ status: 'PUBLISHED',
       receipt: { listingId: options.listingId ?? String(draftListingId), state: 'active' } });
@@ -71,4 +73,30 @@ test('unexpected Etsy image/file inventory stops before publish', async () => {
 test('different Etsy listing ID is never declared published', async () => {
   const m=mock({listingId:'111'});
   await assert.rejects(()=>releaseExactListing(env,m.fetchFn),/PUBLISH_NOT_VERIFIED_IN_ETSY_READBACK/);
+});
+
+test('P01 scope rejects the wrong shop, seven-image count, or two-PDF set', () => {
+  const cases = [
+    { ...request, shopId: 123456 },
+    { ...request, expectedImageCount: 6 },
+    { ...request, expectedBuyerFileNames: ['seller-package.zip'] },
+    { ...request, expectedBuyerFileNames: [...request.expectedBuyerFileNames, 'bonus.pdf'] },
+    { ...request, authorization: { ...request.authorization, schemaVersion: '0.9.0' } },
+    { ...request, authorization: {
+      ...request.authorization, authorization: {
+        ...request.authorization.authorization, channel: 'other'
+      }
+    }}
+  ];
+  for (const body of cases) {
+    assert.throws(() => validateExactRelease({
+      ...env, ETSY_RELEASE_REQUEST_JSON: JSON.stringify(body)
+    }), /P01_EXACT_SHOP_OR_ASSET_SCOPE_MISMATCH/);
+  }
+});
+
+test('P01 buyer filenames must match Etsy preflight readback before publish', async () => {
+  const m = mock({buyerFileNames: ['seller-package.zip', 'buyer.pdf']});
+  await assert.rejects(() => releaseExactListing(env,m.fetchFn), /PREFLIGHT_IDENTITY_OR_ASSET_SET_MISMATCH/);
+  assert.deepEqual(m.calls.map(x=>x.action),[undefined,'PREFLIGHT']);
 });
