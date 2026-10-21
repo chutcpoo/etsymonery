@@ -25,7 +25,7 @@ type ReleaseRequest = {
 type ReleaseDeps = {
   fetchImpl?: typeof fetch;
   getAccessToken?: (scopes: readonly string[]) => Promise<string>;
-  publish?: typeof handleAuthorizedPublishOperation;
+  publish?: (body: Record<string, unknown>, request: Request) => Promise<Response>;
   verifyBuild?: typeof verifyBuildPrerequisites;
 };
 function fail(code: string): never { throw new Error(code); }
