@@ -85,8 +85,13 @@ reconciliation, never blind retry.
 ## Remaining gates to a full chat-driven one-click publishing experience
 
 1. Confirm the **same** canonical Drive root is accessible to the service account.
-2. Have independent QC review the actual final files and bind stored QC evidence,
-   not just user-supplied `qc` JSON assertions.
+2. A server-side QC fingerprint/report pin now blocks Draft, Drive uploads
+   and Publish when no independent reviewer approval is configured. The reviewer
+   MUST verify the actual final file hashes and current Drive report before setting
+   `ETSY_QC_APPROVED_PRODUCT_ID`, `ETSY_QC_APPROVED_CANDIDATE_FINGERPRINT`,
+   `ETSY_QC_APPROVED_LISTING_FINGERPRINT`, `ETSY_QC_APPROVED_REPORT_SHA256`
+   and `ETSY_QC_APPROVED_REPORT_DRIVE_ID`. This is an operator-controlled
+   approval record, not a cryptographic independent reviewer signature.
 3. Generic metadata Draft creation is implemented at `POST /api/etsy/drafts`
    (`PREFLIGHT` or gated `CREATE_DRAFT`), reusing the Neon operation ledger.
    It is OFF pending exact candidate approval and independently reviewed QC.

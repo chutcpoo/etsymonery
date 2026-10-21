@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { hasServerVerifiedQc } from "./etsy-server-qc-gate";
 import { NextResponse } from "next/server";
 import { createListingFingerprint } from "./candidate-fingerprint";
 import {
@@ -245,6 +246,7 @@ type DraftDependencies = {
 function gate(input: DraftRequest) {
   if (process.env.ETSY_GENERIC_DRAFT_WRITES_ENABLED !== "true" ||
       process.env.ETSY_DRAFT_WRITES_ENABLED !== "true") return "ETSY_GENERIC_DRAFT_WRITES_DISABLED";
+  if (!hasServerVerifiedQc(input)) return "INDEPENDENT_QC_SERVER_APPROVAL_REQUIRED";
   if (process.env.ETSY_GENERIC_DRAFT_APPROVED_PRODUCT_ID !== input.productId ||
       process.env.ETSY_GENERIC_DRAFT_APPROVED_CANDIDATE_FINGERPRINT !== input.candidateFingerprint ||
       process.env.ETSY_GENERIC_DRAFT_APPROVED_LISTING_FINGERPRINT !== input.expectedListingFingerprint ||

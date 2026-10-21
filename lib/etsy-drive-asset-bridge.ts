@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { hasServerVerifiedQc } from "./etsy-server-qc-gate";
 import { NextResponse } from "next/server";
 import {
   fetchVerifiedGoogleDriveAsset,
@@ -120,6 +121,7 @@ function assertQc(input: DriveBridgeRequest) {
 function writeApprovalGate(input: DriveBridgeRequest) {
   if (process.env.ETSY_DRIVE_ASSET_WRITES_ENABLED !== "true" ||
       process.env.ETSY_DRAFT_WRITES_ENABLED !== "true") return "ETSY_DRIVE_ASSET_WRITES_DISABLED";
+  if (!hasServerVerifiedQc(input)) return "INDEPENDENT_QC_SERVER_APPROVAL_REQUIRED";
   if (process.env.ETSY_DRIVE_APPROVED_CANDIDATE_FINGERPRINT !== input.candidateFingerprint ||
       process.env.ETSY_DRIVE_APPROVED_DRAFT_LISTING_ID !== String(input.draftListingId) ||
       process.env.ETSY_DRIVE_APPROVED_PRODUCT_ID !== input.productId) {

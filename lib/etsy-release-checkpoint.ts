@@ -1,4 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import { hasServerVerifiedQc } from "./etsy-server-qc-gate";
 import { NextResponse } from "next/server";
 import { getValidEtsyAccessToken } from "./etsy-auth";
 import { etsyApiHeaders } from "./etsy";
@@ -155,6 +156,7 @@ export async function inspectEtsyDraftAssets(
 function exactApproval(input: ReleaseRequest, assetSetSha256: string) {
   if (process.env.PUBLISH_WRITES_ENABLED !== "true" ||
       process.env.ETSY_EXACT_PUBLISH_WRITES_ENABLED !== "true") return "PUBLISH_WRITES_DISABLED";
+  if (!hasServerVerifiedQc(input)) return "INDEPENDENT_QC_SERVER_APPROVAL_REQUIRED";
   if (process.env.ETSY_SHOP_ID !== String(input.shopId) ||
       process.env.ETSY_EXACT_PUBLISH_PRODUCT_ID !== input.productId ||
       process.env.ETSY_EXACT_PUBLISH_CANDIDATE_FINGERPRINT !== input.candidateFingerprint ||
