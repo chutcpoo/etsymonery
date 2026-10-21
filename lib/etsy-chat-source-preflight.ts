@@ -50,7 +50,7 @@ export function parseSourcePreflight(raw:unknown): SourceInput {
     assetName,expectedSha256,expectedBytes:x.expectedBytes,kind,rank:x.rank};
 }
 function authorization(request:Request) {
-  const expected=process.env.ETSY_DRAFT_WRITE_TOKEN?.trim();
+  const expected=process.env.ETSY_CHAT_SOURCE_PREFLIGHT_TOKEN?.trim();
   if(!expected)return reject(503,"OPERATOR_TOKEN_NOT_CONFIGURED");
   const supplied=request.headers.get(AUTH_HEADER)?.trim() ?? "";
   const a=Buffer.from(supplied),b=Buffer.from(expected);
