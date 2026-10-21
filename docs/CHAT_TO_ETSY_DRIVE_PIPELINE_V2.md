@@ -87,10 +87,15 @@ reconciliation, never blind retry.
 1. Confirm the **same** canonical Drive root is accessible to the service account.
 2. Have independent QC review the actual final files and bind stored QC evidence,
    not just user-supplied `qc` JSON assertions.
-3. Build the generic metadata `CREATE_DRAFT` executor, using existing Neon ledger
-   and exact Candidate/Shop approval; still default OFF.
-4. Confirm every buyer file and gallery asset exists remotely, not merely its
-   returned upload receipt. Etsy API cannot provide authoritative file-byte SHA.
+3. Generic metadata Draft creation is implemented at `POST /api/etsy/drafts`
+   (`PREFLIGHT` or gated `CREATE_DRAFT`), reusing the Neon operation ledger.
+   It is OFF pending exact candidate approval and independently reviewed QC.
+4. An exact release checkpoint is implemented at `POST /api/etsy/release`.
+   `PREFLIGHT` reads the Etsy Draft, requires its frozen Listing Fingerprint,
+   exact buyer filenames and image count, and computes the provider asset-set hash.
+   `PUBLISH` requires that hash plus exact seller authorization and BOTH
+   `PUBLISH_WRITES_ENABLED` and `ETSY_EXACT_PUBLISH_WRITES_ENABLED`. These are OFF.
+   Etsy API still cannot provide authoritative uploaded file-byte SHA.
 5. Require separate seller authorization for the exact final publish operation.
 6. Wire an authorized ChatGPT Work/browser or equivalent client executor to POST
    the Vercel endpoint; the ordinary Etsy app only supports listing discovery.
@@ -99,3 +104,32 @@ reconciliation, never blind retry.
 
 Do not claim the integration is completely production-ready while any of the
 above are missing. Preview tests must use fixtures and all write flags OFF.
+
+## Generic metadata Draft and release checkpoint
+
+1. `POST /api/etsy/drafts` with exact listing title/description/tags/price/
+   taxonomy/quantity, Product/Candidate/Listing SHA-256, and QC assertion.
+   `PREFLIGHT` validates fields only (no Etsy HTTP). To `CREATE_DRAFT`, the
+   server must pin `ETSY_GENERIC_DRAFT_APPROVED_PRODUCT_ID`,
+   `ETSY_GENERIC_DRAFT_APPROVED_CANDIDATE_FINGERPRINT`, and
+   `ETSY_GENERIC_DRAFT_APPROVED_LISTING_FINGERPRINT` and explicitly enable
+   `ETSY_GENERIC_DRAFT_WRITES_ENABLED` plus `ETSY_DRAFT_WRITES_ENABLED`.
+   The approved product plan must be verified. The adapter scans for an
+   existing exact title, creates draft once via the operation ledger, then
+   verifies state/fingerprint on readback. Ambiguous results stop.
+2. Send up to 10 JPG/PNG images and 5 PDF/ZIP buyer files through the Drive
+   bridge after independent QC, with exact SHA/size/Drive folder checks.
+3. `POST /api/etsy/release` `PREFLIGHT` reads the exact draft and verifies
+   expected buyer filename set, image count and metadata fingerprint. No writes.
+   This yields an `assetSetSha256` for seller review and explicit approval.
+4. `POST /api/etsy/release` `PUBLISH` is allowed only after the operator
+   sets `ETSY_EXACT_PUBLISH_WRITES_ENABLED`, `PUBLISH_WRITES_ENABLED`,
+   `ETSY_EXACT_PUBLISH_PRODUCT_ID`, `ETSY_EXACT_PUBLISH_CANDIDATE_FINGERPRINT`,
+   `ETSY_EXACT_PUBLISH_DRAFT_ID`, `ETSY_EXACT_PUBLISH_ASSET_SET_SHA256`,
+   and `ETSY_EXACT_PUBLISH_AUTHORIZATION_ID` to **this specific release**.
+   It then calls the existing authorized publish transaction/readback system.
+
+These routes are not an autonomous publishing queue. ChatGPT's Etsy connector
+still cannot invoke seller writes, and Vercel cannot reuse ChatGPT's Google Drive
+credentials. Work/browser automation or a separately authorized action connector
+is required to execute authenticated POST requests from chat after one-time setup.

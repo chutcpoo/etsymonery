@@ -72,7 +72,11 @@ test("preflight requires operator token and cannot touch Etsy when missing",asyn
 });
 test("release preflight reads Etsy assets without publishing",async()=>{
   const backup=process.env.ETSY_DRAFT_WRITE_TOKEN;
+  const backupKey=process.env.ETSY_API_KEY;
+  const backupSecret=process.env.ETSY_SHARED_SECRET;
   process.env.ETSY_DRAFT_WRITE_TOKEN="test-token";
+  process.env.ETSY_API_KEY="api-key-fixture";
+  process.env.ETSY_SHARED_SECRET="api-secret-fixture";
   try{
     const b=backend();let publish=0;
     const result=await createEtsyReleaseCheckpointHandler({
@@ -91,6 +95,10 @@ test("release preflight reads Etsy assets without publishing",async()=>{
   }finally{
     if(backup===undefined)delete process.env.ETSY_DRAFT_WRITE_TOKEN;
     else process.env.ETSY_DRAFT_WRITE_TOKEN=backup;
+    if(backupKey===undefined)delete process.env.ETSY_API_KEY;
+    else process.env.ETSY_API_KEY=backupKey;
+    if(backupSecret===undefined)delete process.env.ETSY_SHARED_SECRET;
+    else process.env.ETSY_SHARED_SECRET=backupSecret;
   }
 });
 test("release PUBLISH is blocked before Etsy read with Preview flags closed",async()=>{
