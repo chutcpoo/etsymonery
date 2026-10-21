@@ -40,7 +40,7 @@ export default async function Home() {
           <strong>{control.live.activeCount ?? "UNKNOWN"}</strong>
         </article>
         <article className="metricCard">
-          <span>Catalog tracked</span>
+          <span>Dated Drive projection</span>
           <strong>{control.live.catalogTrackedCount}</strong>
         </article>
         <article className="metricCard">
@@ -62,6 +62,21 @@ export default async function Home() {
           </div>
         </section>
       ) : null}
+
+      <section className="notice warningNotice">
+        <div>
+          <p className="eyebrow">CATALOG IDENTITY REVIEW</p>
+          <h2>Legacy identifier projection is not current Product Truth.</h2>
+          <p>
+            The dated Drive mapping and the live Etsy seller-state are independent
+            evidence. A matching ID is not approval to update or publish. Review
+            missing and unmapped identifiers before preparing any Etsy write.
+          </p>
+          <a className="textLink" href="/api/etsy/catalog-integrity">
+            Open read-only five-state integrity report
+          </a>
+        </div>
+      </section>
 
       <section className="panel">
         <div>
