@@ -41,7 +41,7 @@ export default async function FactoryDashboardPage() {
           <strong>{control.live.activeCount ?? "UNKNOWN"}</strong>
         </article>
         <article className="metricCard">
-          <span>Catalog tracked</span>
+          <span>Dated Drive projection</span>
           <strong>{control.live.catalogTrackedCount}</strong>
         </article>
         <article className="metricCard">
