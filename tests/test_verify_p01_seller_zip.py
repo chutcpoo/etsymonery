@@ -38,6 +38,17 @@ class VerifyP01Test(unittest.TestCase):
             with self.assertRaisesRegex(PackageError, 'already matches'):
                 repair(out, Path(folder)/'third.zip')
 
+            # Even a directory-only ZIP member must be checked for traversal.
+            unsafe = Path(folder) / 'unsafe-directory.zip'
+            with zipfile.ZipFile(src) as inp, zipfile.ZipFile(unsafe, 'w') as dst:
+                for item in inp.infolist():
+                    dst.writestr(item, inp.read(item))
+                dst.writestr('../outside/', b'')
+            with self.assertRaisesRegex(PackageError, 'unsafe filename'):
+                verify(unsafe)
+            with self.assertRaisesRegex(PackageError, 'unsafe filename'):
+                repair(unsafe, Path(folder)/'rejected-unsafe.zip')
+
             # A stale file hash must never turn an unrelated failed QA into PASS.
             for case, failed_qa in (
                 ('overall', dict(qa, overall_status='FAIL')),
