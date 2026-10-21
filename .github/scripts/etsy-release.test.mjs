@@ -77,7 +77,7 @@ test('different Etsy listing ID is never declared published', async () => {
 
 test('P01 scope rejects the wrong shop, seven-image count, or two-PDF set', () => {
   const cases = [
-    { ...request, shopId: 123456 },
+    { ...request, shopId: 123456, authorization: { ...request.authorization, shopId: '123456' } },
     { ...request, expectedImageCount: 6 },
     { ...request, expectedBuyerFileNames: ['seller-package.zip'] },
     { ...request, expectedBuyerFileNames: [...request.expectedBuyerFileNames, 'bonus.pdf'] },
