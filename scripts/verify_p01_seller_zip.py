@@ -29,11 +29,16 @@ def _read_json(archive, name):
 
 
 def _required_entries(archive):
-    names = [item.filename for item in archive.infolist() if not item.is_dir()]
-    if len(names) != len(set(names)):
+    entries = [item.filename for item in archive.infolist()]
+    if len(entries) != len(set(entries)):
         raise PackageError("ZIP contains duplicate filenames")
-    if any(p.is_absolute() or '..' in p.parts or '\\' in p.as_posix() for p in map(PurePosixPath, names)):
-        raise PackageError("ZIP contains an unsafe filename")
+    # Inspect every ZIP member, including directory-only entries. Otherwise an
+    # unsafe '../' directory could pass and be copied into a repaired archive.
+    for name in entries:
+        path = PurePosixPath(name)
+        if path.is_absolute() or '..' in path.parts or '\\' in name or (path.parts and path.parts[0].endswith(':')):
+            raise PackageError("ZIP contains an unsafe filename")
+    names = [item.filename for item in archive.infolist() if not item.is_dir()]
     manifests = [x for x in names if x.startswith('P01_MANIFEST_') and x.endswith('.json')]
     qa_files = [x for x in names if x.startswith('QA_REPORTS/P01_AUTOMATED_QA_') and x.endswith('.json')]
     qa_md = [x for x in names if x.startswith('QA_REPORTS/P01_QA_REPORT_') and x.endswith('.md')]
