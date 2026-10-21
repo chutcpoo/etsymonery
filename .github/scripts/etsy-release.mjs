@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 const URL = 'https://publisher.poonthaidigital.com/api/etsy/release';
 const SHA = /^[a-f0-9]{64}$/;
 const GIT_SHA = /^[a-f0-9]{40}$/;
-const POSITIVE_ID = /^[1-9]\\d*$/;
+const POSITIVE_ID = /^[1-9]\d*$/;
 
 export function validateExactRelease(env) {
   const required = ['RELEASE_PRODUCT_ID', 'RELEASE_LISTING_ID', 'APPROVED_DEPLOYMENT_SHA',
