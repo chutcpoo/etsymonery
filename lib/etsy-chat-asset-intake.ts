@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createDraftAssetsPostHandler } from "./etsy-draft-assets-api";
 import { parseDriveBridgeRequest, type DriveBridgeRequest } from "./etsy-drive-asset-bridge";
 import { hasServerVerifiedQc } from "./etsy-server-qc-gate";
+import { buyerFilenameIssue } from "./etsy-digital-delivery-policy";
 import { verifyBuildPrerequisites } from "./product-creation-plan";
 
 const TOKEN_HEADER = "x-autodigitalpublisher-write-token";
@@ -50,6 +51,8 @@ export function validateChatSourceBytes(
   if (!SHA.test(input.expectedSha256)) return "INVALID_ASSET_SHA";
   const lower = input.assetName.toLowerCase();
   if (input.kind === "UPLOAD_FILE") {
+    const buyerNameIssue = buyerFilenameIssue(input.assetName);
+    if (buyerNameIssue) return buyerNameIssue;
     if (lower.endsWith(".pdf")) {
       if (file.type !== "application/pdf" ||
           !Buffer.from(bytes.subarray(0, 5)).equals(Buffer.from("%PDF-"))) return "INVALID_PDF_BYTES_OR_TYPE";
