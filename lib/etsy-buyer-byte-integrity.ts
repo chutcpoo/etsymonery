@@ -119,7 +119,7 @@ function zipIssue(bytes: Uint8Array) {
     const name = nameBuffer.toString("utf8").normalize("NFC");
     const folders = name.endsWith("/");
     const parts = name.replace(/\/$/, "").split("/");
-    if (!name || name.includes("\\") || /[\x00-\x1f\x7f:]/.test(name) ||
+    if (!name || name.includes("\\") || [...name].some(ch => ch === ":" || ch.charCodeAt(0) <= 31 || ch.charCodeAt(0) === 127) ||
         name.startsWith("/") || parts.some(p => !p || p === "." || p === "..") ||
         name.includes("\ufffd")) {
       return blocked("ZIP_UNSAFE_MEMBER_PATH");
