@@ -164,7 +164,14 @@ test("an exactly pinned candidate with approved plan relays same SHA-256 to exis
  const handler=createEtsyChatAssetHandler({
   verifyBuild:async()=>({
    allowed:true,status:"BUILD_PERMITTED",productId:PRODUCT_ID,
-   planId:"PLAN-P01",planSha256:FP,approvedAt:"2026-10-21T00:00:00Z"
+   planId:"PLAN-P01",planSha256:FP,approvedAt:"2026-10-21T00:00:00Z",
+   evidence:{
+    productId:PRODUCT_ID,planId:"PLAN-P01",planVersion:1,
+    planSha256:FP,approvedAt:"2026-10-21T00:00:00Z",
+    buildStartedAt:"2026-10-21T00:01:00Z",
+    buildCorrelationId:"P01-BUILD-TEST",builder:"TEST",
+    result:"BUILD_PERMITTED"
+   }
   }),
   assetPostHandler:async request=>{
    calls++;
