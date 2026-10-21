@@ -93,8 +93,12 @@ def _verify(archive, *, accept_stale_qa=False):
                 stale.append(f"{section}/{record['filename']}")
     if stale and not accept_stale_qa:
         raise PackageError("Stale QA evidence: " + ', '.join(stale))
-    if qa.get('overall_status') != 'PASS' and not accept_stale_qa:
+    # --repair permits only stale hash/size evidence, never failed quality checks.
+    if qa.get('overall_status') != 'PASS':
         raise PackageError('Automated QA overall_status is not PASS')
+    for check_name, check_data in checks.items():
+        if not isinstance(check_data, dict) or check_data.get('status') != 'PASS':
+            raise PackageError(f'Automated QA check is not PASS: {check_name}')
     return manifest, qa, qa_name, sections, actuals, stale
 
 
@@ -116,7 +120,6 @@ def repair(source, output):
                 measured = actuals[f"{folder}/{record['filename']}"]
                 record.update({'bytes': measured['bytes'], 'sha256': measured['sha256']})
         qa['tested_at_ict'] = datetime.now(ZoneInfo('Asia/Bangkok')).isoformat(timespec='seconds')
-        qa['overall_status'] = 'PASS'
         qa['revalidated_against_manifest'] = True
         qa['repair_note'] = 'File-size and SHA-256 metadata recomputed from ZIP members; static layout checks are from prior QA.'
         payload = (json.dumps(qa, ensure_ascii=False, indent=2) + '\n').encode('utf-8')
