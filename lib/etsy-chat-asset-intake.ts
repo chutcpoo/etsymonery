@@ -177,7 +177,7 @@ export function createEtsyChatAssetHandler(deps: IntakeDependencies = {}) {
       rank: String(input.rank)
     };
     Object.entries(fields).forEach(([key, value]) => form.set(key, value));
-    form.set("asset", new File([bytes], input.assetName, { type: asset.type }), input.assetName);
+    form.set("asset", new File([new Uint8Array(bytes)], input.assetName, { type: asset.type }), input.assetName);
     const response = await uploader(new Request(request.url, {
       method: "POST",
       headers: { [TOKEN_HEADER]: request.headers.get(TOKEN_HEADER) ?? "" },
