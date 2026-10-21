@@ -1,0 +1,54 @@
+name: Etsy - Exact approved listing publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      product_id:
+        description: 'Exactly approved Product ID (e.g. P01)'
+        required: true
+        type: string
+      listing_id:
+        description: 'Exact existing Etsy Draft listing ID'
+        required: true
+        type: string
+      deployment_sha:
+        description: 'Exact 40-character Git commit deployed to Vercel production'
+        required: true
+        type: string
+      approval_phrase:
+        description: 'Type PUBLISH_EXACT_LISTING after separate seller authorization'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: etsy-exact-release-${{ inputs.listing_id }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: ${{ inputs.approval_phrase == 'PUBLISH_EXACT_LISTING' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: etsy-production-release
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Validate the release executor without network or Etsy writes
+        run: node --test .github/scripts/etsy-release.test.mjs
+      - name: Publish only the exact server-authorized draft, then verify readback
+        env:
+          RELEASE_PRODUCT_ID: ${{ inputs.product_id }}
+          RELEASE_LISTING_ID: ${{ inputs.listing_id }}
+          APPROVED_DEPLOYMENT_SHA: ${{ inputs.deployment_sha }}
+          RELEASE_CONFIRMATION: ${{ inputs.approval_phrase }}
+          ETSY_RELEASE_OPERATOR_TOKEN: ${{ secrets.ETSY_RELEASE_OPERATOR_TOKEN }}
+          ETSY_RELEASE_REQUEST_JSON: ${{ secrets.ETSY_RELEASE_REQUEST_JSON }}
+          ETSY_RELEASE_ASSET_SET_SHA256: ${{ secrets.ETSY_RELEASE_ASSET_SET_SHA256 }}
+        run: node .github/scripts/etsy-release.mjs
