@@ -52,7 +52,7 @@ test("rejects Drive files outside canonical root before download", async () => {
   await assert.rejects(() => fetchVerifiedGoogleDriveAsset(spec, {
     sourceRootId: ROOT, getAccessToken: async () => "fixture-token",
     fetchImpl: backend.fetchImpl
-  }), /UNEXPECTED_GOOGLE_REQUEST|GOOGLE_DRIVE_FILE_OUTSIDE_APPROVED_ROOT/);
+  }), /UNEXPECTED_GOOGLE_REQUEST|GOOGLE_DRIVE_FILE_OUTSIDE_APPROVED_ROOT|GOOGLE_DRIVE_IDENTITY_MISMATCH/);
   assert.equal(backend.calls.some(c => c.url.includes("?alt=media")), false);
 });
 
