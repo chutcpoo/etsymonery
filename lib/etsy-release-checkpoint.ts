@@ -203,10 +203,11 @@ export function createEtsyReleaseCheckpointHandler(deps: ReleaseDeps = {}) {
       const token = await tokenGetter(["listings_r", "listings_w"]);
       const assets = await inspectEtsyDraftAssets(input, token, fetchImpl);
       if (input.action === "PREFLIGHT") return NextResponse.json({
+        ...assets,
         status: "READY_FOR_SELLER_REVIEW", mode: "READ_ONLY",
         productId: input.productId, candidateId: input.candidateId,
         draftListingId: input.draftListingId,
-        ...assets, publishAuthorized: false, ETSY_WRITE_COUNT: 0
+        publishAuthorized: false, ETSY_WRITE_COUNT: 0
       }, { headers: { "cache-control": "no-store" } });
       const block = exactApproval(input, assets.assetSetSha256);
       if (block) return NextResponse.json({
