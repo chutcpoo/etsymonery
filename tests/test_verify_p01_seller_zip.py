@@ -38,6 +38,22 @@ class VerifyP01Test(unittest.TestCase):
             with self.assertRaisesRegex(PackageError, 'already matches'):
                 repair(out, Path(folder)/'third.zip')
 
+            # A stale file hash must never turn an unrelated failed QA into PASS.
+            for case, failed_qa in (
+                ('overall', dict(qa, overall_status='FAIL')),
+                ('listing_draft', dict(qa, checks={**qa['checks'], 'listing_draft': {'status': 'FAIL'}})),
+            ):
+                failed = Path(folder) / f'{case}-failed.zip'
+                with zipfile.ZipFile(src) as inp, zipfile.ZipFile(failed, 'w') as dst:
+                    for item in inp.infolist():
+                        original = inp.read(item.filename)
+                        data = json.dumps(failed_qa).encode('utf-8') if 'AUTOMATED_QA' in item.filename else original
+                        dst.writestr(item, data)
+                rejected_output = Path(folder) / f'{case}-bad-output.zip'
+                with self.assertRaisesRegex(PackageError, 'not PASS'):
+                    repair(failed, rejected_output)
+                self.assertFalse(rejected_output.exists())
+
     def test_manifest_mismatch_is_not_silently_repaired(self):
         with tempfile.TemporaryDirectory() as folder:
             path=Path(folder)/'bad.zip'
