@@ -7,7 +7,7 @@ export async function GET(){
  return NextResponse.json({
    status:"READY_FOR_AUTHENTICATED_SOURCE_PREFLIGHT",
    mode:"READ_ONLY",requiresGoogleServiceAccount:false,
-   operatorAuthConfigured:Boolean(process.env.ETSY_DRAFT_WRITE_TOKEN?.trim()),
+   operatorAuthConfigured:Boolean(process.env.ETSY_CHAT_SOURCE_PREFLIGHT_TOKEN?.trim()),
    sourceRootConfigured:Boolean(process.env.GOOGLE_DRIVE_SOURCE_ROOT_ID?.trim()),
    draftWritePermitted:false,publishPermitted:false,ETSY_WRITE_COUNT:0
  },{headers:{"cache-control":"no-store"}});

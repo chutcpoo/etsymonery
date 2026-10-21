@@ -24,10 +24,10 @@ function req(m:unknown=manifest(), options:{token?:string,blob?:Buffer,name?:str
  });
 }
 async function withEnv(fn:()=>Promise<void>){
- const k=["ETSY_DRAFT_WRITE_TOKEN","GOOGLE_DRIVE_SOURCE_ROOT_ID",
+ const k=["ETSY_CHAT_SOURCE_PREFLIGHT_TOKEN","GOOGLE_DRIVE_SOURCE_ROOT_ID",
           "ETSY_CHAT_ASSET_WRITES_ENABLED","ETSY_DRAFT_WRITES_ENABLED","PUBLISH_WRITES_ENABLED"];
  const old=Object.fromEntries(k.map(x=>[x,process.env[x]]));
- process.env.ETSY_DRAFT_WRITE_TOKEN=token;
+ process.env.ETSY_CHAT_SOURCE_PREFLIGHT_TOKEN=token;
  process.env.GOOGLE_DRIVE_SOURCE_ROOT_ID=root;
  process.env.ETSY_CHAT_ASSET_WRITES_ENABLED="false";
  process.env.ETSY_DRAFT_WRITES_ENABLED="false";

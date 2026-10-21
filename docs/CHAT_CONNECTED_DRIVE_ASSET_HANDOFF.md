@@ -92,3 +92,9 @@ Service Account is not needed.
 Operator token must be set separately as a Vercel secret, never sent to ChatGPT
 or stored in the bundle. The ordinary Chat Mode connector still cannot call
 arbitrary authenticated multipart endpoints, so a capable operator is required.
+
+The standalone source-only preflight uses its own read-only bearer secret:
+`ETSY_CHAT_SOURCE_PREFLIGHT_TOKEN`. It does **not** use the existing
+`ETSY_DRAFT_WRITE_TOKEN` and cannot be used to authorize Etsy writes.
+Keep the preflight bearer in Vercel sensitive environment variables or a
+secret manager, never in chat messages or the Product Truth ZIP.
