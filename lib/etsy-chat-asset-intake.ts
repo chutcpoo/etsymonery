@@ -4,6 +4,7 @@ import { createDraftAssetsPostHandler } from "./etsy-draft-assets-api";
 import { parseDriveBridgeRequest, type DriveBridgeRequest } from "./etsy-drive-asset-bridge";
 import { hasServerVerifiedQc } from "./etsy-server-qc-gate";
 import { buyerFilenameIssue } from "./etsy-digital-delivery-policy";
+import { inspectBuyerFileBytes } from "./etsy-buyer-byte-integrity";
 import { verifyBuildPrerequisites } from "./product-creation-plan";
 
 const TOKEN_HEADER = "x-autodigitalpublisher-write-token";
@@ -72,6 +73,10 @@ export function validateChatSourceBytes(
   } else return "UNSUPPORTED_ASSET_KIND";
   if (createHash("sha256").update(bytes).digest("hex") !== input.expectedSha256) {
     return "CHAT_SOURCE_SHA256_MISMATCH";
+  }
+  if (input.kind === "UPLOAD_FILE") {
+    const integrity = inspectBuyerFileBytes(input.assetName, bytes);
+    if (integrity.issue) return integrity.issue;
   }
   return null;
 }
@@ -160,7 +165,11 @@ export function createEtsyChatAssetHandler(deps: IntakeDependencies = {}) {
       assetName: input.assetName, sha256: input.expectedSha256,
       sizeBytes: asset.size,
       sourceDriveIdVerifiedByServer: false,
-      bytesVerifiedAgainstExpectedSha256: true
+      bytesVerifiedAgainstExpectedSha256: true,
+      buyerBytesCheckLevel: input.kind === "UPLOAD_FILE"
+        ? inspectBuyerFileBytes(input.assetName, bytes).level : "IMAGE_SIGNATURE_ONLY",
+      pdfRenderedAndVisuallyReviewed: false,
+      independentFinalQcVerified: false
     };
     if (input.action === "PREFLIGHT") return NextResponse.json({
       status: "SOURCE_BYTES_VERIFIED", mode: "READ_ONLY",
