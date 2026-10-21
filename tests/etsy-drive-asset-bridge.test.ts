@@ -20,7 +20,12 @@ const vars = [
   "ETSY_DRAFT_WRITE_TOKEN", "ETSY_DRAFT_WRITES_ENABLED",
   "ETSY_DRIVE_ASSET_WRITES_ENABLED", "ETSY_DRIVE_APPROVED_CANDIDATE_FINGERPRINT",
   "ETSY_DRIVE_APPROVED_DRAFT_LISTING_ID", "ETSY_DRIVE_APPROVED_PRODUCT_ID", "ETSY_SHOP_ID",
-  "PUBLISH_WRITES_ENABLED"
+  "PUBLISH_WRITES_ENABLED",
+  "ETSY_QC_APPROVED_PRODUCT_ID",
+  "ETSY_QC_APPROVED_CANDIDATE_FINGERPRINT",
+  "ETSY_QC_APPROVED_LISTING_FINGERPRINT",
+  "ETSY_QC_APPROVED_REPORT_SHA256",
+  "ETSY_QC_APPROVED_REPORT_DRIVE_ID"
 ];
 before(() => {
   for (const name of vars) previous[name] = process.env[name];
@@ -29,6 +34,13 @@ before(() => {
   process.env.ETSY_DRIVE_ASSET_WRITES_ENABLED = "false";
   process.env.PUBLISH_WRITES_ENABLED = "false";
   process.env.ETSY_SHOP_ID = "23582741";
+  // The fixture reviewer pins allow the explicitly authorized upload path.
+  // Production reviewer verification is a separate required action.
+  process.env.ETSY_QC_APPROVED_PRODUCT_ID = PRODUCT_ID;
+  process.env.ETSY_QC_APPROVED_CANDIDATE_FINGERPRINT = FP;
+  process.env.ETSY_QC_APPROVED_LISTING_FINGERPRINT = LISTING_FP;
+  process.env.ETSY_QC_APPROVED_REPORT_SHA256 = "c".repeat(64);
+  process.env.ETSY_QC_APPROVED_REPORT_DRIVE_ID = "1ApprovedFixtureReportDriveId0123";
 });
 after(() => {
   for (const name of vars) {
