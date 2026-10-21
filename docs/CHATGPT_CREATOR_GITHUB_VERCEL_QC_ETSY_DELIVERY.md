@@ -75,6 +75,18 @@ below are deliberately invalid and are not a passing QA claim):
   packaged `.zip` containing the real workbook only after ZIP QA.
 - Buyer filenames must be unique ignoring case. No path traversal, spaces,
   unsupported extension, missing hashes, missing size or zero-byte files.
+- Final buyer-facing filenames must **not have internal revision suffixes**
+  such as `_v1`, `-V2` or `_v1.2.1` before the extension. Version tracking
+  belongs in the private manifest and production/archive metadata only.
+- **Do not create a new buyer ZIP as an early build step.** First independently
+  confirm the exact candidate PDF bytes, content, filenames, hashes and page
+  rendering via the GitHub-controlled QA and protected Vercel validation.
+  Passing repository CI or a Vercel Preview build is **not** product-byte QC.
+  Only after both file-QC checkpoints pass should any buyer ZIP be assembled.
+  The newly created ZIP must then be independently rechecked, and it must
+  contain **only customer-facing assets**, never seller-only QA or media files.
+  Packaging and validation are not authorization to create/publish an Etsy
+  Listing. Follow the separately authorized exact-Draft-and-Publish gate.
 - One or more JPEG/PNG gallery images declared; preview assets do not become
   buyer files. A metadata check cannot prove images depict the buyer product.
 - Declared original seller design and AI usage are mandatory; if AI was used,
