@@ -47,6 +47,38 @@ test("policy rejects 70+ names and unsupported filename characters", () => {
   assert.equal(buyerFilenameIssue("../secrets.pdf"), "BUYER_FILE_NAME_UNSUPPORTED_CHARACTERS");
   assert.equal(buyerFilenameIssue("ทดสอบ.pdf"), "BUYER_FILE_NAME_UNSUPPORTED_CHARACTERS");
 });
+test("buyer download names never expose internal v1/v2/v1.2.1 revision markers", () => {
+  for (const filename of [
+    "Home_Maintenance_Starter_v1.pdf",
+    "Home_Maintenance_Starter-V2.pdf",
+    "Home_Maintenance_Starter_v1.2.1.zip",
+    "Home_Maintenance_Starter_v2_1.pdf",
+    "Home.Maintenance.v3.pdf"
+  ]) {
+    assert.equal(buyerFilenameIssue(filename), "BUYER_FILE_NAME_VERSION_SUFFIX_NOT_ALLOWED");
+  }
+  for (const filename of [
+    "Home_Maintenance_Starter_US_Letter.pdf",
+    "Home_Maintenance_Starter_A4.pdf",
+    "Home_Maintenance_Starter.zip"
+  ]) assert.equal(buyerFilenameIssue(filename), null);
+
+  const v = handoff();
+  v.buyerFiles = [{ filename: "Home_Maintenance_Starter_v2.pdf", expectedBytes: 500, sha256: SHA }];
+  const result = inspectChatGptHandoff(v);
+  assert.equal(result.status, "BLOCKED");
+  assert.ok(result.issues.includes("BUYER_FILE_NAME_VERSION_SUFFIX_NOT_ALLOWED"));
+
+  const base = {
+    action: "PREFLIGHT", operationId: "P1", productId: "P01",
+    candidateId: "C1", candidateFingerprint: SHA, expectedListingFingerprint: SHA,
+    shopId: 23582741, draftListingId: 123, expectedImageCount: 1
+  };
+  assert.throws(() => parseReleaseRequest({
+    ...base, expectedBuyerFileNames: ["Home_Maintenance_Starter_v2.pdf"]
+  }), /INVALID_EXPECTED_BUYER_FILES/);
+});
+
 test("policy blocks oversized buyer file, duplicate case-insensitive name, and wrong SHA", () => {
   const v = handoff();
   v.buyerFiles = [
