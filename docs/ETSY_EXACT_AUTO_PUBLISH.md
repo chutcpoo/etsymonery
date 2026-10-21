@@ -31,3 +31,9 @@ This workflow enables a **single, exact Etsy Draft** to be published from a prot
 ## Current status of P01
 
 At preparation time the P01 product had no Etsy Draft Listing ID, and physical print QA was pending. Its Publish authorization was **not** granted. This workflow addition must not change existing Etsy listings.
+
+## Additional P01 integrity lock
+
+For Product ID `P01`, the existing GitHub release runner now rejects a release **before any network request** unless `shopId=23582741`, `expectedImageCount=7`, and the buyer filename set is exactly `Home_Maintenance_Starter_A4.pdf` plus `Home_Maintenance_Starter_US_Letter.pdf`. It also requires a v1.0.0 seller grant with `channel=etsy`. After authenticated Vercel preflight, the runner independently checks the buyer filenames reported by Etsy, not merely the image count and asset-set fingerprint. These checks do not replace the exact Vercel server-side QC and authorization pins. Keep the price at the specifically approved P01 **USD $3.90** in the final frozen listing fingerprint, and confirm Etsy's draft price before approval.
+
+This change does **not** create the P01 Draft, activate Vercel flags, configure GitHub environment secrets, or publish any listing. Use the existing `.github/workflows/etsy-exact-auto-publish.yml` workflow only; do not create a parallel P01 publish workflow.
