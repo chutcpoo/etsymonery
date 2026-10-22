@@ -90,7 +90,16 @@
   ],
   "gate": "SOURCE_LOCK_ONLY__NOT_SERVER_APPROVED",
   "independentQc": "SELLER_ATTESTED__SIGNATURE_FILE_NOT_FETCHED",
-  "shopCurrency": "NOT_VERIFIED",
+  "shopCurrency": "SELLER_SCREENSHOT_CONFIRMED_USD_2026-10-22",
   "listingFingerprint": null,
-  "comment": "P01 exact source lock. Do not use fingerprint as authorization to turn on Etsy writes without reviewed plan/QC and exact listing fingerprint."
+  "comment": "Source fingerprint is unchanged; seller-confirmed draft price and shop currency are approval metadata outside sourceRecord, not approval of exact QC, Etsy listing fingerprint, a write gate or a Publish.",
+  "sellerPriceApproval": {
+    "status": "APPROVED",
+    "price_usd": 3.9,
+    "currency": "USD",
+    "seller_confirmed_at_date_ict": "2026-10-22",
+    "source": "DIRECT_SELLER_CHAT_CONFIRMATION",
+    "scope": "DRAFT_PRICE_ONLY",
+    "doesNotAuthorizePublish": true
+  }
 }
