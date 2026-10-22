@@ -1,0 +1,36 @@
+name: P01 direct Etsy Draft safety tests
+
+on:
+  pull_request:
+    paths:
+      - ".github/scripts/etsy-p01-draft-direct.mjs"
+      - ".github/scripts/etsy-p01-draft-direct.test.mjs"
+      - ".github/workflows/etsy-p01-draft-create.yml"
+      - ".github/workflows/etsy-p01-direct-draft-safety.yml"
+      - "docs/releases/P01_CANDIDATE_SOURCE_LOCK_2026-10-22.json"
+      - "docs/releases/P01_EXACT_DRAFT_EVIDENCE_2026-10-22.json"
+  push:
+    branches: [main]
+    paths:
+      - ".github/scripts/etsy-p01-draft-direct.mjs"
+      - ".github/scripts/etsy-p01-draft-direct.test.mjs"
+      - ".github/workflows/etsy-p01-direct-draft-safety.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-p01-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Verify P01 source evidence and SHA-256
+        run: node --input-type=module -e "import {loadEvidence} from './.github/scripts/etsy-p01-draft-direct.mjs';loadEvidence();"
+      - name: Direct Etsy Draft safety tests (network mocked)
+        run: node --test .github/scripts/etsy-p01-draft-direct.test.mjs
