@@ -57,13 +57,23 @@ def _verify(archive, *, accept_stale_qa=False):
         raise PackageError("Manifest/QA product or version mismatch")
     pdfs = manifest.get('final_customer_files', [])
     previews = manifest.get('listing_previews', [])
+    video = manifest.get('listing_video')
     if len(pdfs) != 2 or len(previews) != 7:
         raise PackageError("Expected 2 PDFs and 7 previews in manifest")
+    if video is not None and (
+        not isinstance(video, dict)
+        or not isinstance(video.get('filename'), str)
+        or not video['filename'].lower().endswith('.mp4')
+    ):
+        raise PackageError("Invalid listing video metadata")
     actuals = {}
     for folder, records, count in [('CUSTOMER_FILES', pdfs, 2), ('LISTING_PREVIEWS', previews, 7)]:
         found = [n for n in names if n.startswith(folder + '/')]
-        if len(found) != count:
-            raise PackageError(f"Expected {count} files in {folder}; found {len(found)}")
+        expected_names = {f"{folder}/{record['filename']}" for record in records}
+        if folder == 'LISTING_PREVIEWS' and video is not None:
+            expected_names.add(f"LISTING_PREVIEWS/{video['filename']}")
+        if len(found) != len(expected_names) or set(found) != expected_names:
+            raise PackageError(f"Unexpected file set in {folder}: found {len(found)} members; expected {len(expected_names)}")
         if len({r['filename'] for r in records}) != count:
             raise PackageError(f"Duplicate {folder} file names in manifest")
         for record in records:
@@ -79,6 +89,15 @@ def _verify(archive, *, accept_stale_qa=False):
                 raise PackageError(f"Invalid PDF signature: {name}")
             if folder == 'LISTING_PREVIEWS' and not (data.startswith(b'\xff\xd8') and data.endswith(b'\xff\xd9')):
                 raise PackageError(f"Invalid JPEG signature: {name}")
+    # P01 seller review ZIP may contain one MP4 beside its seven JPG previews.
+    # Verify the exact optional video record without pretending to validate playback.
+    if video is not None:
+        name = f"LISTING_PREVIEWS/{video['filename']}"
+        data = archive.read(name)
+        if len(data) != video.get('bytes') or hashlib.sha256(data).hexdigest() != video.get('sha256'):
+            raise PackageError(f"Listing video bytes/SHA-256 mismatch: {name}")
+        if len(data) < 12 or data[4:8] != b'ftyp':
+            raise PackageError(f"Invalid MP4 file-type marker: {name}")
     checks = qa.get('checks', {})
     sections = [('customer_pdfs', pdfs, 'CUSTOMER_FILES'), ('listing_previews', previews, 'LISTING_PREVIEWS')]
     stale = []
@@ -107,9 +126,16 @@ def _verify(archive, *, accept_stale_qa=False):
     return manifest, qa, qa_name, sections, actuals, stale
 
 
-def verify(path):
+def verify(path, expected_qa_report=None):
     with zipfile.ZipFile(path) as archive:
         _, _, _, _, _, stale = _verify(archive)
+        # Compare to separately retrieved current Drive QA Markdown when supplied.
+        # ZIP-contained QA cannot assert that it matches an external canonical file.
+        if expected_qa_report is not None:
+            reports = [n for n in archive.namelist()
+                       if n.startswith('QA_REPORTS/P01_QA_REPORT_') and n.endswith('.md')]
+            if len(reports) != 1 or archive.read(reports[0]) != Path(expected_qa_report).read_bytes():
+                raise PackageError("QA Markdown differs from the canonical expected report")
     return stale
 
 
@@ -142,6 +168,8 @@ def main():
     parser.add_argument('zip_path', type=Path)
     parser.add_argument('--repair', action='store_true', help='write a new ZIP with refreshed QA JSON; preserve all deliverables')
     parser.add_argument('--output', type=Path, help='required output ZIP path when using --repair')
+    parser.add_argument('--expected-qa-report', type=Path,
+                        help='optional local canonical QA Markdown from Drive; reject ZIP documentation drift')
     args = parser.parse_args()
     try:
         if args.repair:
@@ -150,8 +178,8 @@ def main():
             stale = repair(args.zip_path, args.output)
             print(f'PASS: updated QA for {", ".join(stale)}; wrote {args.output}')
         else:
-            verify(args.zip_path)
-            print(f'PASS: ZIP CRC, manifest bytes/SHA-256, QA bytes/SHA-256, 2 PDFs and 7 JPEGs: {args.zip_path}')
+            verify(args.zip_path, expected_qa_report=args.expected_qa_report)
+            print(f'PASS: ZIP CRC, manifest bytes/SHA-256, QA bytes/SHA-256, 2 PDFs, 7 JPEGs, optional MP4, canonical QA if supplied: {args.zip_path}')
     except (PackageError, OSError, zipfile.BadZipFile) as exc:
         print(f'FAIL: {exc}', file=sys.stderr)
         return 1
