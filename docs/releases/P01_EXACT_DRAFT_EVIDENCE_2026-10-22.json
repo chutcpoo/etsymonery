@@ -14,7 +14,7 @@
   "listing": {
     "title": "Home Repair & Maintenance Tracker PDF | Repair to Warranty Log Kit | A4 & US Letter Printable",
     "price_usd": 3.9,
-    "price_status": "LISTING_DRAFT_PRICE_HYPOTHESIS",
+    "price_status": "SELLER_APPROVED_2026-10-22",
     "tags": [
       "home maintenance",
       "home repair log",
@@ -37,7 +37,9 @@
     "when_made": null,
     "quantity": null,
     "listing_fingerprint": null,
-    "listing_fingerprint_reason": "Required Etsy listing taxonomy/maker/date/quantity not grounded; cannot calculate canonical fingerprint safely"
+    "listing_fingerprint_reason": "Required Etsy listing taxonomy/maker/date/quantity not grounded; cannot calculate canonical fingerprint safely",
+    "shop_currency": "USD",
+    "shop_currency_evidence": "SELLER_PROVIDED_ETSY_SHOP_MANAGER_CURRENCY_SCREENSHOT_2026-10-22"
   },
   "source": {
     "drive_root_id": "1F2c8J04_Crv1GzN0KBMwlChxvBaYo7px",
@@ -154,5 +156,14 @@
     "CORRECTED_ZIP_NOT_IN_CANONICAL_DRIVE"
   ],
   "publish_permission": false,
-  "draft_created": false
+  "draft_created": false,
+  "sellerPriceApproval": {
+    "status": "APPROVED_BY_SELLER",
+    "price_usd": 3.9,
+    "currency": "USD",
+    "approved_at_date_ict": "2026-10-22",
+    "provenance": "DIRECT_SELLER_CONFIRMATION_IN_CURRENT_CHAT",
+    "scope": "P01_v1.2.1_DRAFT_PRICE_ONLY",
+    "publish_authorized": false
+  }
 }
