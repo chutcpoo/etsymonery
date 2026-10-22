@@ -1,0 +1,45 @@
+name: Etsy - P01 exact draft create (never publish)
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_sha:
+        description: 'Exact production Git commit SHA independently approved for P01 Draft'
+        required: true
+        type: string
+      confirmation:
+        description: 'Type CREATE_P01_DRAFT_ONLY; never type a publish phrase'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: etsy-p01-draft-create
+  cancel-in-progress: false
+
+jobs:
+  create-exact-p01-draft:
+    if: ${{ inputs.confirmation == 'CREATE_P01_DRAFT_ONLY' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: etsy-p01-draft
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Test exact Draft-only runner (offline)
+        run: node --test .github/scripts/etsy-p01-draft.test.mjs
+      - name: Create only the exact server-authorized P01 Draft
+        env:
+          P01_DRAFT_CONFIRMATION: ${{ inputs.confirmation }}
+          P01_DRAFT_DEPLOYMENT_SHA: ${{ inputs.deployment_sha }}
+          P01_DRAFT_OPERATOR_TOKEN: ${{ secrets.P01_DRAFT_OPERATOR_TOKEN }}
+          P01_DRAFT_REQUEST_JSON: ${{ secrets.P01_DRAFT_REQUEST_JSON }}
+          P01_DRAFT_PRICE_APPROVED_USD: ${{ vars.P01_DRAFT_PRICE_APPROVED_USD }}
+          P01_DRAFT_SHOP_CURRENCY_VERIFIED: ${{ vars.P01_DRAFT_SHOP_CURRENCY_VERIFIED }}
+        run: node .github/scripts/etsy-p01-draft.mjs
