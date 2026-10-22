@@ -1,3 +1,5 @@
+> SUPERSEDED (2026-10-22): P01 Draft workflow now calls Etsy Open API directly via GitHub Actions, without Vercel. See `docs/P01_GITHUB_DIRECT_ETSY_DRAFT.md`. Historical instructions below must not be executed.
+
 # P01 Draft-only GitHub → Vercel → Etsy operator
 
 **Status: NOT EXECUTED.** No Draft created by this change. Nothing here authorizes Publish, an all-product write flag, or production deployment.
