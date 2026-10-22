@@ -1,0 +1,158 @@
+{
+  "schema_version": "p01-draft-evidence.v1",
+  "date_ict": "2026-10-22",
+  "scope": "EXACT_ETSY_DRAFT_PREPARATION_ONLY",
+  "commercial_release_eligible": false,
+  "product": {
+    "product_id": "P01",
+    "version": "1.2.1",
+    "name": "Home Maintenance Repair-to-Warranty Starter Kit",
+    "shop_name": "PoonthaiDigital",
+    "shop_id": 23582741,
+    "desired_etsy_state": "draft"
+  },
+  "listing": {
+    "title": "Home Repair & Maintenance Tracker PDF | Repair to Warranty Log Kit | A4 & US Letter Printable",
+    "price_usd": 3.9,
+    "price_status": "LISTING_DRAFT_PRICE_HYPOTHESIS",
+    "tags": [
+      "home maintenance",
+      "home repair log",
+      "repair tracker",
+      "warranty tracker",
+      "homeowner planner",
+      "service visit log",
+      "repair expense log",
+      "contractor tracker",
+      "household binder",
+      "home upkeep planner",
+      "appliance registry",
+      "printable house log",
+      "first home binder"
+    ],
+    "description_drive_file_id": "1NUD1zSAynA9wCUrEJXa9cju83TZxvEob",
+    "description_sha256": "865defc47f67e8f4c7f879bec1130f291af33a42360aa150960974ac1d496000",
+    "taxonomy_id": null,
+    "who_made": null,
+    "when_made": null,
+    "quantity": null,
+    "listing_fingerprint": null,
+    "listing_fingerprint_reason": "Required Etsy listing taxonomy/maker/date/quantity not grounded; cannot calculate canonical fingerprint safely"
+  },
+  "source": {
+    "drive_root_id": "1F2c8J04_Crv1GzN0KBMwlChxvBaYo7px",
+    "manifest_drive_id": "1OjML_sSt1jqf9dHu2dpLqTjHCPdFeFA0",
+    "manifest_sha256": "372c1358f5c2fd65b9ccab410345863ab8b63105f9ddbf27d1d3ab8a345f3cd7",
+    "qa_report_drive_id": "1HW1KNQ66_8h4XWclXs5nhNM_KT3L96UL",
+    "qa_report_sha256": "3b6838c2103e35641569c738fc33015a4b14b9014ccac09bd5c0015ddc49becd",
+    "automated_qa_drive_id": "1wj1KbDugFVI64QDEF9avy3GtFSj6vpe3",
+    "corrected_zip_sha256": "42ab0e9282db763331c5d87fac3d14b70d22c33b2293b86e2d3689e497e16315",
+    "corrected_zip_drive_upload": "NOT_VERIFIED",
+    "asset_set_sha256": "c5e371750e6cade6182d011c9226f31e99dcffa49ffcd0937492227a52cc89f6",
+    "asset_set_hash_definition": "SHA256(UTF8(JSON.stringify(records sorted by name; object keys sorted alphabetically; record keys bytes,name,sha256)))",
+    "files": [
+      {
+        "name": "Home_Maintenance_Starter_A4.pdf",
+        "bytes": 77474,
+        "sha256": "716a2697740b92be40034f66ed4f71816c8b9506e8abfc06ba982b21094516ca",
+        "category": "buyer_pdf"
+      },
+      {
+        "name": "Home_Maintenance_Starter_US_Letter.pdf",
+        "bytes": 76046,
+        "sha256": "cf75e46c47f5e9f2580bafb4063c992a239c42ecae55fd27dab6f45d0334c68f",
+        "category": "buyer_pdf"
+      },
+      {
+        "name": "01_Hero.jpg",
+        "bytes": 557334,
+        "sha256": "3c94f934a8b7ec137c8992450e95ab5b6af7e799ff88795f02c50d50f1a947fb",
+        "category": "listing_image"
+      },
+      {
+        "name": "02_All_12_Pages.jpg",
+        "bytes": 678347,
+        "sha256": "944e8807815ca3607ca11b4899548b07b55bf27ea40f49e670b05ef477262eca",
+        "category": "listing_image"
+      },
+      {
+        "name": "03_Linked_Repair_Workflow.jpg",
+        "bytes": 669414,
+        "sha256": "66bd45964074824761ce83f4f7fa25d7ebdac9e5fa7064f6226c0bba460f81e5",
+        "category": "listing_image"
+      },
+      {
+        "name": "04_Workflow_Pages.jpg",
+        "bytes": 488087,
+        "sha256": "dcfef0261d35cdc2fc1b0d33074d6d9ca9b808b2fa943f58f307f9e630bfb057",
+        "category": "listing_image"
+      },
+      {
+        "name": "05_Print_Sizes.jpg",
+        "bytes": 567622,
+        "sha256": "1c37b2c42f3860a66fe7b13dd7ea7785fd343563eb5effd0d6d87385394dfa00",
+        "category": "listing_image"
+      },
+      {
+        "name": "06_Useful_Registers.jpg",
+        "bytes": 615556,
+        "sha256": "714c84201cebc61d6c2ea50282feb1762e59fbb4589aaf89d5484b5d955e2fb1",
+        "category": "listing_image"
+      },
+      {
+        "name": "07_Download_Guide.jpg",
+        "bytes": 541393,
+        "sha256": "61cac2777a3e36ec474bd9a4b5ba3068c85a31428a6c5de2e3ba0a93110b0468",
+        "category": "listing_image"
+      },
+      {
+        "name": "P01_Listing_Video_v1.2.1.mp4",
+        "bytes": 585248,
+        "sha256": "460d91aabc79f9441197a2da20c8560ee9559f058554c6352d13aa742fb57ecd",
+        "category": "listing_video"
+      }
+    ]
+  },
+  "qc": {
+    "digital_file_checks": "PASS_10_OF_10",
+    "zip_crc": "PASS",
+    "physical_printing": "USER_SELF_ATTESTED_DONE",
+    "seller_signature": "USER_SELF_ATTESTED_DONE",
+    "signed_document_file": "NOT_FOUND_IN_QA_FOLDER",
+    "independent_final_qc_signoff_for_current_source": "NOT_PINNED_TO_SERVER"
+  },
+  "github": {
+    "repository": "chutcpoo/etsymonery",
+    "baseline": "main",
+    "corrected_verifier_pr": "https://github.com/chutcpoo/etsymonery/pull/276"
+  },
+  "vercel": {
+    "team": "shopee-affiliate-ai",
+    "project": "autodigitalpublisher",
+    "team_plan": "HOBBY",
+    "draft_writes_enabled": false,
+    "generic_draft_writes_enabled": false,
+    "publish_writes_enabled": false,
+    "server_approved_qc": "UNVERIFIED",
+    "operator_auth": "NOT_VERIFIED",
+    "production_sha": "781210cbd8931de85953a66aa5da974758a9cb1c"
+  },
+  "etsy": {
+    "shop_id": 23582741,
+    "readback_source": "https://publisher.poonthaidigital.com/api/etsy/seller-state",
+    "latest_read_only_draft_count": 0,
+    "listing_id": null,
+    "write_count": 0
+  },
+  "blockers": [
+    "HOBBY_NONCOMMERCIAL_USE",
+    "SERVER_WRITE_GATES_OFF",
+    "EXACT_LISTING_FINGERPRINT_NOT_READY",
+    "INDEPENDENT_QC_SERVER_PINS_NOT_VERIFIED",
+    "APPROVED_PRODUCT_PLAN_NOT_VERIFIED",
+    "OPERATOR_SECRET_NOT_VERIFIED",
+    "CORRECTED_ZIP_NOT_IN_CANONICAL_DRIVE"
+  ],
+  "publish_permission": false,
+  "draft_created": false
+}
