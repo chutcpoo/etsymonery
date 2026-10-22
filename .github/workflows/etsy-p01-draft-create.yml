@@ -1,34 +1,30 @@
-name: Etsy - P01 direct Draft (no Vercel)
+name: Etsy - P01 exact draft create (never publish)
 
 on:
   workflow_dispatch:
     inputs:
-      mode:
-        description: 'CHECK = read-only, CREATE_DRAFT = create P01 metadata draft once'
-        type: choice
-        options: [CHECK, CREATE_DRAFT]
+      deployment_sha:
+        description: 'Exact production Git commit SHA independently approved for P01 Draft'
         required: true
-        default: CHECK
-      confirmation:
-        description: 'For CREATE_DRAFT only, enter CREATE_P01_DRAFT_ONLY'
         type: string
-        required: false
+      confirmation:
+        description: 'Type CREATE_P01_DRAFT_ONLY; never type a publish phrase'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: etsy-p01-direct-draft-once
+  group: etsy-p01-draft-create
   cancel-in-progress: false
 
 jobs:
-  p01-direct-etsy:
-    # This environment MUST have main-only deployment restrictions and a required reviewer.
-    # Do NOT add or configure secrets until those protections have been confirmed by the owner.
-    environment: etsy-p01-direct-draft
-    if: ${{ github.ref == 'refs/heads/main' && (inputs.mode == 'CHECK' || (inputs.mode == 'CREATE_DRAFT' && inputs.confirmation == 'CREATE_P01_DRAFT_ONLY')) }}
+  create-exact-p01-draft:
+    if: ${{ inputs.confirmation == 'CREATE_P01_DRAFT_ONLY' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
+    environment: etsy-p01-draft
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -36,26 +32,14 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
-      - name: Offline Draft safety tests
-        run: node --test .github/scripts/etsy-p01-draft-direct.test.mjs
-      - name: Validate frozen P01 source evidence
-        run: node --input-type=module -e "import {loadEvidence} from './.github/scripts/etsy-p01-draft-direct.mjs'; loadEvidence();"
-      - name: Check or create exactly one P01 Draft using Etsy Open API
+      - name: Test exact Draft-only runner (offline)
+        run: node --test .github/scripts/etsy-p01-draft.test.mjs
+      - name: Create only the exact server-authorized P01 Draft
         env:
-          P01_DIRECT_MODE: ${{ inputs.mode }}
-          P01_DIRECT_CONFIRMATION: ${{ inputs.confirmation }}
-          ETSY_API_KEY: ${{ secrets.ETSY_API_KEY }}
-          ETSY_SHARED_SECRET: ${{ secrets.ETSY_SHARED_SECRET }}
-          ETSY_OAUTH_REFRESH_TOKEN: ${{ secrets.ETSY_OAUTH_REFRESH_TOKEN }}
-          P01_APPROVED_SHOP_CURRENCY: ${{ vars.P01_APPROVED_SHOP_CURRENCY }}
-          P01_SELLER_APPROVED_PRICE_USD: ${{ vars.P01_SELLER_APPROVED_PRICE_USD }}
-          P01_QC_APPROVED_SOURCE_FINGERPRINT: ${{ vars.P01_QC_APPROVED_SOURCE_FINGERPRINT }}
-          P01_QC_APPROVED_REPORT_SHA256: ${{ vars.P01_QC_APPROVED_REPORT_SHA256 }}
-          P01_QC_REVIEWED: ${{ vars.P01_QC_REVIEWED }}
-          P01_APPROVED_TAXONOMY_ID: ${{ vars.P01_APPROVED_TAXONOMY_ID }}
-          P01_APPROVED_QUANTITY: ${{ vars.P01_APPROVED_QUANTITY }}
-          P01_APPROVED_WHO_MADE: ${{ vars.P01_APPROVED_WHO_MADE }}
-          P01_APPROVED_WHEN_MADE: ${{ vars.P01_APPROVED_WHEN_MADE }}
-          P01_APPROVED_LISTING_FINGERPRINT: ${{ vars.P01_APPROVED_LISTING_FINGERPRINT }}
-          P01_APPROVED_DESCRIPTION: ${{ secrets.P01_APPROVED_DESCRIPTION }}
-        run: node .github/scripts/etsy-p01-draft-direct.mjs
+          P01_DRAFT_CONFIRMATION: ${{ inputs.confirmation }}
+          P01_DRAFT_DEPLOYMENT_SHA: ${{ inputs.deployment_sha }}
+          P01_DRAFT_OPERATOR_TOKEN: ${{ secrets.P01_DRAFT_OPERATOR_TOKEN }}
+          P01_DRAFT_REQUEST_JSON: ${{ secrets.P01_DRAFT_REQUEST_JSON }}
+          P01_DRAFT_PRICE_APPROVED_USD: ${{ vars.P01_DRAFT_PRICE_APPROVED_USD }}
+          P01_DRAFT_SHOP_CURRENCY_VERIFIED: ${{ vars.P01_DRAFT_SHOP_CURRENCY_VERIFIED }}
+        run: node .github/scripts/etsy-p01-draft.mjs
