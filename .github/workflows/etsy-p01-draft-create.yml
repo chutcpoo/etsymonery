@@ -61,6 +61,7 @@ jobs:
         env:
           P01_DIRECT_MODE: ${{ inputs.action }}
           P01_DIRECT_CONFIRMATION: ${{ inputs.confirmation }}
+          P01_DIRECT_DRAFT_WRITES_ENABLED: ${{ vars.P01_DIRECT_DRAFT_WRITES_ENABLED }}
           ETSY_API_KEY: ${{ secrets.P01_ETSY_API_KEY }}
           ETSY_SHARED_SECRET: ${{ secrets.P01_ETSY_SHARED_SECRET }}
           ETSY_OAUTH_REFRESH_TOKEN: ${{ secrets.P01_ETSY_OAUTH_REFRESH_TOKEN }}
