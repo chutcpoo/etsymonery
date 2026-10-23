@@ -6,6 +6,11 @@ on:
       - ".github/scripts/etsy-p01-draft-direct.mjs"
       - ".github/scripts/etsy-p01-draft-direct.test.mjs"
       - ".github/scripts/etsy-p01-direct-workflow.test.mjs"
+      - ".github/scripts/etsy-p01-metadata-evidence.test.mjs"
+      - "docs/releases/P01_ETSY_TAXONOMY_LIVE_2026-10-23.json"
+      - "docs/releases/P01_LISTING_METADATA_CANDIDATE_2026-10-23.json"
+      - "docs/releases/P01_TECHNICAL_REVERIFICATION_2026-10-23.json"
+      - "docs/releases/P01_AUTOMATION_SECURITY_QC_GATES_2026-10-23.json"
       - ".github/workflows/etsy-p01-draft-create.yml"
       - ".github/workflows/etsy-p01-direct-draft-safety.yml"
       - "docs/releases/P01_CANDIDATE_SOURCE_LOCK_2026-10-22.json"
@@ -34,4 +39,4 @@ jobs:
       - name: Verify P01 source evidence and SHA-256
         run: node --input-type=module -e "import {loadEvidence} from './.github/scripts/etsy-p01-draft-direct.mjs';loadEvidence();"
       - name: Direct Etsy Draft safety tests (network mocked)
-        run: node --test .github/scripts/etsy-p01-draft-direct.test.mjs .github/scripts/etsy-p01-direct-workflow.test.mjs
+        run: node --test .github/scripts/etsy-p01-draft-direct.test.mjs .github/scripts/etsy-p01-direct-workflow.test.mjs .github/scripts/etsy-p01-metadata-evidence.test.mjs
