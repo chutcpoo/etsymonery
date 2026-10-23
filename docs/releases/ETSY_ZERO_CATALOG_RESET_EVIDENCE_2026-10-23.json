@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "etsy-zero-catalog-cleanstart.v1",
+  "observationDate": "2026-10-23",
+  "shop": {
+    "name": "PoonthaiDigital",
+    "shopId": 23582741,
+    "sellerState": {
+      "status": "PASS",
+      "generatedAt": "2026-10-23T16:15:27.050Z",
+      "counts": {
+        "active": 0,
+        "inactive": 0,
+        "sold_out": 0,
+        "draft": 0,
+        "expired": 0
+      },
+      "total": 0,
+      "etsyWriteCount": 0
+    },
+    "source": "GET https://publisher.poonthaidigital.com/api/etsy/seller-state",
+    "scopeNote": "Authenticated application projection of listing counts, not deletion/zeroing of orders, payment, tax, or all Etsy account records."
+  },
+  "status": {
+    "source": "GET https://publisher.poonthaidigital.com/api/etsy/status",
+    "mode": "READ_ONLY",
+    "oauthConnected": true,
+    "liveEtsyProviderVerificationClaim": "NOT_TESTED",
+    "draftWritesEnabled": false,
+    "publishWritesEnabled": false,
+    "postResetV2WritesEnabled": false
+  },
+  "github": {
+    "repository": "chutcpoo/etsymonery",
+    "branch": "fix/p01-draft-github-direct-no-vercel-20261023",
+    "mergeAuthorized": false,
+    "workflowInventory": {
+      "originalCount": 9,
+      "disabledCount": 7,
+      "preservedActiveCount": 2,
+      "disabled": [
+        {
+          "id": 359503594,
+          "name": "PD-COFFEE-002 R02 Release Runner"
+        },
+        {
+          "id": 359670676,
+          "name": "PD-STOCK-005 R02 Release Runner"
+        },
+        {
+          "id": 359774655,
+          "name": "PD-STOCK-005 Video R01 Release Runner"
+        },
+        {
+          "id": 362816081,
+          "name": "Execute PDT-FCMP-002 Publish R01 Once"
+        },
+        {
+          "id": 362816778,
+          "name": "Promote FCMP Publish Preview Once"
+        },
+        {
+          "id": 391679112,
+          "name": "Etsy - Exact approved listing publish"
+        },
+        {
+          "id": 392464446,
+          "name": "Etsy - P01 exact draft create (old Vercel relay in main)"
+        }
+      ],
+      "preservedActive": [
+        {
+          "id": 346784054,
+          "name": "CI"
+        },
+        {
+          "id": 392490882,
+          "name": "P01 direct Etsy Draft safety tests"
+        }
+      ],
+      "retirementOperation": "GitHub REST workflow disable; reversible. Historical runs and repo files preserved.",
+      "localAuditManifest": "~/Projects/_ETSY_LEGACY_ARCHIVE_2026-10-23/GITHUB_WORKFLOW_RETIREMENT_2026-10-23.json"
+    },
+    "environment": {
+      "name": "etsy-p01-draft",
+      "allowedBranches": [
+        "main"
+      ],
+      "requiredReviewerConfigured": true,
+      "draftWritesEnabled": false,
+      "secretNamesPresent": [
+        "P01_ETSY_API_KEY",
+        "P01_ETSY_SHARED_SECRET"
+      ],
+      "secretNamesMissing": [
+        "P01_ETSY_OAUTH_REFRESH_TOKEN"
+      ]
+    }
+  },
+  "archive": {
+    "localManifest": "~/Projects/_ETSY_LEGACY_ARCHIVE_2026-10-23/ARCHIVE_MANIFEST.json",
+    "itemsMoved": 4,
+    "activeCheckoutPreserved": true,
+    "linkedGitWorktreesRestoredAndPreserved": true,
+    "oldOperatorDocsArchivedInPr": [
+      "docs/P01_GITHUB_VERCEL_DRAFT_OPERATOR.md",
+      "docs/P01_GITHUB_DIRECT_ETSY_DRAFT.md",
+      "docs/ETSY_GLOBAL_RESET_2026-09-20.md"
+    ]
+  },
+  "p01": {
+    "state": "RETAINED_AS_SEPARATE_UNPUBLISHED_CANDIDATE",
+    "candidateFingerprint": "04cf97646f850d571ebd9776b622b03ed44870986036ab2b86d9622745ebe007",
+    "proposedListingFingerprint": "055a66908f108a474d722cbd82c98d2bde7444c1319fc352053410be20303c0f",
+    "approvedListingFingerprint": null,
+    "taxonomyCandidate": 12476,
+    "independentFinalQc": "AWAITING_INDEPENDENT_HUMAN_SIGNATURE",
+    "reviewIssue": 283
+  },
+  "decision": {
+    "catalog": "EMPTY_BY_LIVE_READ",
+    "obsoleteGitHubActions": "DISABLED_SEVEN",
+    "developerBranchCleanup": "STAGED_NOT_MERGED",
+    "etsyWriteExecuted": false,
+    "etsyListingDeleted": false,
+    "etsyPublishExecuted": false,
+    "releaseState": "HOLD"
+  }
+}
