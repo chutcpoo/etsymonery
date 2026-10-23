@@ -1,0 +1,155 @@
+{
+  "checkedAt": "2026-10-23T15:07:49.858913+07:00",
+  "product": "P01",
+  "version": "1.2.1",
+  "zipSha256": "42ab0e9282db763331c5d87fac3d14b70d22c33b2293b86e2d3689e497e16315",
+  "expectedZipSha256": "42ab0e9282db763331c5d87fac3d14b70d22c33b2293b86e2d3689e497e16315",
+  "sourceFingerprint": "04cf97646f850d571ebd9776b622b03ed44870986036ab2b86d9622745ebe007",
+  "assetSetSha256": "c5e371750e6cade6182d011c9226f31e99dcffa49ffcd0937492227a52cc89f6",
+  "independentHumanFinalQc": "NOT_VERIFIED",
+  "sellerPhysicalPrint": "USER_SELF_ATTESTED",
+  "etsyWrites": 0,
+  "zipCrcPass": true,
+  "assets": [
+    {
+      "name": "Home_Maintenance_Starter_A4.pdf",
+      "sha256": "716a2697740b92be40034f66ed4f71816c8b9506e8abfc06ba982b21094516ca",
+      "bytes": 77474,
+      "manifestAndSourceLockMatch": true,
+      "pages": 12,
+      "pageSizesPts": [
+        [
+          595.28,
+          841.89
+        ]
+      ],
+      "hasForms": false,
+      "allPagesText": true,
+      "pass": true
+    },
+    {
+      "name": "Home_Maintenance_Starter_US_Letter.pdf",
+      "sha256": "cf75e46c47f5e9f2580bafb4063c992a239c42ecae55fd27dab6f45d0334c68f",
+      "bytes": 76046,
+      "manifestAndSourceLockMatch": true,
+      "pages": 12,
+      "pageSizesPts": [
+        [
+          612.0,
+          792.0
+        ]
+      ],
+      "hasForms": false,
+      "allPagesText": true,
+      "pass": true
+    },
+    {
+      "name": "01_Hero.jpg",
+      "sha256": "3c94f934a8b7ec137c8992450e95ab5b6af7e799ff88795f02c50d50f1a947fb",
+      "bytes": 557334,
+      "manifestAndSourceLockMatch": true,
+      "imageSize": [
+        2500,
+        2000
+      ],
+      "imageMode": "RGB",
+      "pass": true
+    },
+    {
+      "name": "02_All_12_Pages.jpg",
+      "sha256": "944e8807815ca3607ca11b4899548b07b55bf27ea40f49e670b05ef477262eca",
+      "bytes": 678347,
+      "manifestAndSourceLockMatch": true,
+      "imageSize": [
+        2500,
+        2000
+      ],
+      "imageMode": "RGB",
+      "pass": true
+    },
+    {
+      "name": "03_Linked_Repair_Workflow.jpg",
+      "sha256": "66bd45964074824761ce83f4f7fa25d7ebdac9e5fa7064f6226c0bba460f81e5",
+      "bytes": 669414,
+      "manifestAndSourceLockMatch": true,
+      "imageSize": [
+        2500,
+        2000
+      ],
+      "imageMode": "RGB",
+      "pass": true
+    },
+    {
+      "name": "04_Workflow_Pages.jpg",
+      "sha256": "dcfef0261d35cdc2fc1b0d33074d6d9ca9b808b2fa943f58f307f9e630bfb057",
+      "bytes": 488087,
+      "manifestAndSourceLockMatch": true,
+      "imageSize": [
+        2500,
+        2000
+      ],
+      "imageMode": "RGB",
+      "pass": true
+    },
+    {
+      "name": "05_Print_Sizes.jpg",
+      "sha256": "1c37b2c42f3860a66fe7b13dd7ea7785fd343563eb5effd0d6d87385394dfa00",
+      "bytes": 567622,
+      "manifestAndSourceLockMatch": true,
+      "imageSize": [
+        2500,
+        2000
+      ],
+      "imageMode": "RGB",
+      "pass": true
+    },
+    {
+      "name": "06_Useful_Registers.jpg",
+      "sha256": "714c84201cebc61d6c2ea50282feb1762e59fbb4589aaf89d5484b5d955e2fb1",
+      "bytes": 615556,
+      "manifestAndSourceLockMatch": true,
+      "imageSize": [
+        2500,
+        2000
+      ],
+      "imageMode": "RGB",
+      "pass": true
+    },
+    {
+      "name": "07_Download_Guide.jpg",
+      "sha256": "61cac2777a3e36ec474bd9a4b5ba3068c85a31428a6c5de2e3ba0a93110b0468",
+      "bytes": 541393,
+      "manifestAndSourceLockMatch": true,
+      "imageSize": [
+        2500,
+        2000
+      ],
+      "imageMode": "RGB",
+      "pass": true
+    },
+    {
+      "name": "P01_Listing_Video_v1.2.1.mp4",
+      "sha256": "460d91aabc79f9441197a2da20c8560ee9559f058554c6352d13aa742fb57ecd",
+      "bytes": 585248,
+      "manifestAndSourceLockMatch": true,
+      "videoSeconds": 10.0,
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "width": 2000,
+          "height": 1600,
+          "r_frame_rate": "30/1"
+        }
+      ],
+      "pass": true
+    }
+  ],
+  "assetCount": 10,
+  "allTenAssetsMatch": true,
+  "zipMatchesFrozenPackage": true,
+  "technicalGate": "PASS",
+  "canonicalDriveZipFileId": "1hz1jOSlunHsVm0sjuZgDpJly8qieKCQY",
+  "evidenceScope": "Independent machine re-verification of uploaded canonical ZIP bytes and current GitHub source lock; not an independent human signoff",
+  "githubPr": "https://github.com/chutcpoo/etsymonery/pull/282"
+}
