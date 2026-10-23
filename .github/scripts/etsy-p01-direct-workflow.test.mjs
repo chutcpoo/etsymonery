@@ -25,6 +25,7 @@ test("P01 protected operator is manual, exact and main-only", () => {
   assert.match(workflow, /P01_SOURCE_FINGERPRINT_MISMATCH_STOP/);
   assert.match(workflow, /P01_QC_APPROVED_SOURCE_FINGERPRINT:/);
   assert.match(workflow, /P01_QC_REVIEWED:/);
+  assert.match(workflow, /P01_DIRECT_DRAFT_WRITES_ENABLED:/);
 });
 
 test("P01 private API credentials and refresh token use Environment secrets, not inputs", () => {
