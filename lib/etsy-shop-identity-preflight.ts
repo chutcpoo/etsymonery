@@ -4,6 +4,7 @@ import { fetchEtsyReadWithRetry } from "./etsy-http";
 
 // Scope: read-only P01 seller identity preflight. Does not touch Etsy OAuth or listings.
 export const P01_EXPECTED_SHOP_NAME = "PoonthaiDigital";
+export const P01_EXPECTED_SHOP_ID = 23582741;
 const NO_STORE = { "cache-control": "no-store" };
 
 function blocked(error: string, code: number) {
@@ -48,6 +49,9 @@ export function createEtsyShopIdentityPreflightGetHandler(
       return blocked("ETSY_SHOP_ID_NOT_CONFIGURED", 503);
     }
     const shopId = Number(configured);
+    if (shopId !== P01_EXPECTED_SHOP_ID) {
+      return blocked("ETSY_P01_SHOP_ID_NOT_APPROVED", 409);
+    }
     try {
       const res = await fetchEtsyReadWithRetry(
         deps.fetchImpl ?? fetch,
@@ -67,6 +71,10 @@ export function createEtsyShopIdentityPreflightGetHandler(
       const actualName = shop.shop_name.trim();
       const nameMatches = actualName.toLowerCase() === P01_EXPECTED_SHOP_NAME.toLowerCase();
       if (!nameMatches) return blocked("ETSY_SHOP_NAME_MISMATCH", 409);
+      if (typeof shop.currency_code !== "string" ||
+        shop.currency_code.trim().toUpperCase() !== "USD") {
+        return blocked("ETSY_SHOP_CURRENCY_MISMATCH", 409);
+      }
       return Response.json({
         status: "PASS", mode: "READ_ONLY", source: "etsy-open-api-v3-getShop",
         shop_id: shopId, shop_name: actualName,
