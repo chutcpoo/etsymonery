@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { POST_RESET_PLATFORM_STATE } from "../../../../lib/post-reset-platform";
-import { ETSY_CHANNEL_INDEX } from "../../../../lib/catalog-channel-index";
+import { CANONICAL_CATALOG_SOURCE, ETSY_CHANNEL_INDEX } from "../../../../lib/catalog-channel-index";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,13 @@ export async function GET() {
   return NextResponse.json({
     ...POST_RESET_PLATFORM_STATE,
     catalogState,
-    liveCatalogCount: trackedCatalogCount,
+    liveCatalogCount: trackedCatalogCount, // Backward-compatible legacy field; NOT a live Etsy count.
+    catalogProjectionCount: trackedCatalogCount,
+    catalogProjectionKind: "DATED_DRIVE_DERIVED_IDENTIFIER_PROJECTION",
+    catalogProjectionLastModifiedAt: CANONICAL_CATALOG_SOURCE.snapshotModifiedAt,
+    currentDriveTruthVerified: false,
+    liveEtsyCount: null,
+    catalogIntegrityReadEndpoint: "/api/etsy/catalog-integrity",
     registeredLiveListings: trackedCatalogCount,
     newProductPreparationEndpoint: "/api/products/prepare",
     etsyWrites: "DISABLED_UNTIL_NEW_EXACT_OPERATION",
