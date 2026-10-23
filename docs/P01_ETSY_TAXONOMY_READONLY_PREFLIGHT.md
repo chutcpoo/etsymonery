@@ -37,3 +37,5 @@ Exactly one parameter required. Other parameters, duplicate params and invalid I
 Protected GET /api/etsy/shop-identity calls Etsy official GET /v3/application/shops/{shop_id} using the server-configured ETSY_SHOP_ID only, never a caller-supplied shop ID. It checks the response shop_id and shop_name against P01's expected PoonthaiDigital identity and returns observed currency_code. A mismatched ID or name is BLOCKED, not silently accepted. No OAuth refresh or mutation method is invoked.
 
 This is an additional verification gate, not proof that Etsy's listing-count projection and Shop Manager UI are perfectly synchronized. See tests/etsy-shop-identity-preflight.test.ts for mocked no-write and mismatch tests.
+
+P01 additional invariants: the configured shop ID must equal the frozen 23582741; the live Etsy response must contain the same shop ID, shop name PoonthaiDigital and shop currency USD. Any discrepancy fails closed before a Listing Fingerprint is approved.
