@@ -72,7 +72,8 @@ test("P01 shop identity refuses untrusted returned ID or shop name", async () =>
     for (const invalid of [
       { ...shopPayload, shop_id: 99 },
       { ...shopPayload, shop_name: "AnotherShop" },
-      { ...shopPayload, shop_name: "" }
+      { ...shopPayload, shop_name: "" },
+      { ...shopPayload, currency_code: "EUR" }
     ]) {
       const get = createEtsyShopIdentityPreflightGetHandler({
         fetchImpl: async () => Response.json(invalid)
@@ -93,6 +94,8 @@ test("P01 shop identity does not let caller select a different shop", async () =
     assert.equal((await get(req("fixture-read-token", "?shop_id=99"))).status, 400);
     process.env.ETSY_SHOP_ID = "not-valid";
     assert.equal((await get(req())).status, 503);
+    process.env.ETSY_SHOP_ID = "123456";
+    assert.equal((await get(req())).status, 409);
     assert.equal(called, 0);
   });
 });
