@@ -56,7 +56,7 @@ jobs:
             console.log("P01 frozen source fingerprint verified; no Etsy listing write");
           '
       - name: Direct Etsy Draft safety tests (mocked)
-        run: node --test .github/scripts/etsy-p01-draft-direct.test.mjs
+        run: node --test .github/scripts/etsy-p01-draft-direct.test.mjs .github/scripts/etsy-p01-direct-workflow.test.mjs .github/scripts/etsy-p01-metadata-evidence.test.mjs
       - name: Check Etsy shop or create exact protected P01 Draft
         env:
           P01_DIRECT_MODE: ${{ inputs.action }}
