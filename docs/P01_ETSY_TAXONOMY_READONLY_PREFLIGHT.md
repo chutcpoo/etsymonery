@@ -31,3 +31,9 @@ Exactly one parameter required. Other parameters, duplicate params and invalid I
 3. Generate exact listing fingerprint using lib/candidate-fingerprint.ts on the actual payload.
 4. Independent Final QC and exact server pins are still required. The seller's physical print self-attestation is acknowledged, not independent signoff.
 5. Obtain separate Draft authorization. No Etsy data is written by this preflight and no general-purpose Publish authorization is implied.
+
+
+## Live shop identity preflight (same read token)
+Protected GET /api/etsy/shop-identity calls Etsy official GET /v3/application/shops/{shop_id} using the server-configured ETSY_SHOP_ID only, never a caller-supplied shop ID. It checks the response shop_id and shop_name against P01's expected PoonthaiDigital identity and returns observed currency_code. A mismatched ID or name is BLOCKED, not silently accepted. No OAuth refresh or mutation method is invoked.
+
+This is an additional verification gate, not proof that Etsy's listing-count projection and Shop Manager UI are perfectly synchronized. See tests/etsy-shop-identity-preflight.test.ts for mocked no-write and mismatch tests.
