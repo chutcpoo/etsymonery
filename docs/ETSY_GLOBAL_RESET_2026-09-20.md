@@ -1,17 +1,7 @@
-# Etsy Global Reset — 2026-09-20
+# Archived — Historical 2026-09-20 shop reset snapshot
 
-Canonical production state after the user deleted all Etsy products.
+**Status: HISTORICAL / DO NOT EXECUTE.** The procedures and readiness claims in this document are no longer authoritative for the Etsy shop reset on 2026-10-23.
 
-- ETSY_LIVE_CATALOG = 0
-- CATALOG_STATE = EMPTY_CATALOG / RESET
-- Legacy product operations are historical and non-executable.
-- Legacy Etsy write routes are blocked at routing middleware.
-- Central authorized-operation executor is tombstoned.
-- Central authorized asset staging is tombstoned.
-- Legacy Etsy GitHub Actions workflows were removed.
-- Only CI remains active.
-- New Etsy operations must be introduced with a new post-reset operation ID, fresh protected-state verification, fresh exact authorization, and independent release QC.
-- No pre-reset authorization may be reused.
-- Production must report ETSY_WRITE_COUNT = 0 while in reset state.
+The exact prior text is preserved at [Archive](./archive/etsy-legacy-2026-10-23/ETSY_GLOBAL_RESET_2026-09-20.md).
 
-Current post-reset product work is not represented by any legacy operation in this repository until a new exact V2 executor is separately introduced and reviewed.
+Use the [current P01 direct GitHub-to-Etsy workflow and release gates](./P01_GITHUB_DIRECT_ETSY_EXECUTION_2026-10-23.md) and the [new zero-catalog baseline](./ETSY_ZERO_CATALOG_START_2026-10-23.md) instead. Both are pending review in PR #282, not merged to production. Draft, asset uploads and Publish remain blocked until their exact required approvals.
