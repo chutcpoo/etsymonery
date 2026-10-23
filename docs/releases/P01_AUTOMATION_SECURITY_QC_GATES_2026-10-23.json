@@ -84,7 +84,11 @@
     "decision": null,
     "reviewedZipSha256": null,
     "reviewedCandidateFingerprint": null,
-    "notes": "Technical checks and seller physical-print attestation do not constitute independently signed human Final QC."
+    "notes": "Technical checks and seller physical-print attestation do not constitute independently signed human Final QC.",
+    "availableGitHubHumanCollaborators": [
+      "chutcpoo"
+    ],
+    "noIndependentCollaboratorConfirmed": true
   },
   "githubEnvironment": {
     "name": "etsy-p01-draft",
@@ -101,7 +105,9 @@
     "draftWriteGate": "false",
     "authenticationStatus": "TAXONOMY_API_KEY_AUTHENTICATED__DIRECT_OAUTH_REFRESH_SECRET_MISSING",
     "credentialsNeverRead": true,
-    "source": "2026-10-23 authenticated GitHub CLI read-only environment inspection"
+    "source": "2026-10-23 authenticated GitHub CLI read-only environment inspection",
+    "githubApiKeySharedSecretConfigured": true,
+    "githubOAuthRefreshSecretConfigured": false
   },
   "etsyApp": {
     "sellerOAuthObserved": true,
@@ -140,7 +146,10 @@
     "quantity": null,
     "descriptionApproval": "EXISTING_CANONICAL_DRIVE_DRAFT_NOT_FROZEN_IN_FINAL_PAYLOAD",
     "expectedListingFingerprint": null,
-    "reason": "Taxonomy provider evidence available (Planner Templates 12476 proposed), but approved category, maker/date/quantity and exact description are not frozen; release fingerprint not approved."
+    "reason": "Taxonomy provider evidence available (Planner Templates 12476 proposed), but approved category, maker/date/quantity and exact description are not frozen; release fingerprint not approved.",
+    "proposedListingFingerprint": "055a66908f108a474d722cbd82c98d2bde7444c1319fc352053410be20303c0f",
+    "proposedListingGitHubPath": "docs/releases/P01_LISTING_METADATA_CANDIDATE_2026-10-23.json",
+    "reviewStatus": "PROPOSED_NOT_SELLER_APPROVED"
   },
   "allowedAction": "READ_ONLY_REVIEW",
   "etsyListingWritesPerformed": 0,
