@@ -25,3 +25,16 @@ The repair command preserves the original archive and preserves all PDF/JPG/list
 ## Release boundary
 
 This repository's verifier and Vercel preview do not authorize Etsy Draft, media upload or live listing writes. Keep all marketplace write flags disabled and continue requiring seller approval, exact candidate identity, independent QC and separate Production release authorization.
+
+## 2026-10-22 P01 R2 listing video and QA Markdown gates
+
+The original Drive seller ZIP contains **seven JPEG previews plus one MP4** under `LISTING_PREVIEWS/`. Previously the folder count logic demanded only seven total entries, rejecting a valid, declared video. The verifier now treats the optional manifest `listing_video` as one exact additional entry and checks its recorded size, SHA-256, and MP4 ftyp marker. These checks do not prove video playback quality.
+
+When QA Markdown has been revised separately in Google Drive, compare downloaded canonical bytes explicitly:
+
+```bash
+python3 scripts/verify_p01_seller_zip.py P01_SELLER_REVIEW_PACKAGE_v1.2.1_QA_SYNC_2026-10-22.zip \
+  --expected-qa-report P01_QA_REPORT_v1.2.1.md
+```
+
+This prevents reporting a stale embedded Markdown file as current. Keep the original ZIP archived and use a distinct seller-review filename for the corrected copy. Check print legibility physically and separately authorize any Etsy Draft or Publish actions; this verifier is read-only and does not confer release permission.

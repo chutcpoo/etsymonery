@@ -65,6 +65,68 @@ class VerifyP01Test(unittest.TestCase):
                     repair(failed, rejected_output)
                 self.assertFalse(rejected_output.exists())
 
+    def test_video_hash_and_canonical_qa_document(self):
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder)
+            source = base / 'p01.zip'
+            qa_doc = base / 'latest.md'
+            qa_doc.write_text('# Latest QA with MP4\n')
+            pdfs = [(f'{n}.pdf', b'%PDF-1.4\n' + bytes([n])) for n in range(2)]
+            imgs = [(f'{n}.jpg', b'\xff\xd8' + bytes([n]) + b'\xff\xd9') for n in range(7)]
+            video_data = b'\x00\x00\x00\x18ftypisom\x00\x00\x00\x00isom'
+            video_name = 'P01_Listing_Video_v1.2.1.mp4'
+
+            def entries(items):
+                return [{'filename': name, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
+                        for name, data in items]
+
+            manifest = {
+                'product_id': 'P01', 'version': '1.2.1',
+                'final_customer_files': entries(pdfs),
+                'listing_previews': entries(imgs),
+                'listing_video': entries([(video_name, video_data)])[0],
+            }
+            qa = {
+                'product_id': 'P01', 'version': '1.2.1', 'overall_status': 'PASS',
+                'checks': {
+                    'customer_pdfs': {'status': 'PASS', 'files': entries(pdfs)},
+                    'listing_previews': {'status': 'PASS', 'files': entries(imgs)},
+                },
+            }
+            with zipfile.ZipFile(source, 'w') as z:
+                z.writestr('P01_MANIFEST_v1.2.1.json', json.dumps(manifest))
+                z.writestr('QA_REPORTS/P01_AUTOMATED_QA_v1.2.1.json', json.dumps(qa))
+                z.writestr('QA_REPORTS/P01_QA_REPORT_v1.2.1.md', qa_doc.read_bytes())
+                for name, data in pdfs:
+                    z.writestr('CUSTOMER_FILES/' + name, data)
+                for name, data in imgs:
+                    z.writestr('LISTING_PREVIEWS/' + name, data)
+                z.writestr('LISTING_PREVIEWS/' + video_name, video_data)
+
+            # The real package structure is seven JPEGs plus one MP4, not 7 total.
+            verify(source, expected_qa_report=qa_doc)
+            qa_doc.write_text('# Updated QA containing new notes\n')
+            with self.assertRaisesRegex(PackageError, 'QA Markdown differs'):
+                verify(source, expected_qa_report=qa_doc)
+
+            tampered_video = base / 'wrong-video.zip'
+            with zipfile.ZipFile(source) as original, zipfile.ZipFile(tampered_video, 'w') as dst:
+                for member in original.infolist():
+                    data = original.read(member.filename)
+                    if member.filename.endswith('.mp4'):
+                        data += b'tampered'
+                    dst.writestr(member, data)
+            with self.assertRaisesRegex(PackageError, 'Listing video bytes/SHA-256 mismatch'):
+                verify(tampered_video)
+
+            unexpected_member = base / 'extra-image.zip'
+            with zipfile.ZipFile(source) as original, zipfile.ZipFile(unexpected_member, 'w') as dst:
+                for member in original.infolist():
+                    dst.writestr(member, original.read(member))
+                dst.writestr('LISTING_PREVIEWS/08_Unexpected.jpg', b'\xff\xd8\xff\xd9')
+            with self.assertRaisesRegex(PackageError, 'Unexpected file set'):
+                verify(unexpected_member)
+
     def test_manifest_mismatch_is_not_silently_repaired(self):
         with tempfile.TemporaryDirectory() as folder:
             path=Path(folder)/'bad.zip'
