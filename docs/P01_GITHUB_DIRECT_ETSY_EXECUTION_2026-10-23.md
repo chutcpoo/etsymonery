@@ -39,3 +39,11 @@ The direct runner creates a metadata Draft only. Separate authenticated image, v
 7. Validate separate buyer files, gallery and video upload automation prior to any separate Publish decision.
 
 Nothing in this branch authorizes a GitHub merge, Production deployment, Etsy Draft, file upload, Publish, new credentials, or paid service.
+
+## Additional default-off marketplace write gate (added during merge-readiness review)
+
+GitHub Environment variable `P01_DIRECT_DRAFT_WRITES_ENABLED` defaults to unset/false. For action `CREATE_DRAFT`, the direct runner explicitly requires the exact string `true` before any OAuth network request; neither a workflow_dispatch confirmation nor the presence of credentials alone can open the Draft path. Action `CHECK` is unchanged. Never enable this variable until independent final QC, exact listing fingerprints, environment protection and separate seller Draft authorization have all been confirmed. A verified default-off test is included in the protected offline safety suite.
+
+## Current inspection limits
+
+The GitHub connector in this session exposes PR diffs, Actions CI, code and reviews but does not provide repository Environment configuration or Secret inventory endpoints. The GitHub public resource fetcher rejects `/environments`; therefore existence, protection reviewers, main-only policy and Secrets cannot be asserted from a workflow file. The required Secrets are scoped credential names, not evidence they are configured. No OAuth tokens or other Secrets were retrieved. A successful CI mock test does not prove authenticated Etsy CHECK can run.
