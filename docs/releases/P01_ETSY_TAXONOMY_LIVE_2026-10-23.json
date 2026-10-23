@@ -10,7 +10,13 @@
     "developerPortalObservedAccess": "Personal Access",
     "developerPortalObservedAppRecord": true,
     "oauthGrantOnExistingVercel": true,
-    "githubDirectOauthSecretConfigured": false
+    "githubDirectOauthSecretConfigured": false,
+    "developerPortalUserScope": "Just myself or colleagues",
+    "developerPortalSellerToolsChecked": true,
+    "developerPortalWriteListingsChecked": true,
+    "developerPortalChargesUsers": false,
+    "registeredDescriptionMentionsAutomationListingOwnShop": true,
+    "evidenceMethod": "Etsy Developer Portal authenticated browser read-only DOM, no secret field values recorded"
   },
   "auth": {
     "xApiKeyUsed": true,
