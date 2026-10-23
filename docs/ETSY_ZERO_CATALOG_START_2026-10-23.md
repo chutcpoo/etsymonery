@@ -13,8 +13,8 @@ The user wants a fresh seller catalog without carrying outdated operator instruc
 - Development in [PR #282](https://github.com/chutcpoo/etsymonery/pull/282) replaces the existing GitHub Actions P01 Draft workflow's **Vercel relay** with GitHub Actions -> Etsy Open API v3 directly.
 - The single Draft workflow is `.github/workflows/etsy-p01-draft-create.yml`. It is manual dispatch only, default CHECK, main-only, protected Environment `etsy-p01-draft`, exact source fingerprint and default-off `P01_DIRECT_DRAFT_WRITES_ENABLED`.
 - GitHub Actions direct executor does not require a Vercel paid plan. Existing Vercel read-only endpoints are evidence sources, not Etsy Draft writing dependencies.
-- **DO NOT dispatch Etsy CREATE_DRAFT or Publish.** PR #282 is not merged or explicitly approved. The existing main-branch workflow still uses the older Vercel relay until a separately approved code review/merge.
-- `.github/workflows/etsy-exact-auto-publish.yml` is an older separate Publish workflow. It remains present and is not authorized for this new zero-catalog flow; do not invoke it merely because it exists.
+- **DO NOT dispatch Etsy CREATE_DRAFT or Publish.** PR #282 is not merged or explicitly approved. The existing main-branch Draft Workflow file still uses the older Vercel relay but its **GitHub Actions workflow was disabled manually** while this new path remains under review. A separately approved merge and explicit workflow re-enable (after credential and QC gates) are required.
+- `.github/workflows/etsy-exact-auto-publish.yml` is an older separate Publish workflow. It remains present as a file but is **disabled manually in GitHub Actions**, not an authorized path for the new zero-catalog flow. Do not re-enable until a separately approved release architecture exists.
 
 ## Current gaps before an authenticated direct Etsy CHECK
 
@@ -47,3 +47,23 @@ Local Mac cleanup was performed separately: clean and unused local checkouts `et
 5. Separately authorize Draft creation, then separately design/test/authorize upload of exactly two buyer PDFs, seven JPG and one MP4. **Publish requires another separate approval**.
 
 **Decision: SHOP CATALOG EMPTY PER API; CODE AND ARCHIVE CLEANUP STAGED IN PR; MARKETPLACE RELEASE HOLD. No Merge, Etsy listing write, Publish or secret migration performed.**
+
+## GitHub Actions retirement — verified live on 2026-10-23
+
+Authenticated `gh api` inspection discovered nine GitHub Actions workflows reported `active` even though only four workflow YAML files remain in `main`. Seven obsolete release/create/publish workflows were disabled through GitHub's documented `/actions/workflows/{id}/disable` endpoint with readback of `state=disabled_manually` for each. No queued, waiting or in-progress jobs existed at the start.
+
+| Archived / disabled workflow | GitHub workflow ID | Provider state |
+| --- | ---: | --- |
+| PD-COFFEE-002 R02 Release Runner | 359503594 | disabled_manually |
+| PD-STOCK-005 R02 Release Runner | 359670676 | disabled_manually |
+| PD-STOCK-005 Video R01 Release Runner | 359774655 | disabled_manually |
+| Execute PDT-FCMP-002 Publish R01 Once | 362816081 | disabled_manually |
+| Promote FCMP Publish Preview Once | 362816778 | disabled_manually |
+| Etsy - Exact approved listing publish | 391679112 | disabled_manually |
+| Etsy - P01 exact draft create (old Vercel relay in main) | 392464446 | disabled_manually |
+
+**Preserved active:** CI (346784054), P01 direct Etsy Draft safety tests (392490882). Disabling a workflow does not delete YAML, historical runs or release evidence. The precise before/after manifest and re-enable instructions are retained on the authorized Mac in `~/Projects/_ETSY_LEGACY_ARCHIVE_2026-10-23/GITHUB_WORKFLOW_RETIREMENT_2026-10-23.json`.
+
+**Important Git worktree dependency:** Two other old checkouts (`~/Projects/poonthaidigital-tools` and `~/Projects/poonthaidigital-tools-etsy-alt-text-r01`) share linked Git-worktree metadata and were **kept in their original places** rather than archived. A trial move was immediately rolled back; both were independently verified clean and functional. Do not move individual linked worktree paths without a coordinated `git worktree move` and complete link/path verification.
+
+No GitHub PR was merged and no Etsy provider Listing write was performed as part of this retirement.
