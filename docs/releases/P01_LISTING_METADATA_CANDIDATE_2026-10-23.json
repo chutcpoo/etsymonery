@@ -42,7 +42,7 @@
     "title": "Canonical v1.2.1 Etsy listing draft",
     "tags": "Canonical 13 unique tags"
   },
-  "proposedListingFingerprint": null,
+  "proposedListingFingerprint": "055a66908f108a474d722cbd82c98d2bde7444c1319fc352053410be20303c0f",
   "expectedListingFingerprint": null,
   "releaseGate": {
     "independentHumanFinalQc": false,
@@ -51,5 +51,7 @@
     "mergeAuthorized": false,
     "draftAuthorized": false,
     "publishAuthorized": false
-  }
+  },
+  "fingerprintMethod": "Exact canonical Node create-fingerprint.v1 / LISTING scope via .github/scripts/etsy-p01-draft-direct.mjs",
+  "proposedNotFinal": true
 }
