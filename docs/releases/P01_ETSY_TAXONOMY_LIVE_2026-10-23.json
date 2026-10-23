@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "p01-etsy-taxonomy-live.v1",
+  "checkedAt": "2026-10-23",
+  "shopId": 23582741,
+  "productId": "P01",
+  "productVersion": "1.2.1",
+  "provider": "Etsy Open API v3",
+  "app": {
+    "name": "autodigitalpublisher",
+    "developerPortalObservedAccess": "Personal Access",
+    "developerPortalObservedAppRecord": true,
+    "oauthGrantOnExistingVercel": true,
+    "githubDirectOauthSecretConfigured": false
+  },
+  "auth": {
+    "xApiKeyUsed": true,
+    "liveTaxonomyGetStatus": 200,
+    "livePropertiesGetStatus": 200,
+    "secretMaterialInEvidence": false,
+    "listingMutationPerformed": false
+  },
+  "sellerTaxonomy": {
+    "endpoint": "GET https://openapi.etsy.com/v3/application/seller-taxonomy/nodes",
+    "rootCount": 15,
+    "totalNodesTraversed": 3065,
+    "searchNames": "Planner, Journal, Chore Chart, Bookkeeping Templates",
+    "candidates": [
+      {
+        "taxonomy_id": 12476,
+        "name": "Planner Templates",
+        "full_path": "Paper & Party Supplies > Paper > Stationery > Design & Templates > Templates > Planner Templates",
+        "leaf": true,
+        "propertiesGetHttp": 200,
+        "propertiesCount": 20,
+        "requiredPropertiesCount": 0
+      },
+      {
+        "taxonomy_id": 12475,
+        "name": "Journal Templates",
+        "full_path": "Paper & Party Supplies > Paper > Stationery > Design & Templates > Templates > Journal Templates",
+        "leaf": true,
+        "propertiesGetHttp": 200,
+        "propertiesCount": 20,
+        "requiredPropertiesCount": 0
+      },
+      {
+        "taxonomy_id": 12479,
+        "name": "Chore Chart Templates",
+        "full_path": "Paper & Party Supplies > Paper > Stationery > Design & Templates > Templates > Chore Chart Templates",
+        "leaf": true,
+        "propertiesGetHttp": 200,
+        "propertiesCount": 19,
+        "requiredPropertiesCount": 0
+      },
+      {
+        "taxonomy_id": 12478,
+        "name": "Bookkeeping Templates",
+        "full_path": "Paper & Party Supplies > Paper > Stationery > Design & Templates > Templates > Bookkeeping Templates",
+        "leaf": true,
+        "propertiesGetHttp": 200,
+        "propertiesCount": 19,
+        "requiredPropertiesCount": 0
+      }
+    ],
+    "recommendation": {
+      "taxonomy_id": 12476,
+      "status": "PROPOSED_PRODUCT_FIT_REQUIRES_FINAL_LISTING_APPROVAL",
+      "reason": "P01 is a printable home repair-to-warranty planning, recordkeeping and maintenance tracking PDF bundle rather than bookkeeping, chore-chart or journal-only template."
+    }
+  },
+  "releaseBoundary": {
+    "sourceFingerprint": "04cf97646f850d571ebd9776b622b03ed44870986036ab2b86d9622745ebe007",
+    "humanIndependentFinalQc": "NOT_VERIFIED",
+    "makerDateQuantity": "NOT_APPROVED",
+    "listingFingerprint": null,
+    "githubEnvironmentDraftWriteGate": false,
+    "etsyListingWrites": 0,
+    "mergeAuthorized": false,
+    "draftAuthorized": false,
+    "publishAuthorized": false
+  }
+}
