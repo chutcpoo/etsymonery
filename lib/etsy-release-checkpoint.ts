@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { hasServerVerifiedQc } from "./etsy-server-qc-gate";
+import { buyerFilenameIssue } from "./etsy-digital-delivery-policy";
 import { NextResponse } from "next/server";
 import { getValidEtsyAccessToken } from "./etsy-auth";
 import { etsyApiHeaders } from "./etsy";
@@ -68,8 +69,7 @@ export function parseReleaseRequest(raw: unknown): ReleaseRequest {
   if (!SHA.test(candidateFingerprint) || !SHA.test(expectedListingFingerprint)) fail("INVALID_RELEASE_FINGERPRINT");
   if (!Array.isArray(x.expectedBuyerFileNames) || x.expectedBuyerFileNames.length < 1 ||
       x.expectedBuyerFileNames.length > 5 ||
-      x.expectedBuyerFileNames.some(s => typeof s !== "string" || !s.trim() ||
-        s.length > 150 || /[/\\\r\n]/.test(s))) fail("INVALID_EXPECTED_BUYER_FILES");
+      x.expectedBuyerFileNames.some(s => buyerFilenameIssue(s) !== null)) fail("INVALID_EXPECTED_BUYER_FILES");
   const expectedBuyerFileNames = (x.expectedBuyerFileNames as string[]).map(x => x.normalize("NFC").trim()).sort();
   if (new Set(expectedBuyerFileNames).size !== expectedBuyerFileNames.length) fail("DUPLICATE_BUYER_FILENAMES");
   const expectedImageCount = id(x.expectedImageCount, "INVALID_EXPECTED_IMAGE_COUNT");

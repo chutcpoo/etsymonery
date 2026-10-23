@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { validateChatSourceBytes, CHAT_ASSET_MAX_BYTES, CHAT_REQUEST_MAX_BYTES } from "./etsy-chat-asset-intake";
+import { inspectBuyerFileBytes } from "./etsy-buyer-byte-integrity";
 
 const ID = /^[A-Za-z0-9_-]{10,200}$/;
 const SHA = /^[a-f0-9]{64}$/;
@@ -91,6 +92,10 @@ export function createSourcePreflightPostHandler() {
       sha256:source.expectedSha256,sizeBytes:source.expectedBytes,
       sourceDriveIdVerifiedByServer:false,
       bytesVerifiedAgainstExpectedSha256:true,
+      buyerBytesCheckLevel:source.kind==="UPLOAD_FILE"
+        ? inspectBuyerFileBytes(source.assetName,bytes).level
+        : "IMAGE_SIGNATURE_ONLY",
+      pdfRenderedAndVisuallyReviewed:false,
       independentFinalQCVerified:false,draftCreated:false,
       publishAuthorized:false,ETSY_WRITE_COUNT:0
     },{headers:{"cache-control":"no-store"}});
