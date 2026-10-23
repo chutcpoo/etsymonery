@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "p01-listing-payload-candidate.v1",
+  "productId": "P01",
+  "productVersion": "1.2.1",
+  "status": "PROPOSED_NOT_SELLER_APPROVED",
+  "sourceFingerprint": "04cf97646f850d571ebd9776b622b03ed44870986036ab2b86d9622745ebe007",
+  "sourceListingDriveFileId": "1NUD1zSAynA9wCUrEJXa9cju83TZxvEob",
+  "sourceListingMarkdownSha256": "865defc47f67e8f4c7f879bec1130f291af33a42360aa150960974ac1d496000",
+  "conversion": "Buyer-Facing Listing Description section through Disclosures & Shop Terms, headings converted to plain text, markdown emphasis/backticks and rules removed; source remains authoritative for review.",
+  "listing": {
+    "title": "Home Repair & Maintenance Tracker PDF | Repair to Warranty Log Kit | A4 & US Letter Printable",
+    "description": "ONE REPAIR. ONE CLEAR RECORD.\nKeep your home repair history connected without the overwhelm of a bulky 50-page binder. \n\nThe First Homeowner Repair-to-Warranty Starter Kit is a focused 12-page printable tracking system designed to follow any home problem from the moment it breaks, through contractor visits, costs, warranty claims, and future checkup dates—all linked by a simple Repair ID.\n\nWhat You Receive — 2 Instant Download PDF Files\n- Home_Maintenance_Starter_US_Letter.pdf — 8.5 × 11 in (12 pages)\n- Home_Maintenance_Starter_A4.pdf — 210 × 297 mm (12 pages)\n\n(Both sizes formatted with clean, generous print margins; choose the file that matches your standard household paper).\n\nAll 12 Purpose-Built Worksheets (No Filler Pages)\n1. Quick Start & ID Guide: How the Repair ID (R-001) and Task ID (T-001) link across worksheets.\n2. Property Overview: Essential home specs, utility shutoff locations, and paint codes (safe, non-sensitive).\n3. Annual Maintenance Map: Month-by-month bird's-eye schedule for routine upkeep.\n4. Seasonal Task Overview: Practical seasonal prompts (Spring, Summer, Fall, Winter).\n5. Maintenance Task Queue: Prioritized checklist with due dates and completion tracking.\n6. Problem & Repair Issue Log: The core starting point—log issues with a unique Repair ID (e.g., R-001).\n7. Service Provider Directory: Keep plumbers, electricians, HVAC, and trusted contractors at hand.\n8. Contractor Visit & Repair Log: Match contractor invoices and repair work back to your Repair ID.\n9. Costs & Receipt References: Track estimates vs. actual spend and file receipt numbers.\n10. Appliance & Equipment Register: Record brand, model, serial number, and warranty period.\n11. Warranty, Parts & Claims Follow-up: Track active warranty claims, replacement parts, and outcomes.\n12. Closeout & Next Due Dates: Close the loop with follow-up dates and preventive maintenance schedules.\n\nHow the \"Repair ID\" Workflow Operates\n1. Assign a simple code like R-001 on Page 6 when an issue occurs.\n2. Note R-001 when the contractor visits (Page 8).\n3. File the receipt under R-001 (Page 9).\n4. Track warranty claims under R-001 (Page 11).\n5. Set your follow-up checkup date under R-001 (Page 12).\nAll related sheets reference the same job code for clear, long-term records.\n\nImportant Product Details (Please Read Before Purchasing)\n- Printable PDF (Non-Fillable): This kit is designed for handwriting with pen and paper. It is NOT an interactive or editable fillable PDF and does not perform automated spreadsheet calculations.\n- Instant Digital Download Only: No physical item, binder, or pre-printed pages will be shipped to you.\n- Print at Actual Size / 100%: For crisp layout and correct margins, print using the \"Actual Size\" or 100% scale setting on your home printer. Print individual pages as often as you need!\n- Guidance Disclaimer: Worksheets are for recordkeeping only and do not replace professional contractor advice, structural inspections, or manufacturer maintenance manuals.\n\nHow to Download Your Digital Files on Etsy\n1. Complete your purchase on Etsy.\n2. Sign in to Etsy.com via an internet browser on your computer or mobile device (Etsy currently does not support digital file downloads within the mobile app).\n3. Go to You > Purchases and Reviews and locate your order.\n4. Click Download Files next to the order and save your PDF(s).\n\nDisclosures & Shop Terms\n- AI Use Disclosure: This original printable planner was created with AI assistance for writing and layout drafting, then manually refined, verified, and quality-tested as a high-resolution PDF download.\n- Personal Use License: For personal household use only. You may print as many copies as needed for your own residence. Reselling, sharing, or commercial redistribution of these digital files is strictly prohibited.",
+    "priceUsd": 3.9,
+    "tags": [
+      "home maintenance",
+      "home repair log",
+      "repair tracker",
+      "warranty tracker",
+      "homeowner planner",
+      "service visit log",
+      "repair expense log",
+      "contractor tracker",
+      "household binder",
+      "home upkeep planner",
+      "appliance registry",
+      "printable house log",
+      "first home binder"
+    ],
+    "quantity": 999,
+    "taxonomy_id": 12476,
+    "who_made": "i_did",
+    "when_made": "2020_2026",
+    "type": "download",
+    "state": "draft"
+  },
+  "fieldEvidence": {
+    "taxonomy_id": "Etsy Seller Taxonomy API 200; Planner Templates ID 12476, PROPOSED fit",
+    "who_made": "PROPOSED seller-created AI-assisted design, awaiting seller disclosure verification",
+    "when_made": "PROPOSED based on P01 2026 creation time, Etsy enumerated bucket 2020_2026",
+    "quantity": "PROPOSED 999 digital download inventory",
+    "priceUsd": "Seller Draft price USD 3.90 approved in source lock",
+    "title": "Canonical v1.2.1 Etsy listing draft",
+    "tags": "Canonical 13 unique tags"
+  },
+  "proposedListingFingerprint": null,
+  "expectedListingFingerprint": null,
+  "releaseGate": {
+    "independentHumanFinalQc": false,
+    "githubOauthRefreshTokenConfigured": false,
+    "githubDraftWriteGate": false,
+    "mergeAuthorized": false,
+    "draftAuthorized": false,
+    "publishAuthorized": false
+  }
+}
