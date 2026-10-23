@@ -94,28 +94,42 @@
     ],
     "configuredRequiredReviewer": "chutcpoo",
     "preventSelfReview": false,
-    "configuredDirectEtsySecrets": [],
+    "configuredDirectEtsySecrets": [
+      "P01_ETSY_API_KEY",
+      "P01_ETSY_SHARED_SECRET"
+    ],
     "draftWriteGate": "false",
-    "authenticationStatus": "BLOCKED_MISSING_ENVIRONMENT_SECRETS",
+    "authenticationStatus": "TAXONOMY_API_KEY_AUTHENTICATED__DIRECT_OAUTH_REFRESH_SECRET_MISSING",
     "credentialsNeverRead": true,
     "source": "2026-10-23 authenticated GitHub CLI read-only environment inspection"
   },
   "etsyApp": {
     "sellerOAuthObserved": true,
     "shopId": 23582741,
-    "appDeveloperApprovalEvidence": "NOT_VERIFIED",
+    "appDeveloperApprovalEvidence": "DEVELOPER_PORTAL_PERSONAL_ACCESS_OBSERVED",
     "verifiedEtsyApiScopesOnExistingServer": [
       "listings_r",
       "listings_w"
     ],
-    "githubOauthRefreshTokenConfigured": false
+    "githubOauthRefreshTokenConfigured": false,
+    "appName": "autodigitalpublisher",
+    "registeredAppObserved": true
   },
   "sellerTaxonomy": {
     "officialEndpoint": "GET /v3/application/seller-taxonomy/nodes",
-    "authenticatedProviderResult": "NOT_AVAILABLE",
+    "authenticatedProviderResult": "HTTP_200",
     "unauthenticatedProbeHttpStatus": 403,
     "taxonomy_id": null,
-    "propertiesVerified": false
+    "propertiesVerified": true,
+    "providerEvidenceGitHubPath": "docs/releases/P01_ETSY_TAXONOMY_LIVE_2026-10-23.json",
+    "verifiedCandidates": [
+      12476,
+      12475,
+      12479,
+      12478
+    ],
+    "recommendedTaxonomyId": 12476,
+    "recommendationStatus": "PROPOSED_UNTIL_SELLER_LISTING_APPROVAL"
   },
   "listing": {
     "title": "Home Repair & Maintenance Tracker PDF | Repair to Warranty Log Kit | A4 & US Letter Printable",
@@ -126,7 +140,7 @@
     "quantity": null,
     "descriptionApproval": "EXISTING_CANONICAL_DRIVE_DRAFT_NOT_FROZEN_IN_FINAL_PAYLOAD",
     "expectedListingFingerprint": null,
-    "reason": "The provider taxonomy and approved maker/date/quantity are not yet evidenced."
+    "reason": "Taxonomy provider evidence available (Planner Templates 12476 proposed), but approved category, maker/date/quantity and exact description are not frozen; release fingerprint not approved."
   },
   "allowedAction": "READ_ONLY_REVIEW",
   "etsyListingWritesPerformed": 0,
