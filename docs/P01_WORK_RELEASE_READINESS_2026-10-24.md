@@ -19,6 +19,16 @@ Fresh structural inspection: both PDFs have 12 pages, correct A4/Letter dimensio
 
 See machine-readable evidence under `docs/releases/P01_WORK_AUDIT_2026-10-24/`.
 
+### Follow-up requested by seller: ChatGPT visual review
+
+Seller assigned ChatGPT to review; reviewer type is AI, not human. Rendered all 24 PDF pages in contact sheets, inspected targeted full pages/spacing, reviewed all seven JPGs and 20 video samples over the ten-second duration. Full 300-frame video decode succeeded: H.264, 2000×1600, 30 fps, ten seconds, zero audio streams. Sampled-frame inspection is not a continuous human video-playback attestation.
+
+**AI visual decision: FAIL — remediation required.** Finding P01-VIS-001: on page 1 of both PDFs, `START HERE` touches/intersects the preceding example table's bottom rule. See [A4 detail](releases/P01_WORK_AUDIT_2026-10-24/A4-page1-spacing.png), [Letter detail](releases/P01_WORK_AUDIT_2026-10-24/Letter-page1-spacing.png), and [AI review record](releases/P01_WORK_AUDIT_2026-10-24/ai-visual-review.json). Correct spacing in a separate QC candidate, update dependent assets if changed, and recompute hashes before approval. The frozen source has not been edited or replaced.
+
+Fresh CI on code commit `2c3f77d81a8935e4dbf200a563f85aa6898c7aa8`: [CI PASS](https://github.com/chutcpoo/etsymonery/actions/runs/40049876789), [direct safety PASS](https://github.com/chutcpoo/etsymonery/actions/runs/40049876780). Vercel remains a separate pending status at follow-up. AI inspection does not satisfy the named Independent Human QC gate.
+
+The seller reports holding a refresh token and will enter it themselves. The GitHub Environment Add secret form has been prepared with name `P01_ETSY_OAUTH_REFRESH_TOKEN`, with no value entered by the agent. Do not inspect that form after the owner enters a value; verify secret-name inventory via API instead. Saving a secret is not validation of token identity, scopes, freshness or rotation readiness. At the latest inventory check, the new secret was still absent.
+
 ## Taxonomy and listing metadata
 
 Read provider evidence `P01_ETSY_TAXONOMY_LIVE_2026-10-23.json`: HTTP 200 Seller Taxonomy and Properties, Planner Templates leaf ID 12476, 20 properties and zero required properties. This audit did not repeat those credentialed taxonomy calls; that evidence retains its original date. Proposed category fit is not seller approval.
