@@ -65,6 +65,40 @@ class VerifyP01Test(unittest.TestCase):
                     repair(failed, rejected_output)
                 self.assertFalse(rejected_output.exists())
 
+    def test_video_is_verified_without_counting_it_as_an_eighth_jpeg(self):
+        with tempfile.TemporaryDirectory() as folder:
+            pdfs = [(f'pdf{i}.pdf', b'%PDF-1.4\n' + bytes([i])) for i in range(2)]
+            imgs = [(f'{i}.jpg', b'\xff\xd8' + bytes([i]) + b'\xff\xd9') for i in range(7)]
+            video = ('video.mp4', b'\x00\x00\x00\x18ftypisomoriginal')
+            def rows(items):
+                return [{'filename':n, 'bytes':len(b), 'sha256':hashlib.sha256(b).hexdigest()} for n,b in items]
+            manifest = {'product_id':'P01', 'version':'1.2.1',
+                        'final_customer_files':rows(pdfs), 'listing_previews':rows(imgs),
+                        'listing_video':rows([video])[0]}
+            qa = {'product_id':'P01', 'version':'1.2.1', 'overall_status':'PASS',
+                  'checks':{'customer_pdfs':{'status':'PASS','files':rows(pdfs)},
+                            'listing_previews':{'status':'PASS','files':rows(imgs)}}}
+            def package(path, video_bytes, extra=False, manifest_override=None):
+                with zipfile.ZipFile(path, 'w') as z:
+                    z.writestr('P01_MANIFEST_v1.2.1.json', json.dumps(manifest_override or manifest))
+                    z.writestr('QA_REPORTS/P01_AUTOMATED_QA_v1.2.1.json', json.dumps(qa))
+                    z.writestr('QA_REPORTS/P01_QA_REPORT_v1.2.1.md', '# QA')
+                    for n,b in pdfs: z.writestr('CUSTOMER_FILES/'+n,b)
+                    for n,b in imgs: z.writestr('LISTING_PREVIEWS/'+n,b)
+                    if video_bytes is not None: z.writestr('LISTING_PREVIEWS/video.mp4',video_bytes)
+                    if extra: z.writestr('LISTING_PREVIEWS/unlisted.mp4',video[1])
+            good = Path(folder)/'good.zip'
+            package(good,video[1]); verify(good)
+            for label, payload, extra in [('changed',video[1]+b'x',False),
+                                          ('missing',None,False),('extra',video[1],True)]:
+                path=Path(folder)/(label+'.zip'); package(path,payload,extra)
+                with self.assertRaises(PackageError): verify(path)
+            # Even a matching hash cannot make a non-MP4 payload a valid video.
+            invalid=b'not an mp4 file at all'
+            bad=Path(folder)/'invalid.zip'
+            package(bad,invalid,manifest_override={**manifest,'listing_video':rows([('video.mp4',invalid)])[0]})
+            with self.assertRaisesRegex(PackageError,'Invalid MP4'): verify(bad)
+
     def test_manifest_mismatch_is_not_silently_repaired(self):
         with tempfile.TemporaryDirectory() as folder:
             path=Path(folder)/'bad.zip'

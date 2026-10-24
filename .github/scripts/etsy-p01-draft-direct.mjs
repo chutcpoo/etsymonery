@@ -78,6 +78,9 @@ export function validateConfiguration(env, evidence) {
   if (needed.some(k=>!env[k]||!env[k].trim())) throw Error('ETSY_DIRECT_SECRETS_REQUIRED');
   if (env.P01_APPROVED_SHOP_CURRENCY!=='USD') throw Error('SHOP_CURRENCY_NOT_APPROVED');
   if (mode==='CHECK') return {mode};
+  // Explicit GitHub Environment release flag; off unless specifically authorized.
+  // A workflow_dispatch confirmation alone is never sufficient for a marketplace write.
+  if (env.P01_DIRECT_DRAFT_WRITES_ENABLED !== 'true') throw Error('P01_DIRECT_DRAFT_WRITES_DISABLED');
   if (env.P01_DIRECT_CONFIRMATION!=='CREATE_P01_DRAFT_ONLY') throw Error('EXPLICIT_DRAFT_ONLY_CONFIRMATION_REQUIRED');
   if (env.P01_SELLER_APPROVED_PRICE_USD!=='3.90') throw Error('SELLER_PRICE_APPROVAL_REQUIRED');
   if (env.P01_QC_APPROVED_SOURCE_FINGERPRINT!==evidence.source.candidateFingerprint ||

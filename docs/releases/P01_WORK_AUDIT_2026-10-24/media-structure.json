@@ -1,0 +1,168 @@
+[
+  {
+    "file": "CUSTOMER_FILES/Home_Maintenance_Starter_A4.pdf",
+    "pages": 12,
+    "formFields": 0,
+    "pageDimensionsPt": [
+      [
+        595.2756,
+        841.8898
+      ],
+      [
+        595.2756,
+        841.8898
+      ],
+      [
+        595.2756,
+        841.8898
+      ],
+      [
+        595.2756,
+        841.8898
+      ],
+      [
+        595.2756,
+        841.8898
+      ],
+      [
+        595.2756,
+        841.8898
+      ],
+      [
+        595.2756,
+        841.8898
+      ],
+      [
+        595.2756,
+        841.8898
+      ],
+      [
+        595.2756,
+        841.8898
+      ],
+      [
+        595.2756,
+        841.8898
+      ],
+      [
+        595.2756,
+        841.8898
+      ],
+      [
+        595.2756,
+        841.8898
+      ]
+    ]
+  },
+  {
+    "file": "CUSTOMER_FILES/Home_Maintenance_Starter_US_Letter.pdf",
+    "pages": 12,
+    "formFields": 0,
+    "pageDimensionsPt": [
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ],
+      [
+        612.0,
+        792.0
+      ]
+    ]
+  },
+  {
+    "file": "LISTING_PREVIEWS/01_Hero.jpg",
+    "pixels": [
+      2500,
+      2000
+    ],
+    "decode": "PASS"
+  },
+  {
+    "file": "LISTING_PREVIEWS/02_All_12_Pages.jpg",
+    "pixels": [
+      2500,
+      2000
+    ],
+    "decode": "PASS"
+  },
+  {
+    "file": "LISTING_PREVIEWS/03_Linked_Repair_Workflow.jpg",
+    "pixels": [
+      2500,
+      2000
+    ],
+    "decode": "PASS"
+  },
+  {
+    "file": "LISTING_PREVIEWS/04_Workflow_Pages.jpg",
+    "pixels": [
+      2500,
+      2000
+    ],
+    "decode": "PASS"
+  },
+  {
+    "file": "LISTING_PREVIEWS/05_Print_Sizes.jpg",
+    "pixels": [
+      2500,
+      2000
+    ],
+    "decode": "PASS"
+  },
+  {
+    "file": "LISTING_PREVIEWS/06_Useful_Registers.jpg",
+    "pixels": [
+      2500,
+      2000
+    ],
+    "decode": "PASS"
+  },
+  {
+    "file": "LISTING_PREVIEWS/07_Download_Guide.jpg",
+    "pixels": [
+      2500,
+      2000
+    ],
+    "decode": "PASS"
+  }
+]

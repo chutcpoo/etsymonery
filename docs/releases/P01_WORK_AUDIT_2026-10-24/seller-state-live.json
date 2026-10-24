@@ -1,0 +1,16 @@
+{
+  "http": 200,
+  "status": "PASS",
+  "mode": "READ_ONLY",
+  "generatedAt": "2026-10-24T01:25:21.540Z",
+  "shopId": 23582741,
+  "counts": {
+    "active": 0,
+    "inactive": 0,
+    "sold_out": 0,
+    "draft": 0,
+    "expired": 0
+  },
+  "total": 0,
+  "ETSY_WRITE_COUNT": 0
+}

@@ -1,0 +1,41 @@
+{
+  "reviewerType": "AI_CHATGPT",
+  "humanSignature": false,
+  "independentHumanQc": "NOT_VERIFIED",
+  "scope": "Rendered 24 PDF pages in contact sheets with targeted full-page/spacing inspection; all 7 listing JPGs; 20 video samples across 10 seconds; full video decode",
+  "visualDecision": "FAIL_REMEDIATION_REQUIRED",
+  "sourceFingerprint": "04cf97646f850d571ebd9776b622b03ed44870986036ab2b86d9622745ebe007",
+  "zipSha256": "42ab0e9282db763331c5d87fac3d14b70d22c33b2293b86e2d3689e497e16315",
+  "findings": [
+    {
+      "id": "P01-VIS-001",
+      "severity": "minor_layout",
+      "affected": [
+        "Home_Maintenance_Starter_A4.pdf page 1",
+        "Home_Maintenance_Starter_US_Letter.pdf page 1"
+      ],
+      "observation": "START HERE heading touches/intersects the bottom border of the preceding example table.",
+      "recommendedFix": "Separate the heading from the table in a new QC candidate; re-render both formats, regenerate dependent previews/video if their PDF appearance changes, and recompute all changed hashes. Preserve this frozen v1.2.1 package."
+    }
+  ],
+  "videoTechnical": {
+    "durationSeconds": 10,
+    "width": 2000,
+    "height": 1600,
+    "codec": "h264",
+    "frames": 300,
+    "fps": 30,
+    "audioStreams": 0,
+    "fullDecode": "PASS",
+    "visualMethod": "20 sampled frames at 2 fps; not continuous human playback"
+  },
+  "notTested": [
+    "new physical print",
+    "genuine independent human review",
+    "real non-owner purchase/download flow"
+  ],
+  "sourceFilesModified": false,
+  "mergeAuthorized": false,
+  "draftAuthorized": false,
+  "publishAuthorized": false
+}

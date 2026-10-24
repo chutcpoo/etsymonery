@@ -1,0 +1,102 @@
+{
+  "status": "PREPARATION_ONLY_NOT_AUTHORIZED",
+  "shopId": 23582741,
+  "listingId": null,
+  "sourceFingerprint": "04cf97646f850d571ebd9776b622b03ed44870986036ab2b86d9622745ebe007",
+  "zipSha256": "42ab0e9282db763331c5d87fac3d14b70d22c33b2293b86e2d3689e497e16315",
+  "assetCount": 10,
+  "assets": [
+    {
+      "bytes": 557334,
+      "name": "01_Hero.jpg",
+      "sha256": "3c94f934a8b7ec137c8992450e95ab5b6af7e799ff88795f02c50d50f1a947fb",
+      "kind": "image",
+      "rank": 1,
+      "endpointSuffix": "images"
+    },
+    {
+      "bytes": 678347,
+      "name": "02_All_12_Pages.jpg",
+      "sha256": "944e8807815ca3607ca11b4899548b07b55bf27ea40f49e670b05ef477262eca",
+      "kind": "image",
+      "rank": 2,
+      "endpointSuffix": "images"
+    },
+    {
+      "bytes": 669414,
+      "name": "03_Linked_Repair_Workflow.jpg",
+      "sha256": "66bd45964074824761ce83f4f7fa25d7ebdac9e5fa7064f6226c0bba460f81e5",
+      "kind": "image",
+      "rank": 3,
+      "endpointSuffix": "images"
+    },
+    {
+      "bytes": 488087,
+      "name": "04_Workflow_Pages.jpg",
+      "sha256": "dcfef0261d35cdc2fc1b0d33074d6d9ca9b808b2fa943f58f307f9e630bfb057",
+      "kind": "image",
+      "rank": 4,
+      "endpointSuffix": "images"
+    },
+    {
+      "bytes": 567622,
+      "name": "05_Print_Sizes.jpg",
+      "sha256": "1c37b2c42f3860a66fe7b13dd7ea7785fd343563eb5effd0d6d87385394dfa00",
+      "kind": "image",
+      "rank": 5,
+      "endpointSuffix": "images"
+    },
+    {
+      "bytes": 615556,
+      "name": "06_Useful_Registers.jpg",
+      "sha256": "714c84201cebc61d6c2ea50282feb1762e59fbb4589aaf89d5484b5d955e2fb1",
+      "kind": "image",
+      "rank": 6,
+      "endpointSuffix": "images"
+    },
+    {
+      "bytes": 541393,
+      "name": "07_Download_Guide.jpg",
+      "sha256": "61cac2777a3e36ec474bd9a4b5ba3068c85a31428a6c5de2e3ba0a93110b0468",
+      "kind": "image",
+      "rank": 7,
+      "endpointSuffix": "images"
+    },
+    {
+      "bytes": 77474,
+      "name": "Home_Maintenance_Starter_A4.pdf",
+      "sha256": "716a2697740b92be40034f66ed4f71816c8b9506e8abfc06ba982b21094516ca",
+      "kind": "buyer_file",
+      "rank": null,
+      "endpointSuffix": "files"
+    },
+    {
+      "bytes": 76046,
+      "name": "Home_Maintenance_Starter_US_Letter.pdf",
+      "sha256": "cf75e46c47f5e9f2580bafb4063c992a239c42ecae55fd27dab6f45d0334c68f",
+      "kind": "buyer_file",
+      "rank": null,
+      "endpointSuffix": "files"
+    },
+    {
+      "bytes": 585248,
+      "name": "P01_Listing_Video_v1.2.1.mp4",
+      "sha256": "460d91aabc79f9441197a2da20c8560ee9559f058554c6352d13aa742fb57ecd",
+      "kind": "video",
+      "rank": null,
+      "endpointSuffix": "videos"
+    }
+  ],
+  "requiredBeforeExecution": [
+    "independent_human_qc",
+    "seller_listing_fingerprint_approval",
+    "separate_merge_approval",
+    "direct_check_pass",
+    "separate_draft_approval",
+    "verified_draft_id",
+    "separate_asset_upload_approval"
+  ],
+  "publishAuthorized": false,
+  "uploadPerformed": false,
+  "apiReference": "https://developers.etsy.com/documentation/reference/"
+}

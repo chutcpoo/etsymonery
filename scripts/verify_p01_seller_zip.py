@@ -57,11 +57,18 @@ def _verify(archive, *, accept_stale_qa=False):
         raise PackageError("Manifest/QA product or version mismatch")
     pdfs = manifest.get('final_customer_files', [])
     previews = manifest.get('listing_previews', [])
+    video = manifest.get('listing_video')
+    videos = [video] if isinstance(video, dict) else []
     if len(pdfs) != 2 or len(previews) != 7:
         raise PackageError("Expected 2 PDFs and 7 previews in manifest")
     actuals = {}
-    for folder, records, count in [('CUSTOMER_FILES', pdfs, 2), ('LISTING_PREVIEWS', previews, 7)]:
-        found = [n for n in names if n.startswith(folder + '/')]
+    allowed = {f"CUSTOMER_FILES/{r['filename']}" for r in pdfs}
+    allowed.update(f"LISTING_PREVIEWS/{r['filename']}" for r in previews + videos)
+    delivered = {n for n in names if n.startswith(('CUSTOMER_FILES/', 'LISTING_PREVIEWS/'))}
+    if delivered != allowed:
+        raise PackageError('Unexpected or missing customer/listing asset')
+    for folder, records, count in [('CUSTOMER_FILES', pdfs, 2), ('LISTING_PREVIEWS', previews, 7), ('LISTING_PREVIEWS', videos, len(videos))]:
+        found = [n for n in names if n in {f"{folder}/{r['filename']}" for r in records}]
         if len(found) != count:
             raise PackageError(f"Expected {count} files in {folder}; found {len(found)}")
         if len({r['filename'] for r in records}) != count:
@@ -77,8 +84,10 @@ def _verify(archive, *, accept_stale_qa=False):
                 raise PackageError(f"Manifest does not match delivered file: {name}")
             if folder == 'CUSTOMER_FILES' and not data.startswith(b'%PDF-'):
                 raise PackageError(f"Invalid PDF signature: {name}")
-            if folder == 'LISTING_PREVIEWS' and not (data.startswith(b'\xff\xd8') and data.endswith(b'\xff\xd9')):
+            if record in previews and not (data.startswith(b'\xff\xd8') and data.endswith(b'\xff\xd9')):
                 raise PackageError(f"Invalid JPEG signature: {name}")
+            if record in videos and not (len(data) >= 12 and data[4:8] == b'ftyp'):
+                raise PackageError(f"Invalid MP4 signature: {name}")
     checks = qa.get('checks', {})
     sections = [('customer_pdfs', pdfs, 'CUSTOMER_FILES'), ('listing_previews', previews, 'LISTING_PREVIEWS')]
     stale = []
@@ -151,7 +160,7 @@ def main():
             print(f'PASS: updated QA for {", ".join(stale)}; wrote {args.output}')
         else:
             verify(args.zip_path)
-            print(f'PASS: ZIP CRC, manifest bytes/SHA-256, QA bytes/SHA-256, 2 PDFs and 7 JPEGs: {args.zip_path}')
+            print(f'PASS: ZIP CRC, manifest bytes/SHA-256, QA bytes/SHA-256, PDF/JPEG assets and declared MP4: {args.zip_path}')
     except (PackageError, OSError, zipfile.BadZipFile) as exc:
         print(f'FAIL: {exc}', file=sys.stderr)
         return 1

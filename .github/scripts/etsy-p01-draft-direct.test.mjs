@@ -24,6 +24,7 @@ const fake=evidenceFixture();
 const goodListing={title:TITLE,description,priceUsd:3.9,tags:TAGS,quantity:999,taxonomy_id:123,
   who_made:'i_did',when_made:'2020_2026',type:'download',state:'draft'};
 const goodEnv={P01_DIRECT_MODE:'CREATE_DRAFT',P01_DIRECT_CONFIRMATION:'CREATE_P01_DRAFT_ONLY',
+  P01_DIRECT_DRAFT_WRITES_ENABLED:'true',
   ETSY_API_KEY:'keystring',ETSY_SHARED_SECRET:'not-a-real-shared-secret',ETSY_OAUTH_REFRESH_TOKEN:'123.fake-refresh-token',
   P01_APPROVED_SHOP_CURRENCY:'USD',P01_SELLER_APPROVED_PRICE_USD:'3.90',
   P01_QC_APPROVED_SOURCE_FINGERPRINT:fake.source.candidateFingerprint,
@@ -83,6 +84,11 @@ test('CREATE_DRAFT once: direct Etsy POST, verified ID, never Publish',async()=>
   assert.equal(postListings(m).length,1);
   assert.equal(m.calls.some(x=>/vercel|publish|release/.test(x.path)),false);
   assert.equal(m.calls.some(x=>x.method==='PATCH'||x.method==='DELETE'),false);
+});
+test('Draft is disabled by default even with exact confirmation, hashes and credentials',async()=>{
+  const m=mocked();
+  await assert.rejects(exec({...goodEnv,P01_DIRECT_DRAFT_WRITES_ENABLED:''},m),/P01_DIRECT_DRAFT_WRITES_DISABLED/);
+  assert.equal(m.calls.length,0);
 });
 test('missing price approval blocks all network traffic',async()=>{
   const m=mocked();await assert.rejects(exec({...goodEnv,P01_SELLER_APPROVED_PRICE_USD:''},m),/SELLER_PRICE_APPROVAL/);assert.equal(m.calls.length,0);

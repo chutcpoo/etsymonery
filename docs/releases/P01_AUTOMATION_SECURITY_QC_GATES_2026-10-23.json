@@ -1,0 +1,159 @@
+{
+  "schemaVersion": "p01-release-gate-evidence.v1",
+  "date": "2026-10-23",
+  "productId": "P01",
+  "version": "1.2.1",
+  "releaseDecision": "HOLD",
+  "source": {
+    "canonicalDriveZipId": "1hz1jOSlunHsVm0sjuZgDpJly8qieKCQY",
+    "zipSha256": "42ab0e9282db763331c5d87fac3d14b70d22c33b2293b86e2d3689e497e16315",
+    "assetSetSha256": "c5e371750e6cade6182d011c9226f31e99dcffa49ffcd0937492227a52cc89f6",
+    "candidateFingerprint": "04cf97646f850d571ebd9776b622b03ed44870986036ab2b86d9622745ebe007",
+    "technicalVerificationGitHubPath": "docs/releases/P01_TECHNICAL_REVERIFICATION_2026-10-23.json",
+    "technicalStatus": "PASS",
+    "tenAssetsHashVerified": true,
+    "zipCrcPass": true,
+    "assets": [
+      {
+        "name": "Home_Maintenance_Starter_A4.pdf",
+        "sha256": "716a2697740b92be40034f66ed4f71816c8b9506e8abfc06ba982b21094516ca",
+        "bytes": 77474,
+        "technicalPass": true
+      },
+      {
+        "name": "Home_Maintenance_Starter_US_Letter.pdf",
+        "sha256": "cf75e46c47f5e9f2580bafb4063c992a239c42ecae55fd27dab6f45d0334c68f",
+        "bytes": 76046,
+        "technicalPass": true
+      },
+      {
+        "name": "01_Hero.jpg",
+        "sha256": "3c94f934a8b7ec137c8992450e95ab5b6af7e799ff88795f02c50d50f1a947fb",
+        "bytes": 557334,
+        "technicalPass": true
+      },
+      {
+        "name": "02_All_12_Pages.jpg",
+        "sha256": "944e8807815ca3607ca11b4899548b07b55bf27ea40f49e670b05ef477262eca",
+        "bytes": 678347,
+        "technicalPass": true
+      },
+      {
+        "name": "03_Linked_Repair_Workflow.jpg",
+        "sha256": "66bd45964074824761ce83f4f7fa25d7ebdac9e5fa7064f6226c0bba460f81e5",
+        "bytes": 669414,
+        "technicalPass": true
+      },
+      {
+        "name": "04_Workflow_Pages.jpg",
+        "sha256": "dcfef0261d35cdc2fc1b0d33074d6d9ca9b808b2fa943f58f307f9e630bfb057",
+        "bytes": 488087,
+        "technicalPass": true
+      },
+      {
+        "name": "05_Print_Sizes.jpg",
+        "sha256": "1c37b2c42f3860a66fe7b13dd7ea7785fd343563eb5effd0d6d87385394dfa00",
+        "bytes": 567622,
+        "technicalPass": true
+      },
+      {
+        "name": "06_Useful_Registers.jpg",
+        "sha256": "714c84201cebc61d6c2ea50282feb1762e59fbb4589aaf89d5484b5d955e2fb1",
+        "bytes": 615556,
+        "technicalPass": true
+      },
+      {
+        "name": "07_Download_Guide.jpg",
+        "sha256": "61cac2777a3e36ec474bd9a4b5ba3068c85a31428a6c5de2e3ba0a93110b0468",
+        "bytes": 541393,
+        "technicalPass": true
+      },
+      {
+        "name": "P01_Listing_Video_v1.2.1.mp4",
+        "sha256": "460d91aabc79f9441197a2da20c8560ee9559f058554c6352d13aa742fb57ecd",
+        "bytes": 585248,
+        "technicalPass": true
+      }
+    ]
+  },
+  "independentFinalQC": {
+    "status": "AWAITING_INDEPENDENT_HUMAN_SIGNATURE",
+    "reviewIssue": "https://github.com/chutcpoo/etsymonery/issues/283",
+    "reviewerId": null,
+    "reviewerSignedAt": null,
+    "decision": null,
+    "reviewedZipSha256": null,
+    "reviewedCandidateFingerprint": null,
+    "notes": "Technical checks and seller physical-print attestation do not constitute independently signed human Final QC.",
+    "availableGitHubHumanCollaborators": [
+      "chutcpoo"
+    ],
+    "noIndependentCollaboratorConfirmed": true
+  },
+  "githubEnvironment": {
+    "name": "etsy-p01-draft",
+    "hasRequiredReviewer": true,
+    "allowedBranches": [
+      "main"
+    ],
+    "configuredRequiredReviewer": "chutcpoo",
+    "preventSelfReview": false,
+    "configuredDirectEtsySecrets": [
+      "P01_ETSY_API_KEY",
+      "P01_ETSY_SHARED_SECRET"
+    ],
+    "draftWriteGate": "false",
+    "authenticationStatus": "TAXONOMY_API_KEY_AUTHENTICATED__DIRECT_OAUTH_REFRESH_SECRET_MISSING",
+    "credentialsNeverRead": true,
+    "source": "2026-10-23 authenticated GitHub CLI read-only environment inspection",
+    "githubApiKeySharedSecretConfigured": true,
+    "githubOAuthRefreshSecretConfigured": false
+  },
+  "etsyApp": {
+    "sellerOAuthObserved": true,
+    "shopId": 23582741,
+    "appDeveloperApprovalEvidence": "DEVELOPER_PORTAL_PERSONAL_ACCESS_OBSERVED",
+    "verifiedEtsyApiScopesOnExistingServer": [
+      "listings_r",
+      "listings_w"
+    ],
+    "githubOauthRefreshTokenConfigured": false,
+    "appName": "autodigitalpublisher",
+    "registeredAppObserved": true
+  },
+  "sellerTaxonomy": {
+    "officialEndpoint": "GET /v3/application/seller-taxonomy/nodes",
+    "authenticatedProviderResult": "HTTP_200",
+    "unauthenticatedProbeHttpStatus": 403,
+    "taxonomy_id": null,
+    "propertiesVerified": true,
+    "providerEvidenceGitHubPath": "docs/releases/P01_ETSY_TAXONOMY_LIVE_2026-10-23.json",
+    "verifiedCandidates": [
+      12476,
+      12475,
+      12479,
+      12478
+    ],
+    "recommendedTaxonomyId": 12476,
+    "recommendationStatus": "PROPOSED_UNTIL_SELLER_LISTING_APPROVAL"
+  },
+  "listing": {
+    "title": "Home Repair & Maintenance Tracker PDF | Repair to Warranty Log Kit | A4 & US Letter Printable",
+    "draftPriceUsd": 3.9,
+    "shopCurrency": "USD",
+    "who_made": null,
+    "when_made": null,
+    "quantity": null,
+    "descriptionApproval": "EXISTING_CANONICAL_DRIVE_DRAFT_NOT_FROZEN_IN_FINAL_PAYLOAD",
+    "expectedListingFingerprint": null,
+    "reason": "Taxonomy provider evidence available (Planner Templates 12476 proposed), but approved category, maker/date/quantity and exact description are not frozen; release fingerprint not approved.",
+    "proposedListingFingerprint": "055a66908f108a474d722cbd82c98d2bde7444c1319fc352053410be20303c0f",
+    "proposedListingGitHubPath": "docs/releases/P01_LISTING_METADATA_CANDIDATE_2026-10-23.json",
+    "reviewStatus": "PROPOSED_NOT_SELLER_APPROVED"
+  },
+  "allowedAction": "READ_ONLY_REVIEW",
+  "etsyListingWritesPerformed": 0,
+  "mergeAuthorized": false,
+  "draftAuthorized": false,
+  "publishAuthorized": false
+}
