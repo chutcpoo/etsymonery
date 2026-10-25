@@ -71,6 +71,7 @@ const POST_RESET_V2_PDT_04_15_DRAFT_ASSETS_R01_ROUTE =
 // write gates are allowed past the legacy catalog-reset middleware.
 // Adding a path here does NOT authorize Etsy writes.
 const EXACT_POST_GATE_ROUTES = new Set([
+  "/api/etsy/n04-art-release",
   "/api/etsy/chat-assets/source-preflight",
   "/api/etsy/chat-assets",
   "/api/etsy/drafts",
