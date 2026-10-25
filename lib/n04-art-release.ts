@@ -50,6 +50,7 @@ export async function handleN04(request:Request,deps:Deps){
     const token=await deps.token();const headers=deps.headers(token);
     async function api(path:string,method='GET',body?:BodyInit,multipart=false){
       const h={...headers};if(multipart)delete h['content-type'];else if(method!=='GET')h['content-type']='application/x-www-form-urlencoded';
+      await new Promise(resolve=>setTimeout(resolve,400)); // Pace Etsy requests below the app QPS limit; never retry writes automatically.
       let response:Response;try{response=await fetcher(API+path,{method,headers:h,body,cache:'no-store',redirect:'error',signal:AbortSignal.timeout(45000)})}catch{fail(method==='GET'?'ETSY_READ_FAILED':'ETSY_WRITE_AMBIGUOUS_RECONCILE_BEFORE_RETRY')}
       if(method!=='GET')writes++;
       const data=await response.json().catch(()=>({}));
