@@ -19,6 +19,10 @@ test('a different shop, title, price or taxonomy cannot be touched',()=>{
  validateListing(listing(),123,999);
  for(const override of [{shop_id:1},{title:'Another product'},{taxonomy_id:1},{price:{amount:999,divisor:100,currency_code:'USD'}}])assert.throws(()=>validateListing({...listing(),...override},123,999),/IDENTITY_MISMATCH/);
 });
+test('Etsy HTML-encoded apostrophes preserve exact approved copy',()=>{
+ const row={...listing(),description:C.description.replace(/'/g,'&#39;')};validateListing(row,123,999);
+ assert.throws(()=>validateListing({...row,description:row.description+' altered'},123,999),/IDENTITY_MISMATCH/);
+});
 test('unapproved or altered binary is rejected before provider upload',()=>{
  assert.throws(()=>assetFor('not-approved.pdf',new Uint8Array()),/NOT_APPROVED/);
  assert.throws(()=>assetFor(C.assets[0].name,new Uint8Array([1,2,3])),/HASH_MISMATCH/);

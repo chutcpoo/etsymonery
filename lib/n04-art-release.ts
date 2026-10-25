@@ -5,7 +5,7 @@ type Row = Record<string, any>;
 type Deps = { token:()=>Promise<string>; headers:(token:string)=>Record<string,string>; fetchImpl?:typeof fetch };
 const API='https://api.etsy.com/v3/application';
 function fail(s:string):never { throw new Error(s); }
-const norm=(s:unknown)=>String(s??'').replace(/\r\n/g,'\n').normalize('NFC').trim();
+const norm=(s:unknown)=>String(s??'').replace(/&#39;|&#x27;/gi,"'").replace(/&quot;/g,'\"').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/\r\n/g,'\n').normalize('NFC').trim();
 export function safeEqual(a:string,b:string){const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y)}
 export function auth(request:Request,secret:string|undefined,now=Date.now()){
   if(!secret||secret.length<32)fail('N04_OPERATOR_NOT_CONFIGURED');
