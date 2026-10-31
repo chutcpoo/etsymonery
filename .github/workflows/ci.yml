@@ -33,7 +33,7 @@ jobs:
           done
 
           STATUS=$(curl -fsS http://127.0.0.1:3000/api/platform/status)
-          node -e 'const x=JSON.parse(process.argv[1]); if(x.status!=="READY_FOR_NEW_PRODUCTS"||x.catalogState!=="ACTIVE_CATALOG"||x.liveCatalogCount!==5||x.registeredLiveListings!==5||x.legacyProductsLoaded!==0||x.legacyWritesEnabled!==false||x.ETSY_WRITE_COUNT!==0) process.exit(1)' "$STATUS"
+          node -e 'const x=JSON.parse(process.argv[1]); if(x.status!=="READY_FOR_NEW_PRODUCTS"||x.catalogState!=="LIVE_STATUS_UNVERIFIED"||x.liveCatalogCount!==null||x.registeredLiveListings!==null||x.registryListingCount!==5||x.liveCatalogVerification!=="NOT_TESTED"||x.legacyProductsLoaded!==0||x.legacyWritesEnabled!==false||x.ETSY_WRITE_COUNT!==0) process.exit(1)' "$STATUS"
 
 
           # Etsy OAuth status smoke test: no provider HTTP request or marketplace write.
