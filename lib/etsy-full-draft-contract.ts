@@ -32,7 +32,7 @@ function positive(value: unknown, code: string): number {
 function assetName(value: unknown): string {
   const name = text(value, "INVALID_ASSET_NAME");
   if (name.length > 70 || name.startsWith(".") || /[. ]$/.test(name) ||
-      /[\\/\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/u.test(name)) fail("INVALID_ASSET_NAME");
+      (/[\\/\u202a-\u202e\u2066-\u2069]/u.test(name) || /\p{Cc}/u.test(name))) fail("INVALID_ASSET_NAME");
   return name;
 }
 export function parseFullDraftRequest(raw: unknown): FullDraftRequest {
@@ -46,7 +46,7 @@ export function parseFullDraftRequest(raw: unknown): FullDraftRequest {
   const productId = text(input.productId, "INVALID_PRODUCT_ID");
   if (!/^[A-Z0-9][A-Z0-9._-]*$/.test(productId)) fail("INVALID_PRODUCT_ID");
   const candidateId = text(input.candidateId, "INVALID_CANDIDATE_ID");
-  if (candidateId.length > 150 || /[\u0000-\u001f\u007f]/u.test(candidateId)) fail("INVALID_CANDIDATE_ID");
+  if (candidateId.length > 150 || /\p{Cc}/u.test(candidateId)) fail("INVALID_CANDIDATE_ID");
   const candidateFingerprint = text(input.candidateFingerprint, "INVALID_CANDIDATE_FINGERPRINT");
   const expectedListingFingerprint = text(input.expectedListingFingerprint, "INVALID_LISTING_FINGERPRINT");
   if (!SHA.test(candidateFingerprint) || !SHA.test(expectedListingFingerprint)) fail("INVALID_FINGERPRINT");
