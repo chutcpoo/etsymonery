@@ -2,7 +2,9 @@
 
 High-level fail-closed service that creates a digital Draft listing **and** uploads all approved images + buyer files in a single operation.
 
-**Location:** `lib/etsy-full-draft-orchestrator.ts`
+**Location:** `lib/etsy-full-draft-orchestrator.ts`  
+**PR:** [#285](https://github.com/chutcpoo/etsymonery/pull/285)  
+**Last updated:** 2026-10-31
 
 ## Safety Guarantees
 
@@ -88,6 +90,12 @@ High-level fail-closed service that creates a digital Draft listing **and** uplo
 - Stronger post-upload content verification (beyond resource existence) can be added later.
 - This is a candidate orchestrator — product-specific executors remain the recommended path until this passes full QC.
 
-## Status
+## Status (2026-10-31)
 
-**CANDIDATE** — Not production-authorized. Opened as Draft PR for review and independent QC.
+- **CI:** Passed (GitHub Actions run 41173661288)
+- **Unit tests:** Added in `tests/etsy-full-draft-orchestrator.test.ts` (parser + PREFLIGHT + fail-closed EXECUTE)
+- **Vercel Preview:** Pending / in progress at time of last check
+- **Independent human QC:** Not yet attested
+- **Production authorization:** Not granted
+
+**CANDIDATE** — Not production-authorized. Requires independent QC and explicit seller approval before any live use.
