@@ -24,7 +24,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm start >/tmp/autodigitalpublisher.log 2>&1 &
+          ETSY_OPERATOR_READ_TOKEN=ci-only-test-operator-token-123456789012345 npm start >/tmp/autodigitalpublisher.log 2>&1 &
           APP_PID=$!
           trap 'kill "$APP_PID" 2>/dev/null || true' EXIT
           for i in {1..30}; do
@@ -37,7 +37,15 @@ jobs:
 
 
           # Etsy OAuth status smoke test: no provider HTTP request or marketplace write.
-          ETSY_STATUS=$(curl -fsS http://127.0.0.1:3000/api/etsy/status)
+          # An anonymous request must not reach the OAuth status handler.
+          CODE=$(curl -sS -o /tmp/etsy-status-unauthorized.json -w '%{http_code}' http://127.0.0.1:3000/api/etsy/status)
+          test "$CODE" = "401"
+          node -e 'const fs=require("fs"); const s=JSON.parse(fs.readFileSync("/tmp/etsy-status-unauthorized.json","utf8")); if(s.error!=="ETSY_OPERATOR_UNAUTHORIZED") process.exit(1)'
+          for PRIVATE_PATH in /api/etsy/seller-state /api/etsy/commerce /api/etsy/control-center /api/etsy/events /api/control-center/status /commerce /sales /; do
+            CODE=$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:3000$PRIVATE_PATH")
+            test "$CODE" = "401"
+          done
+          ETSY_STATUS=$(curl -fsS -H 'Authorization: Bearer ci-only-test-operator-token-123456789012345' http://127.0.0.1:3000/api/etsy/status)
           node -e 'const s=JSON.parse(process.argv[1]); if(s.mode!=="READ_ONLY"||s.etsyApiLiveVerification!=="NOT_TESTED"||s.allCheckedWriteGatesClosed!==true||s.ETSY_WRITE_COUNT!==0||!Array.isArray(s.missingRequiredScopes)||!s.requiredScopeChecks||!("transactions_r" in s.requiredScopeChecks)) process.exit(1)' "$ETSY_STATUS"
 
           RESET=$(curl -fsS http://127.0.0.1:3000/api/internal/etsy/reset-status)

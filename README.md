@@ -68,3 +68,29 @@ Keep:
 - `PUBLISH_WRITES_ENABLED=false`
 
 After this candidate is deployed, re-authorize Etsy once because the requested scope set adds `transactions_r`.
+
+## Operator access protection (pre-deploy setup)
+
+Sensitive Etsy seller/financial GET APIs, OAuth status and initiation, operator
+dashboards, and control-center API routes require a dedicated
+`ETSY_OPERATOR_READ_TOKEN` with at least 32 unpredictable characters.
+The guard applies at the Next.js middleware layer, including custom domains
+that are excluded from Vercel Authentication.
+
+- **Vercel Environment Variables:** configure the token in every environment
+  that serves the operator console, before deploying this security change.
+  No Etsy API key, OAuth token or write credential is reused.
+- **Browser:** visit `/connect/etsy` or `/commerce`; when prompted, enter
+  username `operator` and the operator token as the password.
+- **API:** send `Authorization: Bearer <ETSY_OPERATOR_READ_TOKEN>` over HTTPS.
+  Never put secrets in query strings, client bundles, repository files or logs.
+- **Fail closed:** missing/short token returns HTTP 503; invalid/missing
+  credentials return HTTP 401 before the route handler can read shop data.
+- **Existing scope-specific APIs:** `/api/etsy/listing-sales` and
+  `/api/etsy/reconcile-listings` keep their existing, independent Bearer-token
+  gates. The OAuth callback is exempt from the operator header check because
+  Etsy redirects cannot carry this header; it still requires the short-lived
+  HttpOnly `state` + PKCE cookie pair created by the protected OAuth start.
+- **CI/safety:** the protected endpoints are read-only. Original marketplace
+  mutation gates remain unchanged. The PR branch is excluded from automatic
+  Vercel Git deployments by `vercel.json`; main is not excluded.

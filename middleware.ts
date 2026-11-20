@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { authorizeEtsyOperatorRequest, isEtsyOperatorProtectedPath } from "./lib/etsy-operator-auth";
 
 const RESET_DATE = "2026-09-20";
 const POST_RESET_V2_PDT_IPT_ROUTE = "/api/internal/etsy/post-reset-v2/pdt-ipt-001/draft";
@@ -103,9 +104,17 @@ function resetResponse(pathname: string) {
   );
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const method = request.method.toUpperCase();
+
+  // Authorize before reading private OAuth metadata, shop listings, finances,
+  // operation ledgers or initiating a new OAuth grant. Read/HEAD only: the
+  // existing exact-operation POST gates below stay untouched.
+  if ((method === "GET" || method === "HEAD") && isEtsyOperatorProtectedPath(pathname)) {
+    const authError = await authorizeEtsyOperatorRequest(request);
+    if (authError) return authError;
+  }
 
   if (pathname === "/api/internal/etsy/reset-status") {
     return NextResponse.next();
@@ -180,6 +189,14 @@ export const config = {
     "/api/etsy/:path*",
     "/api/internal/etsy/:path*",
     "/api/publish",
-    "/api/webhooks/etsy/:path*"
+    "/api/webhooks/etsy/:path*",
+    "/api/control-center/:path*",
+    "/",
+    "/commerce/:path*",
+    "/sales/:path*",
+    "/events/:path*",
+    "/factory/:path*",
+    "/stats-evidence/:path*",
+    "/connect/etsy/:path*"
   ]
 };
