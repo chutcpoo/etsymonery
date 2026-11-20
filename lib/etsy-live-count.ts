@@ -1,3 +1,4 @@
+import { appSupportEmail } from "./app-support";
 import { ETSY_SCOPES, etsyApiHeaders, parseEtsyGrantedScopes } from "./etsy";
 import { fetchEtsyReadWithRetry } from "./etsy-http";
 import { loadEtsyReadGrant } from "./token-store";
@@ -25,6 +26,7 @@ export async function readActiveCatalog({
   });
   if (!authorization?.etsyPermissionRef.trim() || !authorization.sellerPrivacyAgreementRef.trim())
     return unavailable("ETSY_APP_AUTHORIZATION_AND_SELLER_PRIVACY_AGREEMENT_REQUIRED");
+  if (!appSupportEmail()) return unavailable("MONITORED_SUPPORT_CONTACT_REQUIRED");
   if (!Number.isSafeInteger(expectedShop) || expectedShop < 1 || authorization.shopId !== expectedShop)
     return unavailable("AUTHORIZED_SHOP_MISMATCH");
 

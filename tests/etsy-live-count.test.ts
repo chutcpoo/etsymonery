@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readActiveCatalog } from "../lib/etsy-live-count";
+process.env.APP_SUPPORT_EMAIL = "support@example.test";
 const grant = { shopId: 123, userId: 42, scope: "listings_r", accessToken: "42.fixture", refreshToken: "fixture", expiresAt: new Date(100000) };
 const deps = { expectedShop: 123, authorization: { shopId: 123, etsyPermissionRef: "test-consent", sellerPrivacyAgreementRef: "test-terms" },
   now: () => 100, loadGrant: async () => grant };

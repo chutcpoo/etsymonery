@@ -36,6 +36,9 @@ try {
   const status = await send("/api/platform/status", "GET", read);
   assert.equal(status.status, 503); assert.equal((await status.json()).liveCatalogCount, null);
   assert.match(status.headers.get("cache-control"), /no-store/);
+  const dashboard = await send("/", "GET", read);
+  assert.equal(dashboard.status, 200);
+  assert.match(await dashboard.text(), /a trademark of Etsy, Inc/);
   const oauth = await send("/api/etsy/status", "GET", read);
   assert.equal(oauth.status, 200); assert.deepEqual((await oauth.json()).requestedScopes, ["listings_r"]);
   assert.equal((await send("/api/products/prepare", "POST", read, {})).status, 401);

@@ -33,4 +33,4 @@ jobs:
       - name: Verify P01 source evidence and SHA-256
         run: node --input-type=module -e "import {loadEvidence} from './.github/scripts/etsy-p01-draft-direct.mjs';loadEvidence();"
       - name: Direct Etsy Draft safety tests (network mocked)
-        run: node --test .github/scripts/etsy-p01-draft-direct.test.mjs
+        run: node --require ./tests/offline.cjs --test .github/scripts/etsy-p01-draft-direct.test.mjs
