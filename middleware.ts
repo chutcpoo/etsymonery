@@ -20,6 +20,26 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname.replace(/\/+$/, "") || "/";
   const read = ["GET", "HEAD"].includes(request.method);
   if (!isEtsyOperatorProtectedPath(path) && read) return NextResponse.next();
+
+  // Dedicated, disabled-by-default OAuth migration. The callback is public
+  // only during an approved migration and validates a single-use durable state.
+  // Every other OAuth path stays blocked by the general policy below.
+  if (process.env.ETSY_OAUTH_MIGRATION_ENABLED === "true") {
+    const isCallback = path === "/api/etsy/oauth/callback" && request.method === "GET";
+    const isOwnerRead = request.method === "GET" &&
+      (path === "/api/etsy/oauth/start" || path === "/api/etsy/oauth/migration/status");
+    const isPromotion = request.method === "POST" &&
+      path === "/api/etsy/oauth/migration/promote";
+    if (isCallback || isOwnerRead || isPromotion) {
+      if (!isCallback) {
+        const denied = await authorizeEtsyOperatorRequest(request, "seller", isOwnerRead);
+        if (denied) return denied;
+      }
+      const response = NextResponse.next();
+      for (const [key, value] of Object.entries(privateHeaders)) response.headers.set(key, value);
+      return response;
+    }
+  }
   const role = request.method === "POST" ? planRole(path) : null;
   const denied = await authorizeEtsyOperatorRequest(request, role ?? "read", read);
   if (denied) return denied;

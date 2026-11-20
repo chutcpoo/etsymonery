@@ -22,3 +22,30 @@ The public health check is `/api/health`. Marketplace operations, OAuth grant ch
 Use Node 22 and the checked-in lockfile. Run `npm ci`, `npm run lint`, `npm audit`, `npm test`, `node --require ./tests/offline.cjs --test .github/scripts/*.test.mjs`, `python3 -m unittest discover -s tests -p test_verify_p01_seller_zip.py`, `npm run typecheck`, `npm run build` and `node tests/operator-smoke.mjs`. The smoke suite starts the built application on loopback with fixture credentials. No Etsy account is needed.
 
 The canonical code repository is [chutcpoo/etsymonery](https://github.com/chutcpoo/etsymonery). The canonical Vercel project is [autodigitalpublisher](https://vercel.com/shopee-affiliate-ai/autodigitalpublisher). PR #288 has an explicit branch-specific Git deployment exclusion in `vercel.json`.
+
+## Owner-only Etsy OAuth migration (disabled by default)
+
+The legacy production authorization requested twelve scopes. PR #288 requires
+only `listings_r` and will not silently reuse or narrow that historical grant.
+A separate, opt-in Authorization Code + PKCE flow is available under
+`/api/etsy/oauth/start` only after explicit, audited owner configuration.
+The exact HTTPS host of the start request must match the registered
+`ETSY_REDIRECT_URI`; the callback stays blocked until the migration flag is
+on. The start route requires the **seller** operator credential (Basic sign-in
+with username `operator` for an interactive browser); the callback requires
+a same-host HttpOnly state cookie and a one-use PostgreSQL session.
+
+The callback stages an encrypted `listings_r` grant in an isolated table; it
+**never overwrites the existing primary token**. Owner-only
+`GET /api/etsy/oauth/migration/status` exposes only candidate metadata.
+Promotion via `POST /api/etsy/oauth/migration/promote` requires a separate
+promotion flag, specific reviewed candidate ID, approval reference, seller
+**Bearer** credential and an exact quoted `If-Match`. Promotion atomically
+checks shop/user identity against the locked current primary row. All Etsy
+listing Draft/Publish operations remain blocked.
+
+After promotion, read-only token refresh is available only under the separately
+reviewed `ETSY_READ_TOKEN_REFRESH_ENABLED` gate. It preserves `listings_r`,
+uses compare-and-swap token replacement, and never grants new scopes. The
+default is disabled. See
+[the detailed operator runbook](docs/etsy-oauth-migration-runbook.md).

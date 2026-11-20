@@ -68,3 +68,24 @@ refresh, draft creation or publication is enabled. Operator verification
 of the referenced evidence is required before any configuration change.
 The OAuth status no longer describes transaction analytics as ready based
 on a historic broad grant: `transactionsReadGrantReady=false`.
+
+## Owner-only OAuth migration implementation · 20 November 2026
+
+An optional, independent OAuth migration implementation is now included
+**without activating it**. It checks a reviewed owner approval reference,
+stored Etsy user/shop identity, write flags OFF, exact HTTPS callback origin,
+and the presence of a monitored support address. Start is seller-only;
+state and encrypted PKCE verifier are stored with 10-minute TTL, with a
+single-use SQL `DELETE ... RETURNING` callback. Token response is validated
+for user identity, lifetime, type, and exactly `listings_r`, then verified
+against a live read-only shop GET and stored as a separate encrypted candidate.
+A second, independently gated promotion transaction must match the exact
+approved candidate and current locked shop/user. No marketplace operation is
+enabled. Read-only refresh for that minimal grant has its own default-OFF
+review and CAS database guard.
+
+**These are deployable security controls, not evidence that any permission,
+production configuration, OAuth migration, promotion or live Etsy read was
+authorized or executed.** No genuine approval-reference values are assigned
+in code. Historical broad-scope grants are not automatically revoked,
+deleted, restored or refreshed.

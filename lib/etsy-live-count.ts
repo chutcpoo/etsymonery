@@ -1,7 +1,7 @@
 import { appSupportEmail } from "./app-support";
 import { ETSY_SCOPES, etsyApiHeaders, parseEtsyGrantedScopes } from "./etsy";
 import { fetchEtsyReadWithRetry } from "./etsy-http";
-import { loadEtsyReadGrant } from "./token-store";
+import { loadEtsyReadGrantWithOptionalRefresh } from "./etsy-read-refresh";
 
 type ReadAuthorization = { shopId: number; etsyPermissionRef: string; sellerPrivacyAgreementRef: string };
 
@@ -28,13 +28,13 @@ export function reviewedReadAuthorizationFromEnvironment(): ReadAuthorization | 
 export async function readActiveCatalog({
   authorization = reviewedReadAuthorizationFromEnvironment(),
   expectedShop = Number(process.env.ETSY_SHOP_ID),
-  loadGrant = loadEtsyReadGrant,
+  loadGrant = loadEtsyReadGrantWithOptionalRefresh,
   transport = fetch,
   now = Date.now
 }: {
   authorization?: ReadAuthorization | null;
   expectedShop?: number;
-  loadGrant?: typeof loadEtsyReadGrant;
+  loadGrant?: typeof loadEtsyReadGrantWithOptionalRefresh;
   transport?: typeof fetch;
   now?: () => number;
 } = {}) {
