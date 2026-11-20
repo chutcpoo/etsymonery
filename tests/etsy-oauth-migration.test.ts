@@ -148,6 +148,22 @@ test("OAuth migration start cannot be accessed with normal read role", async () 
       headers: { authorization: "Bearer fixture-only-seller-role-123456789012345" }
     }));
     assert.equal(seller.headers.has("x-middleware-next"), true);
+    const sellerBasic = await middleware(new NextRequest(url, {
+      headers: { authorization: "Basic " + Buffer.from(
+        "operator:fixture-only-seller-role-123456789012345"
+      ).toString("base64") }
+    }));
+    assert.equal(sellerBasic.headers.has("x-middleware-next"), true);
+    const prohibitedSellerBasicPost = await middleware(new NextRequest(
+      "https://publisher.poonthaidigital.com/api/etsy/oauth/migration/promote",
+      {
+        method: "POST",
+        headers: { authorization: "Basic " + Buffer.from(
+          "operator:fixture-only-seller-role-123456789012345"
+        ).toString("base64") }
+      }
+    ));
+    assert.equal(prohibitedSellerBasicPost.status, 401);
     const callbackAllowed = await middleware(new NextRequest(
       "https://publisher.poonthaidigital.com/api/etsy/oauth/callback?code=fixture"
     ));

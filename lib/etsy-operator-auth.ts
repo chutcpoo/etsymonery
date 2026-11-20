@@ -56,7 +56,7 @@ export const privateHeaders = {
 };
 
 export async function authorizeEtsyOperatorRequest(
-  request: Pick<Request, "headers">, role: OperatorRole = "read", allowBasic = true
+  request: Pick<Request, "headers">, role: OperatorRole = "read", allowBasic = role === "read"
 ) {
   const expected = process.env[roleKeys[role]]?.trim() ?? "";
   if (expected.length < 32 || expected.length > 512 || Object.entries(roleKeys).some(
@@ -69,7 +69,9 @@ export async function authorizeEtsyOperatorRequest(
   }
 
   const header = request.headers.get("authorization");
-  const permittedScheme = (role === "read" && allowBasic) || /^Bearer /i.test(header ?? "");
+  // Basic is allowed only when an explicit browser-navigation caller opts in.
+  // This includes the owner-only OAuth staging GET, but not any seller POST.
+  const permittedScheme = (allowBasic && /^Basic /i.test(header ?? "")) || /^Bearer /i.test(header ?? "");
   const supplied = permittedScheme ? suppliedOperatorToken(header) : null;
   if (!supplied || supplied.length > 512 || !(await sameSecret(supplied, expected))) {
     return NextResponse.json(

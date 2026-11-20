@@ -111,3 +111,26 @@ test("the guard performs no network calls, has no write method and never echoes 
     assert.doesNotMatch(await response!.text(), new RegExp(AUTH_TOKEN));
   });
 });
+
+test("seller Basic works only on explicitly authorized OAuth browser GET", async () => {
+  const originalSeller = process.env.ETSY_SELLER_APPROVER_TOKEN;
+  const sellerToken = "fixture-seller-secret-123456789012345678901234";
+  process.env.ETSY_SELLER_APPROVER_TOKEN = sellerToken;
+  try {
+    const basic = "Basic " + Buffer.from("operator:" + sellerToken).toString("base64");
+    const req = request("/api/etsy/oauth/start", { authorization: basic });
+    assert.equal(await authorizeEtsyOperatorRequest(req, "seller", true), null);
+    assert.equal((await authorizeEtsyOperatorRequest(req, "seller", false))?.status, 401);
+    const wrongRole = request("/api/etsy/oauth/start", {
+      authorization: "Basic " + Buffer.from("operator:" + AUTH_TOKEN).toString("base64")
+    });
+    assert.equal((await authorizeEtsyOperatorRequest(wrongRole, "seller", true))?.status, 401);
+    const bearer = request("/api/etsy/oauth/migration/promote", {
+      authorization: "Bearer " + sellerToken
+    }, "POST");
+    assert.equal(await authorizeEtsyOperatorRequest(bearer, "seller", false), null);
+  } finally {
+    if (originalSeller === undefined) delete process.env.ETSY_SELLER_APPROVER_TOKEN;
+    else process.env.ETSY_SELLER_APPROVER_TOKEN = originalSeller;
+  }
+});
