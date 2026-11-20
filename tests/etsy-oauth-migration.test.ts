@@ -32,8 +32,8 @@ function withEnv<T>(changes: Record<string, string | undefined>, task: () => T):
   };
   try {
     const result = task();
-    if (result && typeof (result as PromiseLike<unknown>).then === "function")
-      return (result as Promise<unknown>).finally(restore) as T;
+    if (result && typeof (result as unknown as PromiseLike<unknown>).then === "function")
+      return (result as unknown as Promise<unknown>).finally(restore) as T;
     restore();
     return result;
   } catch (error) {
