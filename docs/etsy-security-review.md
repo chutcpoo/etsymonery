@@ -36,3 +36,17 @@
 - [ ] Freeze and hash final buyer files, preview images, listing copy and candidate manifest. Have an independent reviewer open the files and compare them with the promised contents, formats and images.
 - [ ] Verify shop owner and independent reviewer identities, review their evidence and bind seller approval to this shop, exact product, revision and draft operation. Any changed file or copy requires a new review. Publish requires separate approval of the final draft.
 - [ ] Keep the marketplace lock closed. Any future implementation enabling a write requires a separate reviewed change and explicit authorization.
+
+## Candidate SHA-256 integrity finding and repair · 20 November 2026
+
+The prior `computePlanSha256` used `JSON.stringify(plan, Object.keys(plan).sort())`.
+A property-name replacer applies to *every* nested object, so unrelated nested
+buyer-file, image and listing fields were omitted from the approval digest.
+This allowed distinct plan contents to produce the same SHA-256 input.
+
+The draft PR now canonicalizes keys recursively while preserving nested values and array order.
+Re-running plan QC also invalidates seller approval if the plan digest changes or QC fails.
+Offline regression tests cover nested mutations, key-order stability, build rejection and
+approval invalidation. Previously stored plan approvals made with the old algorithm must
+be considered **stale** and re-reviewed before any release; no automatic migration or
+re-authorization is permitted. Marketplace writes remain blocked.

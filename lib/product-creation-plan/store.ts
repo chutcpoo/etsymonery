@@ -99,15 +99,20 @@ export class DurableProductPlanStore implements PlanStorage {
     assertNoSecretFields(record.plan);
 
     const qcResult = evaluateProductCreationPlanQC(record.plan);
+    const recalculatedSha = computePlanSha256(record.plan);
+    const wasApproved = record.status === "PLAN_APPROVED";
+    const approvalStale = wasApproved && (recalculatedSha !== previous.sha || !qcResult.passed);
     record.qcResult = qcResult;
-    record.planSha256 = computePlanSha256(record.plan);
+    record.planSha256 = recalculatedSha;
 
-    if (record.status !== "PLAN_APPROVED") {
-      if (qcResult.status !== "PLAN_APPROVED") {
-        record.status = qcResult.status;
-      } else {
-        record.status = "DRAFT";
-      }
+    // Re-running QC must never silently bless changed content with a prior
+    // seller's approval, even if the new content happens to pass the QC rules.
+    if (approvalStale) {
+      record.status = recalculatedSha !== previous.sha ? "PLAN_STALE" : qcResult.status;
+      record.approvedAt = null;
+    } else if (!wasApproved) {
+      record.status = qcResult.status !== "PLAN_APPROVED" ? qcResult.status : "DRAFT";
+      record.approvedAt = null;
     }
 
     await this.repository.save(record, previous);
