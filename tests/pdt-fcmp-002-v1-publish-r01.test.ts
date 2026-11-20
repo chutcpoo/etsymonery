@@ -288,14 +288,14 @@ test("plan exposes one exact PATCH and performs no Etsy write", () => {
   assert.equal(plan.ETSY_WRITE_COUNT, 0);
 });
 
-test("middleware allows only publish R01 while adjacent internal publish paths stay reset", async () => {
+test("middleware denies both exact and adjacent internal publish paths", async () => {
   const exact = await middleware(
     new NextRequest(
       "https://example.test/api/internal/etsy/post-reset-v2/pdt-fcmp-002/publish-r01",
       { method: "POST" }
     )
   );
-  assert.equal(exact.headers.get("x-middleware-next"), "1");
+  assert.equal(exact.headers.get("x-middleware-next"), null);
 
   const adjacent = await middleware(
     new NextRequest(
@@ -303,7 +303,7 @@ test("middleware allows only publish R01 while adjacent internal publish paths s
       { method: "POST" }
     )
   );
-  assert.equal(adjacent.status, 410);
+  assert.equal(adjacent.headers.get("x-middleware-next"), null);
   assert.equal((await adjacent.json()).ETSY_WRITE_COUNT, 0);
 });
 

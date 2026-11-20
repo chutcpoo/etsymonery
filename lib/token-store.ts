@@ -74,9 +74,10 @@ export async function saveEtsyTokens(input: SaveTokensInput) {
       access_token_enc = EXCLUDED.access_token_enc,
       refresh_token_enc = EXCLUDED.refresh_token_enc,
       expires_at = EXCLUDED.expires_at,
-      scope = COALESCE(EXCLUDED.scope, oauth_tokens.scope),
+      scope = EXCLUDED.scope,
       token_type = COALESCE(EXCLUDED.token_type, oauth_tokens.token_type),
-      user_id = COALESCE(EXCLUDED.user_id, oauth_tokens.user_id),
+      user_id = EXCLUDED.user_id,
+      shop_id = CASE WHEN oauth_tokens.user_id = EXCLUDED.user_id THEN oauth_tokens.shop_id ELSE NULL END,
       updated_at = now()
   `;
 }
@@ -207,4 +208,19 @@ export async function getStoredEtsyShopId() {
 
   const row = rows[0] as { shop_id: string | number | null } | undefined;
   return row?.shop_id == null ? null : Number(row.shop_id);
+}
+
+// Live count reads do not need refresh credentials or the ability to save a grant.
+export async function loadEtsyReadGrant() {
+  const sql = getSql();
+  const rows = await sql`
+    SELECT access_token_enc, expires_at, scope, user_id, shop_id
+    FROM oauth_tokens WHERE provider = ${PROVIDER} AND account_key = ${ACCOUNT_KEY} LIMIT 1
+  `;
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    accessToken: decryptSecret(row.access_token_enc), scope: String(row.scope ?? ""),
+    shopId: Number(row.shop_id), userId: Number(row.user_id), expiresAt: new Date(row.expires_at)
+  };
 }

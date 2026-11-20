@@ -104,7 +104,7 @@ export async function fetchEtsyReadWithRetry(
   init: RequestInit = {},
   options: EtsyReadRetryOptions = {}
 ) {
-  assertEtsyAutoRetryReadOnly(init);
+  assertEtsyAutoRetryReadOnly({ method: init.method ?? (input instanceof Request ? input.method : "GET") });
 
   const maxAttempts = normalizedAttemptCount(options.maxAttempts);
   const baseDelayMs = normalizedDelay(options.baseDelayMs, DEFAULT_BASE_DELAY_MS);

@@ -164,7 +164,7 @@ function draftPayload(listing) {
     who_made:listing.who_made,when_made:listing.when_made,type:'download',
     tags:listing.tags.join(',')});
 }
-export async function runDirectDraft(env=process.env,fetchImpl=fetch,readEvidence) {
+export async function runDirectDraft(env,fetchImpl,readEvidence) {
   // Load and verify immutable exact v1.2.1 evidence BEFORE any network call.
   const evidence=loadEvidence(readEvidence);
   const config=validateConfiguration(env,evidence);
@@ -193,8 +193,6 @@ export async function runDirectDraft(env=process.env,fetchImpl=fetch,readEvidenc
     listingFingerprint:config.actualListingFingerprint,sourceFingerprint:evidence.source.candidateFingerprint});
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href){
-  runDirectDraft().then(data=>{
-    console.log('P01 result: '+data.status+'; shop '+data.shopId+(data.listingId?'; draft ID '+data.listingId:''));
-    console.log('No publish and no asset uploads.');
-  }).catch(e=>{console.error('P01 direct Etsy operator STOPPED: '+(e instanceof Error?e.message:'UNKNOWN'));process.exitCode=1;});
+  console.error("BLOCKED: marketplace operations and token changes are disabled.");
+  process.exitCode = 1;
 }

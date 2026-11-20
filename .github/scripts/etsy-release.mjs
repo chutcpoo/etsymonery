@@ -77,7 +77,7 @@ async function getJson(fetchImpl, url, init, label) {
   return payload;
 }
 
-export async function releaseExactListing(env = process.env, fetchImpl = fetch) {
+export async function releaseExactListing(env, fetchImpl) {
   const frozen = validateExactRelease(env);
   const state = await getJson(fetchImpl, URL, { method: 'GET', redirect: 'error' }, 'RELEASE_STATE');
   if (state.deployedEnvironment !== 'production' ||
@@ -111,11 +111,6 @@ export async function releaseExactListing(env = process.env, fetchImpl = fetch) 
   });
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  releaseExactListing().then(result => {
-    console.log('Verified Etsy release: ' + result.status + ', Listing ID: ' + result.listingId);
-    console.log('Etsy listing: ' + result.url);
-  }).catch(error => {
-    console.error('Etsy release stopped: ' + (error instanceof Error ? error.message : 'UNKNOWN_ERROR'));
-    process.exitCode = 1;
-  });
+  console.error("BLOCKED: marketplace operations and token changes are disabled.");
+  process.exitCode = 1;
 }

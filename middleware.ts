@@ -1,202 +1,40 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { authorizeEtsyOperatorRequest, isEtsyOperatorProtectedPath } from "./lib/etsy-operator-auth";
+import { authorizeEtsyOperatorRequest, isEtsyOperatorProtectedPath, privateHeaders, type OperatorRole } from "./lib/etsy-operator-auth";
+import { reviewMarketplaceRequest } from "./lib/etsy-policy";
 
-const RESET_DATE = "2026-09-20";
-const POST_RESET_V2_PDT_IPT_ROUTE = "/api/internal/etsy/post-reset-v2/pdt-ipt-001/draft";
-const POST_RESET_V2_PDT_FCMP_ROUTE = "/api/internal/etsy/post-reset-v2/pdt-fcmp-002/draft";
-const POST_RESET_V2_PDT_FCMP_RECOVERY_ROUTE = "/api/internal/etsy/post-reset-v2/pdt-fcmp-002/recovery-r01";
-const POST_RESET_V2_PDT_FCMP_PUBLISH_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-fcmp-002/publish-r01";
-const POST_RESET_V2_PDT_FCMP_QC_REPAIR_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-fcmp-002/qc-repair-r01";
-const POST_RESET_V2_PDT_FCMP_MEDIA_POLICY_R02_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-fcmp-002/media-policy-r02";
-const POST_RESET_V2_PDT_IPT_MEDIA_POLICY_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-ipt-001/media-policy-r01";
-const POST_RESET_V2_PDT_IPT_CATEGORY_REPAIR_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-ipt-001/category-repair-r01";
-const POST_RESET_V2_PDT_IPT_SEO_MEDIA_V3_R02_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-ipt-001/seo-media-v3-r02-r01";
-const POST_RESET_V2_PDT_BIPC_DRAFT_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-bipc-003/draft-r01";
-const POST_RESET_V2_PDT_BIPC_POLICY_REPAIR_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-bipc-003/policy-repair-r01";
-const POST_RESET_V2_PDT_BIPC_PUBLISH_R02_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-bipc-003/publish-r02";
-const POST_RESET_V2_PDT_BIPC_VIDEO_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-bipc-003/video-r01";
-const POST_RESET_V2_PDT_CBEO_DRAFT_CREATE_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-cbeo-004/draft-create-r01";
-const POST_RESET_V2_PDT_CBEO_BUYERFILES_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-cbeo-004/buyerfiles-r01";
-const POST_RESET_V2_PDT_CBEO_MEDIA_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-cbeo-004/media-r01";
-const POST_RESET_V2_PDT_CBEO_PUBLISH_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-cbeo-004/publish-r01";
-const POST_RESET_V2_PDT_FWCT_MARKET_RESEARCH_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-fwct-006/market-research-r01";
-const POST_RESET_V2_PDT_RPT_DRAFT_CREATE_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-rpt-003/draft-create-r01";
-const POST_RESET_V2_PDT_RPT_SEO_MEDIA_V3_R02_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-rpt-003/seo-media-v3-r02-r01";
-const POST_RESET_V2_PDT_HBOP_ALT_TEXT_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-hbop-001/alt-text-r01";
-const POST_RESET_V2_PDT_HBOP_PUBLISH_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-hbop-001/publish-r01";
-const POST_RESET_V2_PDT_PMC_DRAFT_BUYERFILES_R02_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-pmc-008/draft-buyerfiles-r02";
-const POST_RESET_V2_PDT_PMC_MEDIA_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-pmc-008/media-r01";
-const POST_RESET_V2_PDT_PMC_MEDIA_V3_R06_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-pmc-008/media-v3-r06-r01";
-const POST_RESET_V2_PDT_PMC_PUBLISH_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-pmc-008/publish-r01";
-const POST_RESET_V2_PDT_CSCH_DRAFT_CREATE_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-csch-001/draft-create-r01";
-const POST_RESET_V2_PDT_CSCH_COMPLETE_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-csch-001/complete-r01";
-const POST_RESET_V2_PDT_PCL_DRAFT_CREATE_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-pcl-002/draft-create-r01";
-const POST_RESET_V2_PDT_PCL_COMPLETE_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-pcl-002/complete-r01";
-const POST_RESET_V2_PDT_CPR_DRAFT_CREATE_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-cpr-003/draft-create-r01";
-const POST_RESET_V2_PDT_CPR_COMPLETE_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-cpr-003/complete-r01";
-const POST_RESET_V2_BATCH_DRAFT_CREATE_ROUTE =
-  "/api/internal/etsy/post-reset-v2/batch-draft-create-04-15";
-const POST_RESET_V2_PDT_04_15_DRAFT_ASSETS_R01_ROUTE =
-  "/api/internal/etsy/post-reset-v2/pdt-04-15-draft-assets-r01";
-
-// ONLY routes whose own POST handlers enforce exact authentication and fail-closed
-// write gates are allowed past the legacy catalog-reset middleware.
-// Adding a path here does NOT authorize Etsy writes.
-const EXACT_POST_GATE_ROUTES = new Set([
-  "/api/etsy/chat-assets/source-preflight",
-  "/api/etsy/chat-assets",
-  "/api/etsy/drafts",
-  "/api/etsy/release"
-]);
-
-const BLOCKED_PUBLIC_PREFIXES = [
-  "/api/etsy/active-listing-update",
-  "/api/etsy/authorized-destructive-action",
-  "/api/etsy/authorized-listing-update",
-  "/api/etsy/b01",
-  "/api/etsy/draft-assets",
-  "/api/etsy/pd-clean-004",
-  "/api/etsy/pd-stock-005",
-  "/api/etsy/pdt-boba-001",
-  "/api/etsy/pdt-hbop-001"
-];
-
-function resetResponse(pathname: string) {
-  return NextResponse.json(
-    {
-      status: "CATALOG_RESET",
-      catalogState: "EMPTY_CATALOG",
-      legacyWritesEnabled: false,
-      resetDate: RESET_DATE,
-      pathname,
-      ETSY_WRITE_COUNT: 0
-    },
-    { status: 410 }
-  );
+function blocked(error: string, missing?: string[]) {
+  return NextResponse.json({ status: "BLOCKED", error, missing, ETSY_WRITE_COUNT: 0 }, { status: 403, headers: privateHeaders });
 }
 
+function planRole(path: string): OperatorRole | null {
+  if (/^\/api\/product-plans\/[^/]+\/approve$/.test(path)) return "seller";
+  if (/^\/api\/product-plans\/[^/]+\/qc$/.test(path)) return "qc";
+  if (path === "/api/product-plans/create" || path === "/api/products/prepare" ||
+      /^\/api\/products\/[^/]+\/build$/.test(path)) return "plan";
+  return null;
+}
+
+// This is a single-shop operator service. Only explicitly reviewed entry points
+// may reach handlers. Some retired GET handlers can mutate or collect Etsy data.
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const method = request.method.toUpperCase();
-
-  // Authorize before reading private OAuth metadata, shop listings, finances,
-  // operation ledgers or initiating a new OAuth grant. Read/HEAD only: the
-  // existing exact-operation POST gates below stay untouched.
-  if ((method === "GET" || method === "HEAD") && isEtsyOperatorProtectedPath(pathname)) {
-    const authError = await authorizeEtsyOperatorRequest(request);
-    if (authError) return authError;
+  const path = request.nextUrl.pathname.replace(/\/+$/, "") || "/";
+  const read = ["GET", "HEAD"].includes(request.method);
+  if (!isEtsyOperatorProtectedPath(path) && read) return NextResponse.next();
+  const role = request.method === "POST" ? planRole(path) : null;
+  const denied = await authorizeEtsyOperatorRequest(request, role ?? "read", read);
+  if (denied) return denied;
+  if (role || (read && (["/", "/api/platform/status", "/api/etsy/status", "/api/etsy/seller-state"].includes(path) ||
+      /^\/api\/product-plans\/[a-zA-Z0-9_-]+$/.test(path)))) {
+    const response = NextResponse.next();
+    for (const [key, value] of Object.entries(privateHeaders)) response.headers.set(key, value);
+    return response;
   }
-
-  if (pathname === "/api/internal/etsy/reset-status") {
-    return NextResponse.next();
-  }
-
-  if (
-    pathname === POST_RESET_V2_PDT_IPT_ROUTE ||
-    pathname === POST_RESET_V2_PDT_FCMP_ROUTE ||
-    pathname === POST_RESET_V2_PDT_FCMP_RECOVERY_ROUTE ||
-    pathname === POST_RESET_V2_PDT_FCMP_PUBLISH_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_FCMP_QC_REPAIR_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_FCMP_MEDIA_POLICY_R02_ROUTE ||
-    pathname === POST_RESET_V2_PDT_IPT_MEDIA_POLICY_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_IPT_CATEGORY_REPAIR_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_IPT_SEO_MEDIA_V3_R02_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_BIPC_DRAFT_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_BIPC_POLICY_REPAIR_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_BIPC_PUBLISH_R02_ROUTE ||
-    pathname === POST_RESET_V2_PDT_BIPC_VIDEO_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_CBEO_DRAFT_CREATE_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_CBEO_BUYERFILES_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_CBEO_MEDIA_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_CBEO_PUBLISH_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_FWCT_MARKET_RESEARCH_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_RPT_DRAFT_CREATE_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_RPT_SEO_MEDIA_V3_R02_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_HBOP_ALT_TEXT_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_HBOP_PUBLISH_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_PMC_DRAFT_BUYERFILES_R02_ROUTE ||
-    pathname === POST_RESET_V2_PDT_PMC_MEDIA_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_PMC_MEDIA_V3_R06_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_PMC_PUBLISH_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_CSCH_DRAFT_CREATE_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_CSCH_COMPLETE_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_PCL_DRAFT_CREATE_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_PCL_COMPLETE_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_CPR_DRAFT_CREATE_R01_ROUTE ||
-    pathname === POST_RESET_V2_PDT_CPR_COMPLETE_R01_ROUTE ||
-    pathname === POST_RESET_V2_BATCH_DRAFT_CREATE_ROUTE ||
-    pathname === POST_RESET_V2_PDT_04_15_DRAFT_ASSETS_R01_ROUTE
-  ) {
-    return NextResponse.next();
-  }
-
-  if (pathname.startsWith("/api/internal/etsy/")) {
-    return resetResponse(pathname);
-  }
-
-  if (pathname === "/api/publish" || pathname.startsWith("/api/webhooks/etsy")) {
-    return resetResponse(pathname);
-  }
-
-  if (BLOCKED_PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
-    return resetResponse(pathname);
-  }
-
-  if (pathname.startsWith("/api/etsy/") && !["GET", "HEAD", "OPTIONS"].includes(method)) {
-    // The four exact, post-reset endpoints have independent server-side gates:
-    // source-preflight is read-only; others require exact QC/approval + write flags.
-    // Unknown routes, all legacy routes and other mutation methods stay blocked.
-    if (method === "POST" && EXACT_POST_GATE_ROUTES.has(pathname)) {
-      return NextResponse.next();
-    }
-    return resetResponse(pathname);
-  }
-
-  return NextResponse.next();
+  if (path.includes("/oauth/") || path === "/connect/etsy") return blocked("OAUTH_GRANT_CHANGE_REQUIRES_OWNER");
+  if (/commerce|sales|events|control-center|stats-evidence|market-research|factory/.test(path))
+    return blocked("ETSY_DATA_USE_REQUIRES_WRITTEN_AUTHORIZATION");
+  if (path === "/p" || path.startsWith("/p/")) return blocked("PUBLIC_DISPLAY_REQUIRES_VERIFIED_LIVE_DATA");
+  const operation = /publish|release|activate/.test(path) ? "publish" : "draft";
+  return blocked("MARKETPLACE_OPERATIONS_LOCKED", reviewMarketplaceRequest(request.headers, operation).missing);
 }
 
-export const config = {
-  matcher: [
-    "/api/etsy/:path*",
-    "/api/internal/etsy/:path*",
-    "/api/publish",
-    "/api/webhooks/etsy/:path*",
-    "/api/control-center/:path*",
-    "/",
-    "/commerce/:path*",
-    "/sales/:path*",
-    "/events/:path*",
-    "/factory/:path*",
-    "/stats-evidence/:path*",
-    "/connect/etsy/:path*"
-  ]
-};
+export const config = { matcher: ["/((?!_next/static/|_next/image$|favicon.ico$).*)"] };

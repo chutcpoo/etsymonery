@@ -80,7 +80,7 @@ function checkSeller(snapshot, request, allowedListingId = null) {
   }
 }
 
-export async function createP01Draft(env = process.env, fetchImpl = fetch) {
+export async function createP01Draft(env, fetchImpl) {
   const input = validateP01DraftEnv(env);
   const deployment = await readJson(fetchImpl, '/api/etsy/release', {method:'GET'}, 'DEPLOYMENT');
   if (deployment.deployedEnvironment !== 'production' ||
@@ -128,11 +128,6 @@ export async function createP01Draft(env = process.env, fetchImpl = fetch) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  createP01Draft().then(result => {
-    console.log('P01 Etsy DRAFT verified; Listing ID: ' + result.listingId);
-    console.log('Assets still require separately authorized upload and readback. No publish.');
-  }).catch(error => {
-    console.error('P01 Draft runner stopped: ' + (error instanceof Error ? error.message : 'UNKNOWN'));
-    process.exitCode = 1;
-  });
+  console.error("BLOCKED: marketplace operations and token changes are disabled.");
+  process.exitCode = 1;
 }

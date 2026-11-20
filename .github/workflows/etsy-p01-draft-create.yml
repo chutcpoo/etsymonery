@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   create-exact-p01-draft:
-    if: ${{ inputs.confirmation == 'CREATE_P01_DRAFT_ONLY' }}
+    if: ${{ false }} # Marketplace operations locked pending a separately reviewed release.
     runs-on: ubuntu-latest
     timeout-minutes: 8
     environment: etsy-p01-draft

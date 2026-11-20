@@ -14,7 +14,7 @@ function input(overrides: Partial<EtsyOAuthStatusInput> = {}): EtsyOAuthStatusIn
     apiCredentialsConfigured: true,
     tokenStoreConfigured: true,
     tokensStored: true,
-    grantScope: "listings_r listings_w transactions_r",
+    grantScope: "listings_r",
     grantExpiresAt: new Date("2026-10-21T06:00:00.000Z"),
     redirectUriConfigured: true,
     shopIdConfigured: true,
@@ -28,20 +28,20 @@ function input(overrides: Partial<EtsyOAuthStatusInput> = {}): EtsyOAuthStatusIn
   };
 }
 
-test("stored grant reports all three required scopes, without claiming an Etsy API handshake", () => {
+test("stored grant reports only the required listing-read scope, without claiming an Etsy API handshake", () => {
   const value = buildEtsyOAuthStatus(input());
   assert.deepEqual(ETSY_STATUS_REQUIRED_SCOPES, [
-    "listings_r", "listings_w", "transactions_r"
+    "listings_r"
   ]);
   assert.equal(value.oauthGrantStatus, "GRANT_RECORDED");
   assert.deepEqual(value.requiredScopeChecks, {
-    listings_r: true, listings_w: true, transactions_r: true
+    listings_r: true, listings_w: false, transactions_r: false
   });
   assert.deepEqual(value.missingRequiredScopes, []);
   assert.equal(value.allRequiredScopesGranted, true);
   assert.equal(value.sellerReadGrantReady, true);
-  assert.equal(value.sellerWriteGrantReady, true);
-  assert.equal(value.transactionsReadGrantReady, true);
+  assert.equal(value.sellerWriteGrantReady, false);
+  assert.equal(value.transactionsReadGrantReady, false);
   assert.equal(value.tokenExpiryStatus, "UNEXPIRED");
   assert.equal(value.etsyApiLiveVerification, "NOT_TESTED");
   assert.equal(value.allCheckedWriteGatesClosed, true);
@@ -49,13 +49,10 @@ test("stored grant reports all three required scopes, without claiming an Etsy A
   assert.equal(value.mode, "READ_ONLY");
 });
 
-test("missing transactions_r is visible even when listing read/write is granted", () => {
+test("excess stored permissions block the grant", () => {
   const value = buildEtsyOAuthStatus(input({ grantScope: "listings_r listings_w" }));
-  assert.equal(value.sellerWriteGrantReady, true);
-  assert.equal(value.transactionsReadGrantReady, false);
-  assert.equal(value.allRequiredScopesGranted, false);
-  assert.deepEqual(value.missingRequiredScopes, ["transactions_r"]);
-  assert.equal(value.oauthGrantStatus, "REQUIRED_SCOPES_MISSING");
+  assert.equal(value.sellerReadGrantReady, false);
+  assert.equal(value.oauthGrantStatus, "EXCESS_SCOPES_BLOCKED");
 });
 
 test("missing write grant cannot be called ready", () => {

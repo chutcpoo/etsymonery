@@ -1,40 +1,15 @@
 import { NextResponse } from "next/server";
 
-// This gate protects shop, financial and OAuth-administration GET endpoints on
-// custom domains too. Vercel Authentication alone is not sufficient because
-// custom domains can be exempt from SSO protection.
-const OPERATOR_PAGES = [
-  "/",
-  "/commerce",
-  "/sales",
-  "/events",
-  "/factory",
-  "/stats-evidence",
-  "/connect/etsy"
-] as const;
-
-function routeMatches(pathname: string, root: string) {
-  return pathname === root || (root !== "/" && pathname.startsWith(`${root}/`));
-}
+export type OperatorRole = "read" | "plan" | "qc" | "seller";
+const roleKeys = {
+  read: "ETSY_OPERATOR_READ_TOKEN",
+  plan: "ETSY_PLAN_EDITOR_TOKEN",
+  qc: "ETSY_QC_REVIEWER_TOKEN",
+  seller: "ETSY_SELLER_APPROVER_TOKEN"
+} as const;
 
 export function isEtsyOperatorProtectedPath(pathname: string) {
-  // The callback is authenticated by the short-lived, HttpOnly OAuth state and
-  // PKCE verifier cookies, which Etsy's redirect cannot carry as a Bearer token.
-  if (pathname === "/api/etsy/oauth/callback") return false;
-
-  // Both endpoints already require independent, scope-specific Bearer secrets.
-  if (
-    pathname === "/api/etsy/listing-sales" ||
-    pathname === "/api/etsy/reconcile-listings"
-  ) return false;
-
-  return (
-    pathname === "/api/etsy" ||
-    pathname.startsWith("/api/etsy/") ||
-    pathname === "/api/control-center" ||
-    pathname.startsWith("/api/control-center/") ||
-    OPERATOR_PAGES.some((root) => routeMatches(pathname, root))
-  );
+  return pathname !== "/api/health";
 }
 
 function suppliedOperatorToken(authorization: string | null) {
@@ -74,24 +49,28 @@ async function sameSecret(supplied: string, expected: string) {
   return difference === 0;
 }
 
-const privateHeaders = {
+export const privateHeaders = {
   "cache-control": "private, no-store, max-age=0",
   "referrer-policy": "no-referrer",
   "x-content-type-options": "nosniff"
 };
 
 export async function authorizeEtsyOperatorRequest(
-  request: Pick<Request, "headers">
+  request: Pick<Request, "headers">, role: OperatorRole = "read", allowBasic = true
 ) {
-  const expected = process.env.ETSY_OPERATOR_READ_TOKEN?.trim() ?? "";
-  if (expected.length < 32) {
+  const expected = process.env[roleKeys[role]]?.trim() ?? "";
+  if (expected.length < 32 || expected.length > 512 || Object.entries(roleKeys).some(
+    ([other, key]) => other !== role && process.env[key]?.trim() === expected
+  )) {
     return NextResponse.json(
       { status: "BLOCKED", error: "ETSY_OPERATOR_AUTH_NOT_CONFIGURED", ETSY_WRITE_COUNT: 0 },
       { status: 503, headers: privateHeaders }
     );
   }
 
-  const supplied = suppliedOperatorToken(request.headers.get("authorization"));
+  const header = request.headers.get("authorization");
+  const permittedScheme = (role === "read" && allowBasic) || /^Bearer /i.test(header ?? "");
+  const supplied = permittedScheme ? suppliedOperatorToken(header) : null;
   if (!supplied || supplied.length > 512 || !(await sameSecret(supplied, expected))) {
     return NextResponse.json(
       { status: "BLOCKED", error: "ETSY_OPERATOR_UNAUTHORIZED", ETSY_WRITE_COUNT: 0 },
@@ -103,6 +82,16 @@ export async function authorizeEtsyOperatorRequest(
         }
       }
     );
+  }
+  return null;
+}
+
+export async function authorizePlanRequest(request: Request, role: OperatorRole) {
+  const denied = await authorizeEtsyOperatorRequest(request, role, role === "read");
+  if (denied) return denied;
+  if (process.env.NODE_ENV === "production" && !process.env.DATABASE_URL?.trim()) {
+    return NextResponse.json({ status: "BLOCKED", error: "DURABLE_PLAN_STORE_REQUIRED" },
+      { status: 503, headers: privateHeaders });
   }
   return null;
 }

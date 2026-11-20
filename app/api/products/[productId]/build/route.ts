@@ -1,3 +1,4 @@
+import { authorizePlanRequest } from "../../../../../lib/etsy-operator-auth";
 import { NextResponse } from "next/server";
 import { verifyBuildPrerequisites } from "../../../../../lib/product-creation-plan";
 
@@ -8,6 +9,8 @@ export async function POST(
   request: Request,
   props: { params: Promise<{ productId: string }> }
 ) {
+  const denied = await authorizePlanRequest(request, "plan");
+  if (denied) return denied;
   try {
     const { productId } = await props.params;
     let body: { planId?: string; planSha256?: string; builder?: string } = {};
@@ -22,7 +25,8 @@ export async function POST(
       productId,
       planId: body.planId,
       planSha256: body.planSha256,
-      builder: body.builder || "API_ROUTE_BUILDER"
+      overridePlanRequired: true,
+      builder: "API_ROUTE_BUILDER"
     });
 
     if (!check.allowed) {
@@ -56,7 +60,7 @@ export async function POST(
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "UNKNOWN_ERROR" },
+      { error: "PLAN_STORE_UNAVAILABLE" },
       { status: 500 }
     );
   }

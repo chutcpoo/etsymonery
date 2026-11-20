@@ -237,6 +237,5 @@ test("reconciliation import closure contains no publish, activate, upload, edit 
     assert.doesNotMatch(source, /from ["'].*(?:publish|draft-asset|authorization|operation-ledger|product-creation-plan)/);
   }
   const authSource = await readFile(new URL("../lib/etsy-auth.ts", import.meta.url), "utf8");
-  assert.match(authSource, /scope: token.scope \?\? stored.scope/);
-  assert.doesNotMatch(authSource.split("async function refreshEtsyTokens")[1].split("export async function")[0], /scope:\s*ETSY_SCOPES/);
+  assert.doesNotMatch(authSource, /fetch\(|saveEtsyTokens|refresh_token/);
 });

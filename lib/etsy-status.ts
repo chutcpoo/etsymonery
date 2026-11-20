@@ -10,9 +10,7 @@ import { POST_RESET_PLATFORM_STATE } from "./post-reset-platform";
 // A stored grant is evidence of permissions, not evidence that an API request
 // has succeeded. This module deliberately makes no Etsy HTTP requests.
 export const ETSY_STATUS_REQUIRED_SCOPES = [
-  "listings_r",
-  "listings_w",
-  "transactions_r"
+  "listings_r"
 ] as const;
 
 export type EtsyStatusWriteGates = {
@@ -65,10 +63,12 @@ export function buildEtsyOAuthStatus(input: EtsyOAuthStatusInput) {
     | "TOKEN_NOT_STORED"
     | "GRANT_METADATA_MISSING"
     | "REQUIRED_SCOPES_MISSING"
+    | "EXCESS_SCOPES_BLOCKED"
     | "GRANT_RECORDED";
   if (!input.tokenStoreConfigured) oauthGrantStatus = "TOKEN_STORE_NOT_CONFIGURED";
   else if (!input.tokensStored) oauthGrantStatus = "TOKEN_NOT_STORED";
   else if (!scopeMetadataPresent) oauthGrantStatus = "GRANT_METADATA_MISSING";
+  else if (grantedScopes.some((scope) => !ETSY_SCOPES.some((allowed) => allowed === scope))) oauthGrantStatus = "EXCESS_SCOPES_BLOCKED";
   else if (missingRequiredScopes.length) oauthGrantStatus = "REQUIRED_SCOPES_MISSING";
   else oauthGrantStatus = "GRANT_RECORDED";
 
@@ -90,15 +90,15 @@ export function buildEtsyOAuthStatus(input: EtsyOAuthStatusInput) {
     tokenStorage: input.tokenStoreConfigured
       ? "persistent-encrypted"
       : "not-configured",
-    refreshLifecycle: input.tokenStoreConfigured ? "enabled" : "blocked",
+    refreshLifecycle: "blocked",
     scopes: ETSY_SCOPES,
     requestedScopes: ETSY_SCOPES,
     grantedScopes,
     scopeMetadataPresent,
     missingSellerReadScopes,
     missingSellerWriteScopes,
-    sellerReadGrantReady: scopeMetadataPresent && missingSellerReadScopes.length === 0,
-    sellerWriteGrantReady: scopeMetadataPresent && missingSellerWriteScopes.length === 0,
+    sellerReadGrantReady: oauthGrantStatus === "GRANT_RECORDED" && tokenExpiryStatus === "UNEXPIRED",
+    sellerWriteGrantReady: false,
     transactionsReadGrantReady: requiredScopeChecks.transactions_r,
     requiredScopeChecks,
     missingRequiredScopes,

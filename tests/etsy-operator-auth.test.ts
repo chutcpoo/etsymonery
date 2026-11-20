@@ -43,14 +43,10 @@ test("private Etsy and control-center endpoints and pages are protected", () => 
   }
 });
 
-test("OAuth PKCE callback and separately Bearer-protected read routes stay reachable", () => {
-  for (const path of [
-    "/api/health", "/api/platform/status", "/api/etsy/oauth/callback",
-    "/api/etsy/listing-sales", "/api/etsy/reconcile-listings",
-    "/p/offer", "/products/sample"
-  ]) {
-    assert.equal(isEtsyOperatorProtectedPath(path), false, path);
-  }
+test("health is the only public application entry", () => {
+  assert.equal(isEtsyOperatorProtectedPath("/api/health"), false);
+  for (const path of ["/api/platform/status", "/api/etsy/oauth/callback", "/p/offer",
+    "/api/etsy/listing-sales", "/api/etsy/reconcile-listings"]) assert.ok(isEtsyOperatorProtectedPath(path));
 });
 
 test("missing/short server-side operator secret fails closed before route logic", async () => {
@@ -85,7 +81,7 @@ test("anonymous, wrong, query-string and malformed credentials are rejected", as
 
 test("valid Bearer and browser Basic credentials pass middleware", async () => {
   await withOperatorToken(AUTH_TOKEN, async () => {
-    for (const path of ["/api/etsy/commerce", "/api/etsy/oauth/start", "/commerce", "/api/control-center/status"]) {
+    for (const path of ["/", "/api/etsy/status", "/api/platform/status"]) {
       for (const authorization of [
         "Bearer " + AUTH_TOKEN,
         "Basic " + Buffer.from("operator:" + AUTH_TOKEN).toString("base64")
@@ -97,11 +93,11 @@ test("valid Bearer and browser Basic credentials pass middleware", async () => {
   });
 });
 
-test("HEAD is protected; legacy POST safety gate is unchanged", async () => {
+test("HEAD is protected; mutations and OAuth are guarded", async () => {
   await withOperatorToken(AUTH_TOKEN, async () => {
     assert.equal((await middleware(request("/api/etsy/status", undefined, "HEAD"))).status, 401);
-    assert.equal((await middleware(request("/api/etsy/commerce", undefined, "POST"))).status, 410);
-    assert.equal((await middleware(request("/api/etsy/oauth/callback"))).headers.get("x-middleware-next"), "1");
+    assert.equal((await middleware(request("/api/etsy/commerce", undefined, "POST"))).status, 401);
+    assert.equal((await middleware(request("/api/etsy/oauth/callback"))).status, 401);
     assert.equal((await middleware(request("/api/health"))).headers.get("x-middleware-next"), "1");
   });
 });

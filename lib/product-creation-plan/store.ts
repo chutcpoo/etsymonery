@@ -10,14 +10,13 @@ import {
   MemoryProductCreationPlanRepository
 } from "./repository";
 import { NeonProductCreationPlanRepository } from "./postgres-plan-store";
-import { seedSmokeTestPlan } from "./seed-plans";
 
 export interface PlanStorage {
   savePlan(plan: ProductCreationPlan, customPlanId?: string): Promise<FrozenProductPlan>;
   getPlan(planId: string): Promise<FrozenProductPlan | null>;
   getPlanByProductId(productId: string): Promise<FrozenProductPlan | null>;
   runQC(planId: string): Promise<FrozenProductPlan>;
-  approvePlan(planId: string, hooks?: import("./repository").ApprovalTestHooks): Promise<FrozenProductPlan>;
+  approvePlan(planId: string, hooks?: import("./repository").ApprovalTestHooks, reviewedSha256?: string): Promise<FrozenProductPlan>;
   checkStaleness(
     planId: string,
     currentPlanContent?: ProductCreationPlan
@@ -96,6 +95,7 @@ export class DurableProductPlanStore implements PlanStorage {
       throw new Error(`PRODUCT_PLAN_NOT_FOUND:${planId}`);
     }
 
+    const previous = { sha: record.planSha256, status: record.status };
     assertNoSecretFields(record.plan);
 
     const qcResult = evaluateProductCreationPlanQC(record.plan);
@@ -110,7 +110,7 @@ export class DurableProductPlanStore implements PlanStorage {
       }
     }
 
-    await this.repository.save(record);
+    await this.repository.save(record, previous);
     return structuredClone(record);
   }
 
@@ -125,14 +125,14 @@ export class DurableProductPlanStore implements PlanStorage {
    * If ANY assertion, check, or step fails: ROLLBACK is executed.
    * Durable state is NEVER left as PLAN_APPROVED or partial PLAN_APPROVAL_PENDING residue.
    */
-  async approvePlan(planId: string, hooks?: import("./repository").ApprovalTestHooks): Promise<FrozenProductPlan> {
+  async approvePlan(planId: string, hooks?: import("./repository").ApprovalTestHooks, reviewedSha256?: string): Promise<FrozenProductPlan> {
     const existing = await this.repository.load(planId);
     if (!existing) {
       throw new Error(`PRODUCT_PLAN_NOT_FOUND:${planId}`);
     }
     assertNoSecretFields(existing.plan);
 
-    return this.repository.approveAtomic(planId, hooks);
+    return this.repository.approveAtomic(planId, hooks, reviewedSha256);
   }
 
 
@@ -172,7 +172,6 @@ export function getProductPlanStore(customRepo?: ProductCreationPlanRepository):
 
   // Memory fallback for offline test suites / CI environments
   const memoryRepo = new MemoryProductCreationPlanRepository();
-  seedSmokeTestPlan(memoryRepo);
   return new DurableProductPlanStore(memoryRepo);
 }
 
