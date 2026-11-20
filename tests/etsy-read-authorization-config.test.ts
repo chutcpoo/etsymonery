@@ -13,7 +13,9 @@ const keys = [
 
 test("shop authorization cannot be inferred from Personal Access or a broad OAuth grant", async () => {
   const original = Object.fromEntries(keys.map(k => [k, process.env[k]]));
+  const originalSupport = process.env.APP_SUPPORT_EMAIL;
   try {
+    process.env.APP_SUPPORT_EMAIL = "support@example.test";
     keys.forEach(k => delete process.env[k]);
     assert.equal(reviewedReadAuthorizationFromEnvironment(), null);
     process.env.ETSY_READ_APPROVED_SHOP_ID = "23582741";
@@ -39,6 +41,8 @@ test("shop authorization cannot be inferred from Personal Access or a broad OAut
     assert.equal(calls, 0);
   } finally {
     keys.forEach(k => { const old = original[k]; if (old === undefined) delete process.env[k]; else process.env[k] = old; });
+    if (originalSupport === undefined) delete process.env.APP_SUPPORT_EMAIL;
+    else process.env.APP_SUPPORT_EMAIL = originalSupport;
   }
 });
 
