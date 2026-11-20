@@ -13,6 +13,8 @@ Single-shop Etsy operator console and product-planning service. The dashboard re
 
 Send credentials as Bearer headers over HTTPS. Browser reads also support Basic authentication with username `operator`. Each role requires its own unpredictable secret of at least 32 characters. Plan records belong to this single shop and require a dedicated durable database in production. Granting a role to the same person as another role does not establish independent human review. A plan approval permits local build work only.
 
+**Single-user setup:** The app is for its owner only; the four role-specific secrets are separate security capabilities, not four application accounts. Local plan approval and independent item QC remain distinct steps. The current dashboard deliberately shows an unknown count until the operator supplies verified, shop-specific references through `ETSY_READ_APPROVED_SHOP_ID`, `ETSY_READ_APP_PERMISSION_REF`, and `ETSY_READ_SELLER_AGREEMENT_REF`, plus a monitored `APP_SUPPORT_EMAIL` and an unexpired, exactly scoped `listings_r` grant. These values are unset by default. Setting them does not authorize marketplace writes or grant changes. The prior broad OAuth grant is not silently migrated.
+
 The public health check is `/api/health`. Marketplace operations, OAuth grant changes, external tracking, historical public catalog pages, sales analytics and market research are locked. Marketplace write flags cannot unlock these paths. See the [review, official policies, and release checklists](docs/etsy-security-review.md).
 
 ## Validation

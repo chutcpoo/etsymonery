@@ -50,3 +50,21 @@ Offline regression tests cover nested mutations, key-order stability, build reje
 approval invalidation. Previously stored plan approvals made with the old algorithm must
 be considered **stale** and re-reviewed before any release; no automatic migration or
 re-authorization is permitted. Marketplace writes remain blocked.
+
+## Configurable read-only evidence gate (single-user release) · 20 November 2026
+
+Previously the read authorization record was hard-coded to `null`, so even a
+future approved deployment could never query its own shop listings. The
+server-only read path now accepts *references* to verified app authorization
+and seller agreement, gated to an exact shop ID through
+`ETSY_READ_APPROVED_SHOP_ID`, `ETSY_READ_APP_PERMISSION_REF` and
+`ETSY_READ_SELLER_AGREEMENT_REF`. All three remain empty by default and
+placeholders are rejected. A historical token, browser input and Personal
+Access status do not themselves create a valid authorization record.
+
+The gate also requires `APP_SUPPORT_EMAIL`, an unexpired shop-bound token
+with **only** `listings_r`, and a valid live response. No reauthorization,
+refresh, draft creation or publication is enabled. Operator verification
+of the referenced evidence is required before any configuration change.
+The OAuth status no longer describes transaction analytics as ready based
+on a historic broad grant: `transactionsReadGrantReady=false`.

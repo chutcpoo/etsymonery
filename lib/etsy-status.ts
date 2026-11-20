@@ -99,7 +99,8 @@ export function buildEtsyOAuthStatus(input: EtsyOAuthStatusInput) {
     missingSellerWriteScopes,
     sellerReadGrantReady: oauthGrantStatus === "GRANT_RECORDED" && tokenExpiryStatus === "UNEXPIRED",
     sellerWriteGrantReady: false,
-    transactionsReadGrantReady: requiredScopeChecks.transactions_r,
+    // Transaction analysis remains locked even if a historical grant lists this scope.
+    transactionsReadGrantReady: false,
     requiredScopeChecks,
     missingRequiredScopes,
     allRequiredScopesGranted: scopeMetadataPresent && missingRequiredScopes.length === 0,

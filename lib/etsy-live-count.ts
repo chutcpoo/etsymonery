@@ -4,12 +4,29 @@ import { fetchEtsyReadWithRetry } from "./etsy-http";
 import { loadEtsyReadGrant } from "./token-store";
 
 type ReadAuthorization = { shopId: number; etsyPermissionRef: string; sellerPrivacyAgreementRef: string };
-// Enter an independently verified record by code review only. A request, a
-// stored OAuth token or a historical listing is insufficient authorization.
-const reviewedShop: ReadAuthorization | null = null;
+
+// Read-only authorization is configured only after the owner reviews the
+// underlying Etsy app permission and shop-specific agreement. Do not infer it
+// from a stored OAuth token, app access label, request body or listing history.
+// Missing / placeholder evidence always fails closed; no marketplace writes.
+function evidenceReference(value?: string) {
+  const normalized = value?.trim() ?? "";
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.:/-]{7,255}$/.test(normalized) ||
+      /^(test|todo|tbd|pending|placeholder|not-approved)/i.test(normalized)) return null;
+  return normalized;
+}
+
+export function reviewedReadAuthorizationFromEnvironment(): ReadAuthorization | null {
+  const shop = Number(process.env.ETSY_READ_APPROVED_SHOP_ID);
+  const etsyPermissionRef = evidenceReference(process.env.ETSY_READ_APP_PERMISSION_REF);
+  const sellerPrivacyAgreementRef = evidenceReference(process.env.ETSY_READ_SELLER_AGREEMENT_REF);
+  if (!Number.isSafeInteger(shop) || shop < 1 || !etsyPermissionRef || !sellerPrivacyAgreementRef)
+    return null;
+  return { shopId: shop, etsyPermissionRef, sellerPrivacyAgreementRef };
+}
 
 export async function readActiveCatalog({
-  authorization = reviewedShop,
+  authorization = reviewedReadAuthorizationFromEnvironment(),
   expectedShop = Number(process.env.ETSY_SHOP_ID),
   loadGrant = loadEtsyReadGrant,
   transport = fetch,
