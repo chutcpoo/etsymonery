@@ -1,136 +1,45 @@
-import { getControlCenterV3Snapshot } from "../../lib/control-center-v3";
+import { LiveCount } from "../live-count";
+import FullFactoryDashboard from "./full-dashboard";
 import { buildOperatorDashboard } from "../../lib/operator-dashboard";
 import { NeonCanonicalProductRegistryRepository } from "../../lib/product-registry-repository";
-
+import { readActiveCatalog } from "../../lib/etsy-live-count";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function FactoryDashboardPage() {
+  const live = await readActiveCatalog();
+  if (live.status === "PASS") return <FullFactoryDashboard />;
   let rows: ReturnType<typeof buildOperatorDashboard>[] = [];
   let error: string | null = null;
-
-  const control = await getControlCenterV3Snapshot();
-  const latest = control.production.latestPublish;
-
   try {
     const records = await new NeonCanonicalProductRegistryRepository().list();
-    rows = records.map((product) => buildOperatorDashboard({ product }));
-  } catch (caught) {
-    error =
-      caught instanceof Error ? caught.message : "READ_ONLY_DATA_SOURCE_UNAVAILABLE";
+    rows = records.map(product => buildOperatorDashboard({ product }));
+  } catch {
+    error = "FACTORY_REGISTRY_UNAVAILABLE";
   }
-
-  return (
-    <main className="shell salesShell">
-      <section className="hero">
-        <div>
-          <p className="eyebrow">GLOBAL AI DIGITAL PRODUCT FACTORY OS</p>
-          <h1>Operator Dashboard V3</h1>
-          <p className="lede">
-            Read-only factory state synchronized with live Etsy channel state and
-            the production operation ledger. Mutations remain separate authorized
-            actions.
-          </p>
-        </div>
-        <div className="badge">V3 · GATED READ MODEL</div>
-      </section>
-
-      <section className="metrics">
-        <article className="metricCard">
-          <span>Live active</span>
-          <strong>{control.live.activeCount ?? "UNKNOWN"}</strong>
-        </article>
-        <article className="metricCard">
-          <span>Catalog tracked</span>
-          <strong>{control.live.catalogTrackedCount}</strong>
-        </article>
-        <article className="metricCard">
-          <span>Production</span>
-          <strong>{control.production.capability}</strong>
-        </article>
-        <article className="metricCard">
-          <span>Latest publish</span>
-          <strong>{latest?.status ?? "NOT OBSERVED"}</strong>
-        </article>
-      </section>
-
-      {control.operations.needsAttention.length ? (
-        <section className="notice warningNotice">
-          <div>
-            <p className="eyebrow">OPERATION LEDGER</p>
-            <h2>{control.operations.needsAttention.length} operation(s) need attention</h2>
-            <p>{control.operations.needsAttention.slice(0, 5).map((item) => `${item.operationId}: ${item.attentionState}`).join(" · ")}</p>
-          </div>
-          <div className="badge">NO BLIND RETRY</div>
-        </section>
-      ) : null}
-
-      <section className="notice">
-        <div>
-          <p className="eyebrow">PRODUCTION EXECUTION PROOF</p>
-          <h2>
-            {latest
-              ? `${latest.status} · Etsy #${latest.listingId ?? "UNKNOWN"}`
-              : "No publish proof observed"}
-          </h2>
-          <p>
-            {latest
-              ? `${latest.operationId} · state ${latest.state ?? "UNKNOWN"} · authorization ${latest.authorizationState ?? "UNKNOWN"} · updated ${latest.updatedAt}`
-              : "The ledger has no recent publish operation visible to this read model."}
-          </p>
-        </div>
-        <div className="badge">AUTHORIZED ACTIONS ONLY</div>
-      </section>
-
-      {control.live.status !== "PASS" ? (
-        <section className="notice warningNotice">
-          <div>
-            <strong>Live Etsy read unavailable</strong>
-            <p>{control.live.error ?? "UNKNOWN"}</p>
-          </div>
-        </section>
-      ) : null}
-
-      {error ? (
-        <section className="notice warningNotice">
-          <div>
-            <strong>Factory registry unavailable</strong>
-            <p>{error}</p>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="listingStack">
-        {rows.map((row) => (
-          <article className="listingCard" key={row.productId}>
-            <div className="listingTop">
-              <div>
-                <p className="eyebrow">{row.productId}</p>
-                <h2>{row.currentState ?? "STATE NOT AVAILABLE"}</h2>
-                <p>Next: {row.nextExecutableStage ?? "COMPLETE"}</p>
-              </div>
-              <div className="badge">
-                {row.blocker ? `BLOCKED · ${row.blocker.code}` : "READ ONLY"}
-              </div>
-            </div>
-            <div className="metrics">
-              <article className="metricCard">
-                <span>Fingerprint</span>
-                <strong>{row.fingerprint ?? "NOT AVAILABLE"}</strong>
-              </article>
-              {row.gates.map((gate) => (
-                <article className="metricCard" key={gate.gateType}>
-                  <span>{gate.gateType}</span>
-                  <strong>{gate.status}</strong>
-                </article>
-              ))}
-            </div>
-            <p>
-              Evidence: {row.evidenceIds.length ? row.evidenceIds.join(", ") : "NOT OBSERVED"}
-            </p>
-          </article>
-        ))}
-      </section>
-    </main>
-  );
+  return <main className="shell salesShell">
+    <a className="textLink" href="/">Control Center</a>
+    <section className="hero"><div>
+      <p className="eyebrow">FACTORY · LOCAL REGISTRY</p>
+      <h1>Product Factory</h1>
+      <p className="lede">Canonical product states and QC gates are read-only. No Etsy listing changes are triggered by this page.</p>
+    </div><div className="badge">READ ONLY</div></section>
+    <section className="metrics">
+      <article className="metricCard"><span>Local products</span><strong>{error ? "UNKNOWN" : rows.length}</strong></article>
+      <article className="metricCard"><span>Live Etsy listings</span><LiveCount count={live.liveCatalogCount} observedAt={live.observedAt} /></article>
+      <article className="metricCard"><span>Live read</span><strong>{live.status}</strong></article>
+      <article className="metricCard"><span>Marketplace writes</span><strong>LOCKED</strong></article>
+    </section>
+    {error && <section className="notice warningNotice"><p>{error}: verify the production registry database and schema.</p></section>}
+    <section className="notice warningNotice"><p>Live Etsy access: {live.error}</p></section>
+    <section className="listingStack">
+      {rows.length === 0 && !error && <article className="listingCard"><p>No canonical product records found.</p></article>}
+      {rows.map(row => <article className="listingCard" key={row.productId}>
+        <p className="eyebrow">{row.productId}</p><h2>{row.currentState ?? "STATE NOT AVAILABLE"}</h2>
+        <p>Next: {row.nextExecutableStage ?? "NOT AVAILABLE"}</p>
+        <p>Blocker: {row.blocker?.code ?? "NONE OBSERVED"}</p>
+        <div className="tagRow">{row.gates.map(gate => <span key={gate.gateType}>{gate.gateType}: {gate.status}</span>)}</div>
+      </article>)}
+    </section>
+  </main>;
 }

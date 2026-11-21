@@ -53,7 +53,7 @@ export async function middleware(request: NextRequest) {
   const role = request.method === "POST" ? planRole(path) : null;
   const denied = await authorizeEtsyOperatorRequest(request, role ?? "read", read);
   if (denied) return denied;
-  if (role || (read && (["/", "/api/platform/status", "/api/etsy/status", "/api/etsy/seller-state"].includes(path) ||
+  if (role || (read && (["/", "/factory", "/sales", "/commerce", "/events", "/stats-evidence", "/connect/etsy", "/api/platform/status", "/api/etsy/status", "/api/etsy/seller-state"].includes(path) ||
       /^\/api\/product-plans\/[a-zA-Z0-9_-]+$/.test(path)))) {
     const response = NextResponse.next();
     for (const [key, value] of Object.entries(privateHeaders)) response.headers.set(key, value);

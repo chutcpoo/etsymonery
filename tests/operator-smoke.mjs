@@ -32,7 +32,12 @@ try {
     const denied = await send(path, "POST", read, { approved: true });
     assert.equal(denied.status, 403); assert.ok((await denied.json()).missing.includes("INDEPENDENT_QC"));
   }
-  for (const path of ["/api/etsy/commerce", "/sales", "/api/etsy/oauth/callback", "/p"]) assert.equal((await send(path, "GET", read)).status, 403);
+  for (const path of ["/api/etsy/commerce", "/api/etsy/oauth/callback", "/p"]) assert.equal((await send(path, "GET", read)).status, 403);
+  for (const path of ["/factory", "/sales", "/commerce", "/events", "/stats-evidence", "/connect/etsy"]) {
+    const response = await send(path, "GET", read);
+    assert.equal(response.status, 200, path);
+    assert.match(response.headers.get("cache-control"), /no-store/, path);
+  }
   const status = await send("/api/platform/status", "GET", read);
   assert.equal(status.status, 503); assert.equal((await status.json()).liveCatalogCount, null);
   assert.match(status.headers.get("cache-control"), /no-store/);

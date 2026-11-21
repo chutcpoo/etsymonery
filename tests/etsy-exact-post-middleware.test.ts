@@ -40,3 +40,23 @@ test("every API file rejects anonymous calls and all non-allowlisted operations 
     for (const key of Object.values(roles)) delete process.env[key];
   }
 });
+
+test("owner read-only dashboard pages are accessible only to the read role", async () => {
+  for (const [role, key] of Object.entries(roles)) process.env[key] = token(role);
+  try {
+    for (const path of ["/", "/factory", "/sales", "/commerce", "/events", "/stats-evidence", "/connect/etsy"]) {
+      const anonymous = await middleware(new NextRequest("https://example.test" + path));
+      assert.equal(anonymous.status, 401, path);
+      const authorized = await middleware(new NextRequest("https://example.test" + path, {
+        headers: { authorization: "Bearer " + token("read") }
+      }));
+      assert.equal(authorized.headers.has("x-middleware-next"), true, path);
+      const write = await middleware(new NextRequest("https://example.test" + path, {
+        method: "POST", headers: { authorization: "Bearer " + token("read") }
+      }));
+      assert.equal(write.status, 403, path);
+    }
+  } finally {
+    for (const key of Object.values(roles)) delete process.env[key];
+  }
+});
