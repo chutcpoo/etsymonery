@@ -19,9 +19,12 @@ export async function GET(request: NextRequest) {
 
   const denied = await authorizeEtsyOperatorRequest(request, "seller", true);
   if (denied) return denied;
+  // A link opened from ChatGPT/email is cross-site. Never create an OAuth
+  // session on that request: redirect to an inert, authenticated landing page.
+  // The owner's subsequent click is a same-origin navigation to this route.
   if (request.headers.get("sec-fetch-site") === "cross-site")
-    return NextResponse.json({ error: "CROSS_SITE_MIGRATION_START_FORBIDDEN" },
-      { status: 403, headers: privateHeaders });
+    return NextResponse.redirect(new URL("/api/etsy/oauth/migration/launch", request.url),
+      { status: 303, headers: privateHeaders });
 
   try {
     const primary = await getStoredEtsyGrantMetadata();

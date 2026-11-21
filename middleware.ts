@@ -27,7 +27,9 @@ export async function middleware(request: NextRequest) {
   if (process.env.ETSY_OAUTH_MIGRATION_ENABLED === "true") {
     const isCallback = path === "/api/etsy/oauth/callback" && request.method === "GET";
     const isOwnerRead = request.method === "GET" &&
-      (path === "/api/etsy/oauth/start" || path === "/api/etsy/oauth/migration/status");
+      (path === "/api/etsy/oauth/start" ||
+        path === "/api/etsy/oauth/migration/launch" ||
+        path === "/api/etsy/oauth/migration/status");
     const isPromotion = request.method === "POST" &&
       path === "/api/etsy/oauth/migration/promote";
     if (isCallback || isOwnerRead || isPromotion) {

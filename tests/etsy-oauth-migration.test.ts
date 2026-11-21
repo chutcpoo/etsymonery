@@ -7,6 +7,7 @@ import {
   statesEqual, validateMigrationToken, reviewedReference
 } from "../lib/etsy-oauth-migration";
 import { GET as start } from "../app/api/etsy/oauth/start/route";
+import { GET as launch } from "../app/api/etsy/oauth/migration/launch/route";
 import { GET as callback } from "../app/api/etsy/oauth/callback/route";
 import { POST as promote } from "../app/api/etsy/oauth/migration/promote/route";
 import { middleware } from "../middleware";
@@ -189,4 +190,43 @@ test("promotion requires a second independent owner authorization", async () => 
 test("fixture env test keys remain isolated", () => {
   // Explicit reminder: source code and CI must never set live migration flags.
   assert.equal(envKeys.includes("ETSY_OAUTH_MIGRATION_ENABLED"), true);
+});
+
+test("cross-site OAuth entry redirects to inert seller landing without creating a session", async () => {
+  await withEnv({
+    ETSY_OAUTH_MIGRATION_ENABLED: "true",
+    ETSY_SELLER_APPROVER_TOKEN: "fixture-seller-for-oauth-landing-1234567890123456",
+    ETSY_OPERATOR_READ_TOKEN: "fixture-read-for-oauth-landing-12345678901234567"
+  }, async () => {
+    const url = "https://publisher.poonthaidigital.com/api/etsy/oauth/start";
+    const seller = "Bearer fixture-seller-for-oauth-landing-1234567890123456";
+    const response = await start(new NextRequest(url, {
+      headers: { authorization: seller, "sec-fetch-site": "cross-site" }
+    }));
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("location"),
+      "https://publisher.poonthaidigital.com/api/etsy/oauth/migration/launch");
+    assert.equal(response.headers.get("set-cookie"), null);
+    assert.equal(response.headers.get("cache-control")?.includes("no-store"), true);
+    const landingUrl = "https://publisher.poonthaidigital.com/api/etsy/oauth/migration/launch";
+    const landing = await launch(new NextRequest(landingUrl, {
+      headers: { authorization: seller, "sec-fetch-site": "cross-site" }
+    }));
+    assert.equal(landing.status, 200);
+    assert.match(await landing.text(), /href="\/api\/etsy\/oauth\/start"/);
+    assert.equal(landing.headers.get("set-cookie"), null);
+    assert.match(landing.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
+    const unauthorized = await launch(new NextRequest(landingUrl, {
+      headers: { authorization: "Bearer fixture-read-for-oauth-landing-12345678901234567" }
+    }));
+    assert.equal(unauthorized.status, 401);
+    const readMiddleware = await middleware(new NextRequest(landingUrl, {
+      headers: { authorization: "Bearer fixture-read-for-oauth-landing-12345678901234567" }
+    }));
+    assert.equal(readMiddleware.status, 401);
+    const sellerMiddleware = await middleware(new NextRequest(landingUrl, {
+      headers: { authorization: seller }
+    }));
+    assert.equal(sellerMiddleware.headers.get("x-middleware-next"), "1");
+  });
 });
