@@ -1,7 +1,7 @@
 # AutoDigitalPublisher — Terms of Use (DRAFT — NOT APPROVED)
 
-**Status:** Draft for owner review. Not effective, accepted, or published.  
-**Operator:** PoonthaiDigital shop owner (legal operator name and contact to be verified).  
+**Status:** Draft for owner review. Not effective, accepted, or published.
+**Operator:** PoonthaiDigital shop owner (legal operator name and contact to be verified).
 **Effective date:** To be set only after owner approval.
 
 ## 1. Scope and authorized users
@@ -26,8 +26,8 @@ Etsy data can be delayed, unavailable, rate-limited or stale. The dashboard must
 The operator is responsible for the accuracy of configuration, access management and applicable legal obligations. Terms may be updated prospectively, with notice to authorized users when materially changed. Nothing here overrides mandatory consumer, privacy or other applicable laws.
 
 ## 8. Contact and applicable law
-**Operator legal name:** [OWNER TO CONFIRM]  
-**Support email:** [OWNER TO CONFIRM — monitored mailbox]  
+**Operator legal name:** [OWNER TO CONFIRM]
+**Support email:** chutcpoo@hotmail.com (configured Production support contact; mailbox monitoring still to verify)
 **Governing law / jurisdiction:** [OWNER OR LEGAL ADVISER TO CONFIRM]
 
 **Approval checklist:** owner identity, monitored email, jurisdiction, authorized users, actual enabled features, Etsy app-purpose evidence, and owner sign-off.

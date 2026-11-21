@@ -1,7 +1,7 @@
 # AutoDigitalPublisher — Privacy Policy (DRAFT — NOT APPROVED)
 
-**Status:** Draft for owner review. Not effective or published.  
-**Controller/operator:** [OWNER LEGAL NAME AND CONTACT TO CONFIRM]  
+**Status:** Draft for owner review. Not effective or published.
+**Controller/operator:** [OWNER LEGAL NAME AND CONTACT TO CONFIRM]
 **Effective date:** [AFTER APPROVAL]
 
 ## 1. Purpose and audience
@@ -32,9 +32,9 @@ Authorized users may request information about access, correction, restriction o
 The operator must maintain an incident-response contact and process, including any applicable Etsy notification deadlines. Material changes to purposes, data categories or providers require review and an updated notice before rollout.
 
 ## 10. Contact and legal basis
-**Controller name:** [OWNER TO CONFIRM]  
-**Privacy/support email:** [OWNER TO CONFIRM]  
-**Jurisdiction and lawful basis:** [OWNER / LEGAL ADVISER TO CONFIRM]  
+**Controller name:** [OWNER TO CONFIRM]
+**Privacy/support email:** chutcpoo@hotmail.com (configured Production support contact; mailbox monitoring still to verify)
+**Jurisdiction and lawful basis:** [OWNER / LEGAL ADVISER TO CONFIRM]
 **Applicable rights and transfer disclosures:** [TO CONFIRM AFTER PRODUCTION REVIEW]
 
 **Approval checklist:** operator identity, contact, actual production data flows and regions, lawful basis, retention and deletion policy, backup policy, incident owner, Etsy purpose authorization, owner sign-off.

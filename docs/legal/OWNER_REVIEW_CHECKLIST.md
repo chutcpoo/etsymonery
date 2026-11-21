@@ -2,7 +2,7 @@
 
 Status: **PENDING OWNER REVIEW**. The two drafts in this directory are not live website pages and are not evidence of Etsy or seller approval.
 
-1. Confirm legal operator name, monitored support email and applicable jurisdiction.
+1. Confirm legal operator name and applicable jurisdiction; Production `APP_SUPPORT_EMAIL` is configured as `chutcpoo@hotmail.com`, but mailbox monitoring must still be verified.
 2. Confirm the private-app audience and exact enabled read-only functions; no listings writes, transaction reads or email.
 3. Confirm approved Etsy app purpose and shop `23582741` against the live Etsy developer console and shop-owner authorization.
 4. Verify Vercel Production `DATABASE_URL` points to the expected Neon project, and inspect production regions, subprocessor terms, security logs and backups.
