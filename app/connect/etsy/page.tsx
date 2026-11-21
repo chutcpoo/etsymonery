@@ -16,16 +16,30 @@ export const dynamic = "force-dynamic";
 
 export default async function EtsyConnectPage() {
   const persistenceConfigured = isTokenStoreConfigured();
-  const connected = persistenceConfigured
-    ? await hasStoredEtsyTokens()
-    : false;
+  let connected = false;
+  let grant: Awaited<ReturnType<typeof getStoredEtsyGrantMetadata>> = null;
+  let metadataUnavailable = false;
+  try {
+    if (persistenceConfigured) {
+      connected = await hasStoredEtsyTokens();
+      grant = await getStoredEtsyGrantMetadata();
+    }
+  } catch {
+    metadataUnavailable = true;
+  }
   const credentials = getEtsyCredentials();
-  const grant = persistenceConfigured ? await getStoredEtsyGrantMetadata() : null;
+  const expiry = grant?.expiresAt;
+  const expiryValid = expiry instanceof Date && Number.isFinite(expiry.getTime());
+  const accessTokenExpired = connected && expiryValid && expiry.getTime() <= Date.now();
+  const accessTokenUnexpired = connected && expiryValid && expiry.getTime() > Date.now();
+  const migrationEnabled = process.env.ETSY_OAUTH_MIGRATION_ENABLED === "true";
+  const recordedShopId = Number.isSafeInteger(grant?.shopId) && (grant?.shopId ?? 0) > 0
+    ? String(grant!.shopId)
+    : "NOT VERIFIED";
   const grantedScopes = parseEtsyGrantedScopes(grant?.scope);
   const scopeMetadataPresent = Boolean(grant?.scope?.trim());
   const sellerReadGrantReady =
-    connected &&
-    scopeMetadataPresent &&
+    connected && scopeMetadataPresent &&
     getMissingEtsyScopes(grant?.scope, ETSY_SELLER_READ_SCOPES).length === 0;
   const sellerWriteGrantReady =
     connected &&
@@ -43,18 +57,16 @@ export default async function EtsyConnectPage() {
           <p className="eyebrow">ETSY OPEN API V3</p>
           <h1>Connect Etsy</h1>
           <p className="lede">
-            Authorize AutoDigitalPublisher to create and manage Etsy listing drafts
-            through OAuth 2.0 with PKCE.
+            Owner-only OAuth metadata and read-only access diagnostics.
+            Stored credentials do not prove a successful live Etsy API call.
           </p>
         </div>
         <div className="badge">
-          {connected
-            ? "CONNECTED"
-            : !persistenceConfigured
-              ? "TOKEN STORE REQUIRED"
-              : credentials.configured
-                ? "READY TO AUTHORIZE"
-                : "API KEY REQUIRED"}
+          {metadataUnavailable ? "TOKEN STATUS UNAVAILABLE"
+            : accessTokenExpired ? "STORED TOKEN EXPIRED"
+            : connected ? "GRANT STORED — NOT VERIFIED"
+            : !persistenceConfigured ? "TOKEN STORE REQUIRED"
+            : "NO STORED GRANT"}
         </div>
       </section>
 
@@ -62,29 +74,40 @@ export default async function EtsyConnectPage() {
         <div>
           <p className="eyebrow">STATUS</p>
           <h2>
-            {connected ? "Etsy authorization active" : "Etsy authorization pending"}
+            {metadataUnavailable ? "Unable to read stored OAuth metadata"
+              : accessTokenExpired ? "Stored access token has expired"
+              : connected ? "Grant recorded — live access not verified"
+              : "No verified Etsy connection"}
           </h2>
           <p>
             Requested scopes: {ETSY_SCOPES.join(", ")}. Granted scopes:{" "}
             {scopeMetadataPresent ? grantedScopes.join(", ") : "UNKNOWN"}. Seller
-            Draft read grant: {sellerReadGrantReady ? "READY" : "BLOCKED"}. Seller
-            Draft write grant: {sellerWriteGrantReady ? "READY" : "BLOCKED"}.
-            Transactions read grant: {transactionsReadGrantReady ? "READY" : "BLOCKED"}.
-            These statuses come from stored OAuth metadata, not a live Etsy API
-            verification. OAuth tokens are stored server-side with application-layer encryption.
-            Marketplace writes remain secure-gated: exact candidate/QC/protected-state/
-            authorization evidence is required before execution.
+            Draft read scope: {sellerReadGrantReady ? "GRANTED (LIVE UNVERIFIED)" : "BLOCKED"}. Seller
+            Draft write scope: {sellerWriteGrantReady ? "RECORDED (WRITES LOCKED)" : "BLOCKED"}.
+            Transactions read scope: {transactionsReadGrantReady ? "RECORDED (ANALYTICS LOCKED)" : "BLOCKED"}.
+          </p>
+          <p>
+            Recorded Shop ID: {recordedShopId} (database metadata only).
+            Access token: {accessTokenExpired ? "EXPIRED" : accessTokenUnexpired ? "UNEXPIRED (NOT LIVE VERIFIED)" : "UNKNOWN"}.
+            {expiryValid ? ` Expiry: ${expiry.toISOString()} (UTC).` : " Expiry not available."}
+            Etsy API live read: NOT VERIFIED. Marketplace writes: LOCKED.
+          </p>
+          <p>
+            These indicators do not perform Etsy API requests or prove app permission,
+            seller agreement, or successful token refresh. Credentials remain encrypted server-side.
           </p>
         </div>
 
         {!persistenceConfigured ? (
-          <code>Set DATABASE_URL + TOKEN_ENCRYPTION_KEY</code>
-        ) : credentials.configured ? (
-          <a className="connectButton" href="/api/etsy/oauth/start">
-            {connected ? "Reconnect Etsy" : "Connect Etsy"}
+          <code>Token storage is not configured.</code>
+        ) : metadataUnavailable ? (
+          <code>Stored grant metadata is unavailable. Check the private server logs.</code>
+        ) : migrationEnabled && credentials.configured ? (
+          <a className="connectButton" href="/api/etsy/oauth/migration/launch">
+            Open owner-approved OAuth migration
           </a>
         ) : (
-          <code>Set ETSY_API_KEY + ETSY_SHARED_SECRET</code>
+          <p>OAuth reconnection is disabled by policy. No OAuth changes are initiated from this page.</p>
         )}
       </section>
     </main>
