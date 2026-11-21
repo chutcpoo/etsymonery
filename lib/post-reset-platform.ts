@@ -3,9 +3,9 @@ import { createHash } from "node:crypto";
 export const POST_RESET_EPOCH = "2026-09-20" as const;
 
 export const POST_RESET_PLATFORM_STATE = {
-  status: "READY_FOR_NEW_PRODUCTS",
-  catalogState: "EMPTY_CATALOG",
-  liveCatalogCount: 0,
+  status: "BLOCKED",
+  catalogState: "UNKNOWN",
+  liveCatalogCount: null,
   legacyProductsLoaded: 0,
   legacyWritesEnabled: false,
   writeState: "LOCKED",

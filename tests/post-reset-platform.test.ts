@@ -22,9 +22,9 @@ const valid = {
   finalQcPass: true
 };
 
-test("platform starts empty and write-locked", () => {
-  assert.equal(POST_RESET_PLATFORM_STATE.catalogState, "EMPTY_CATALOG");
-  assert.equal(POST_RESET_PLATFORM_STATE.liveCatalogCount, 0);
+test("platform starts with unknown live state and write-locked", () => {
+  assert.equal(POST_RESET_PLATFORM_STATE.catalogState, "UNKNOWN");
+  assert.equal(POST_RESET_PLATFORM_STATE.liveCatalogCount, null);
   assert.equal(POST_RESET_PLATFORM_STATE.legacyProductsLoaded, 0);
   assert.equal(POST_RESET_PLATFORM_STATE.legacyWritesEnabled, false);
   assert.equal(POST_RESET_PLATFORM_STATE.ETSY_WRITE_COUNT, 0);

@@ -8,26 +8,9 @@ import {
   parseEtsyGrantedScopes
 } from "../lib/etsy";
 
-const CURRENT_ETSY_V3_SCOPES = [
-  "address_r",
-  "address_w",
-  "email_r",
-  "listings_d",
-  "listings_r",
-  "listings_w",
-  "profile_r",
-  "profile_w",
-  "shops_r",
-  "shops_w",
-  "transactions_r",
-  "transactions_w"
-] as const;
-
-test("OAuth requests the full current Etsy Open API v3 documented scope set", () => {
-  assert.deepEqual(ETSY_SCOPES, CURRENT_ETSY_V3_SCOPES);
-  assert.equal(new Set(ETSY_SCOPES).size, ETSY_SCOPES.length);
+test("the live count requires only listing read permission", () => {
+  assert.deepEqual(ETSY_SCOPES, ["listings_r"]);
 });
-
 
 test("normalizes stored OAuth scope metadata and detects missing Seller scopes", () => {
   const granted = parseEtsyGrantedScopes("listings_r listings_w,transactions_r listings_r");

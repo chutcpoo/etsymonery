@@ -710,6 +710,7 @@ test("Global Enforcement 20: Video build path without plan → BLOCK via assertA
 });
 
 test("Global Enforcement 21: Etsy prepare route without plan → BLOCK", async () => {
+  process.env.ETSY_PLAN_EDITOR_TOKEN = "local-prepare-route-test-fixture-123456789";
   const { POST: prepareRoute } = await import("../app/api/products/prepare/route");
   const unapprovedProduct = {
     productId: "PDT-CBP-004",
@@ -729,7 +730,7 @@ test("Global Enforcement 21: Etsy prepare route without plan → BLOCK", async (
 
   const req = new Request("http://localhost/api/products/prepare", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", authorization: "Bearer local-prepare-route-test-fixture-123456789" },
     body: JSON.stringify(unapprovedProduct)
   });
 
@@ -1283,11 +1284,12 @@ test("Global Enforcement 56: buildGatedPublishPlan blocks non-legacy product wit
 });
 
 test("Global Enforcement 57: POST /api/products/prepare route integration blocks unapproved non-legacy candidate", async () => {
+  process.env.ETSY_PLAN_EDITOR_TOKEN = "local-prepare-route-test-fixture-123456789";
   const { POST: prepareRoute } = await import("../app/api/products/prepare/route");
 
   const unapprovedReq = new Request("https://autodigitalpublisher.vercel.app/api/products/prepare", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", authorization: "Bearer local-prepare-route-test-fixture-123456789" },
     body: JSON.stringify({
       productId: "PDT-CBEO-004",
       version: "V1",

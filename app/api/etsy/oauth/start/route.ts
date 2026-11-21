@@ -1,48 +1,53 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createOAuthState, createPkcePair, getEtsyCredentials } from "../../../../../lib/etsy";
+import { privateHeaders } from "../../../../../lib/etsy-operator-auth";
+import { authorizeSellerOAuthBrowserGet } from "../../../../../lib/etsy-oauth-browser-session";
 import {
-  ETSY_SCOPES,
-  createOAuthState,
-  createPkcePair,
-  getEtsyCredentials,
-  getEtsyRedirectUri
-} from "../../../../../lib/etsy";
+  migrationPreflight, buildMigrationAuthorizationUrl
+} from "../../../../../lib/etsy-oauth-migration";
+import { saveMigrationSession } from "../../../../../lib/etsy-oauth-migration-store";
+import { getStoredEtsyGrantMetadata } from "../../../../../lib/token-store";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  const { keystring } = getEtsyCredentials();
+// This URL is *not* a general reauthorization endpoint. It is disabled until
+// the owner separately configures migration approval and a same-host callback.
+export async function GET(request: NextRequest) {
+  if (process.env.ETSY_OAUTH_MIGRATION_ENABLED !== "true")
+    return NextResponse.json({ status: "BLOCKED", error: "OAUTH_GRANT_CHANGE_REQUIRES_OWNER" },
+      { status: 403, headers: privateHeaders });
 
-  if (!keystring) {
-    return NextResponse.json(
-      { error: "ETSY_API_KEY_NOT_CONFIGURED" },
-      { status: 503 }
+  const denied = await authorizeSellerOAuthBrowserGet(request);
+  if (denied) return denied;
+  // A link opened from ChatGPT/email is cross-site. Never create an OAuth
+  // session on that request: redirect to an inert, authenticated landing page.
+  // The owner's subsequent click is a same-origin navigation to this route.
+  if (request.headers.get("sec-fetch-site") === "cross-site")
+    return NextResponse.redirect(new URL("/api/etsy/oauth/migration/launch", request.url),
+      { status: 303, headers: privateHeaders });
+
+  try {
+    const primary = await getStoredEtsyGrantMetadata();
+    const settings = migrationPreflight(request.url, primary);
+    const { keystring } = getEtsyCredentials();
+    if (!keystring) throw new Error("APP_KEY_MISSING");
+    const state = createOAuthState();
+    const { verifier, challenge } = createPkcePair();
+    await saveMigrationSession(state, verifier, settings);
+    const authorizationUrl = buildMigrationAuthorizationUrl(
+      keystring, settings.callback, state, challenge
     );
+    const response = NextResponse.redirect(authorizationUrl, 303);
+    for (const [key, value] of Object.entries(privateHeaders))
+      response.headers.set(key, value);
+    response.cookies.set("etsy_migration_state", state, {
+      httpOnly: true, secure: true, sameSite: "lax",
+      path: "/api/etsy/oauth/callback", maxAge: 600
+    });
+    return response;
+  } catch {
+    return NextResponse.json({ status: "BLOCKED", error: "OAUTH_MIGRATION_PREFLIGHT_FAILED" },
+      { status: 503, headers: privateHeaders });
   }
-
-  const { verifier, challenge } = createPkcePair();
-  const state = createOAuthState();
-  const redirectUri = getEtsyRedirectUri(request.url);
-
-  const authorize = new URL("https://www.etsy.com/oauth/connect");
-  authorize.searchParams.set("response_type", "code");
-  authorize.searchParams.set("client_id", keystring);
-  authorize.searchParams.set("redirect_uri", redirectUri);
-  authorize.searchParams.set("scope", ETSY_SCOPES.join(" "));
-  authorize.searchParams.set("state", state);
-  authorize.searchParams.set("code_challenge", challenge);
-  authorize.searchParams.set("code_challenge_method", "S256");
-
-  const response = NextResponse.redirect(authorize);
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    path: "/",
-    maxAge: 10 * 60
-  };
-
-  response.cookies.set("etsy_oauth_verifier", verifier, cookieOptions);
-  response.cookies.set("etsy_oauth_state", state, cookieOptions);
-
-  return response;
 }

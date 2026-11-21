@@ -72,14 +72,14 @@ export class NeonProductCreationPlanRepository implements ProductCreationPlanRep
     };
   }
 
-  async save(record: FrozenProductPlan): Promise<void> {
+  async save(record: FrozenProductPlan, previous?: { sha: string; status: string }): Promise<void> {
     await this.ensureTable();
     const sql = getSql(this.connectionUrl);
     const qcResultJson = JSON.stringify(record.qcResult);
     const planJson = JSON.stringify(record.plan);
     const now = new Date().toISOString();
 
-    await sql`
+    const saved = await sql`
       INSERT INTO product_creation_plans (
         plan_id, product_id, plan_version, status, plan_sha256,
         approved_at, qc_result_json, plan_json, created_at, updated_at
@@ -95,8 +95,13 @@ export class NeonProductCreationPlanRepository implements ProductCreationPlanRep
         approved_at = EXCLUDED.approved_at,
         qc_result_json = EXCLUDED.qc_result_json,
         plan_json = EXCLUDED.plan_json,
-        updated_at = EXCLUDED.updated_at;
+        updated_at = EXCLUDED.updated_at
+      WHERE (${previous?.sha ?? null}::text IS NULL OR
+        (product_creation_plans.plan_sha256 = ${previous?.sha ?? null} AND
+         product_creation_plans.status = ${previous?.status ?? null}))
+      RETURNING plan_id;
     `;
+    if (saved.length !== 1) throw new Error("PLAN_CHANGED_DURING_QC");
   }
 
   async load(planId: string): Promise<FrozenProductPlan | null> {
@@ -159,7 +164,7 @@ export class NeonProductCreationPlanRepository implements ProductCreationPlanRep
    * If failure occurs, rollback guarantees durable state is NEVER left
    * as PLAN_APPROVED or partial PLAN_APPROVAL_PENDING residue.
    */
-  async approveAtomic(planId: string, hooks?: import("./repository").ApprovalTestHooks): Promise<FrozenProductPlan> {
+  async approveAtomic(planId: string, hooks?: import("./repository").ApprovalTestHooks, reviewedSha256?: string): Promise<FrozenProductPlan> {
     await this.ensureTable();
     const databaseUrl = (this.connectionUrl || process.env.DATABASE_URL)?.trim();
     if (!databaseUrl) throw new Error("DATABASE_URL_NOT_CONFIGURED");
@@ -198,6 +203,7 @@ export class NeonProductCreationPlanRepository implements ProductCreationPlanRep
 
       // 4. Compute canonical SHA
       const canonicalSha = computePlanSha256(current.plan);
+      if (reviewedSha256 && canonicalSha !== reviewedSha256) throw new Error("REVIEWED_PLAN_CHANGED");
 
       // 5. Write: PLAN_APPROVAL_PENDING
       const qcResultJson = JSON.stringify(qcResult);

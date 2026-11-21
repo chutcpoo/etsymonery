@@ -3,6 +3,13 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   js.configs.recommended,
+  {
+    files: [".github/scripts/*.mjs", "tests/*.mjs", "tests/*.cjs"],
+    languageOptions: { globals: {
+      process: "readonly", console: "readonly", fetch: "readonly", URL: "readonly",
+      URLSearchParams: "readonly", Response: "readonly", require: "readonly"
+    } }
+  },
   ...tseslint.configs.recommended,
   {
     rules: {
@@ -17,6 +24,7 @@ export default tseslint.config(
   {
     ignores: [
       ".next/**",
+      "next-env.d.ts",
       "node_modules/**",
       "dist/**",
       "build/**",

@@ -1,3 +1,4 @@
+import { authorizePlanRequest } from "../../../../lib/etsy-operator-auth";
 import { NextResponse } from "next/server";
 import {
   prepareNewProductCandidate,
@@ -9,6 +10,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const denied = await authorizePlanRequest(request, "plan");
+  if (denied) return denied;
   let body: unknown;
   try {
     body = await request.json();
@@ -27,6 +30,7 @@ export async function POST(request: Request) {
   // Central Build Gate Enforcement (TASK 4 & 5)
   const gateCheck = await verifyBuildPrerequisites({
     productId: validated.manifest.productId,
+    overridePlanRequired: true,
     builder: "PRODUCT_PREPARATION_ROUTE"
   });
 

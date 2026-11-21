@@ -243,7 +243,16 @@ export interface FrozenProductPlan {
 }
 
 export function computePlanSha256(plan: ProductCreationPlan): string {
-  // Canonical stable JSON stringify
-  const canonical = JSON.stringify(plan, Object.keys(plan).sort());
+  // A JSON.stringify property-name array would silently discard nested fields
+  // not repeated at the root. Seller approval hashes must bind the entire plan,
+  // including buyer files, listing images, and Etsy listing metadata.
+  const canonical = JSON.stringify(plan, (_key, value: unknown) => {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) return value;
+    return Object.fromEntries(
+      Object.entries(value).sort(([left], [right]) =>
+        left < right ? -1 : left > right ? 1 : 0
+      )
+    );
+  });
   return createHash("sha256").update(canonical, "utf8").digest("hex");
 }

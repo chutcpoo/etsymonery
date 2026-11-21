@@ -37,7 +37,10 @@ async function withEnv<T>(input: Record<string, unknown>, fn: () => Promise<T>) 
     ETSY_SHARED_SECRET: "test-shared-secret", ETSY_GENERIC_UPDATE_AUTHORIZATION_ID: "AUTH-001", ETSY_GENERIC_UPDATE_AUTH_REQUEST_SHA256: "1".repeat(64),
     ETSY_GENERIC_UPDATE_REQUEST_SHA256: hashOperationRequest(input), ETSY_GENERIC_UPDATE_PROTECTED_STATE_SHA256: "5".repeat(64)
   });
-  try { return await fn(); } finally { for (const key of keys) prior[key] === undefined ? delete process.env[key] : process.env[key] = prior[key]; }
+  try { return await fn(); } finally { for (const key of keys) {
+    if (prior[key] === undefined) delete process.env[key];
+    else process.env[key] = prior[key];
+  } }
 }
 
 test("generic metadata contract requires QC_PASSED and READY_TO_PUBLISH", () => {

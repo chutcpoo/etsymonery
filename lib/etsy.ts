@@ -1,22 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-// Full set currently documented by Etsy Open API v3 Authentication > Scopes.
-// Changing this list requires a fresh OAuth authorization code flow; refresh tokens
-// cannot gain scopes that were not granted during the original authorization.
-export const ETSY_SCOPES = [
-  "address_r",
-  "address_w",
-  "email_r",
-  "listings_d",
-  "listings_r",
-  "listings_w",
-  "profile_r",
-  "profile_w",
-  "shops_r",
-  "shops_w",
-  "transactions_r",
-  "transactions_w"
-] as const;
+export const ETSY_SCOPES = ["listings_r"] as const;
 
 export const ETSY_SELLER_READ_SCOPES = ["listings_r"] as const;
 export const ETSY_SELLER_WRITE_SCOPES = ["listings_r", "listings_w"] as const;

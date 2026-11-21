@@ -1,124 +1,85 @@
-import { NextResponse } from "next/server";
-import { getEtsyCredentials, getEtsyRedirectUri } from "../../../../../lib/etsy";
-import { getEtsyUserIdFromToken } from "../../../../../lib/etsy-auth";
-import { isTokenStoreConfigured, saveEtsyTokens } from "../../../../../lib/token-store";
+import { NextRequest, NextResponse } from "next/server";
+import { getEtsyCredentials, etsyApiHeaders } from "../../../../../lib/etsy";
+import { fetchEtsyReadWithRetry } from "../../../../../lib/etsy-http";
+import { privateHeaders } from "../../../../../lib/etsy-operator-auth";
+import {
+  migrationPreflight, statesEqual, validateMigrationToken
+} from "../../../../../lib/etsy-oauth-migration";
+import { consumeMigrationSession, stageMigrationGrant } from "../../../../../lib/etsy-oauth-migration-store";
+import { getStoredEtsyGrantMetadata } from "../../../../../lib/token-store";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-type EtsyTokenResponse = {
-  access_token?: string;
-  refresh_token?: string;
-  expires_in?: number;
-  token_type?: string;
-  scope?: string;
-  error?: string;
-  error_description?: string;
-};
+function blocked(error: string, status = 403) {
+  return NextResponse.json({ status: "BLOCKED", error, ETSY_WRITE_COUNT: 0 },
+    { status, headers: privateHeaders });
+}
 
-export async function GET(request: Request) {
-  const url = new URL(request.url);
+export async function GET(request: NextRequest) {
+  if (process.env.ETSY_OAUTH_MIGRATION_ENABLED !== "true")
+    return blocked("OAUTH_GRANT_CHANGE_REQUIRES_OWNER");
+
+  const url = request.nextUrl;
+  const state = url.searchParams.get("state");
+  const cookie = request.cookies.get("etsy_migration_state")?.value;
   const code = url.searchParams.get("code");
-  const returnedState = url.searchParams.get("state");
-  const error = url.searchParams.get("error");
-
-  if (error) {
-    return NextResponse.json(
-      { error: "ETSY_AUTHORIZATION_DENIED", detail: error },
-      { status: 400 }
-    );
-  }
-
-  if (!isTokenStoreConfigured()) {
-    return NextResponse.json(
-      { error: "ETSY_TOKEN_STORE_NOT_CONFIGURED" },
-      { status: 503 }
-    );
-  }
-
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  const cookies = Object.fromEntries(
-    cookieHeader
-      .split(";")
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((part) => {
-        const index = part.indexOf("=");
-        return index === -1
-          ? [part, ""]
-          : [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
-      })
-  );
-
-  const verifier = cookies.etsy_oauth_verifier;
-  const expectedState = cookies.etsy_oauth_state;
-  const { keystring } = getEtsyCredentials();
-
-  if (!code || !returnedState || !verifier || !expectedState || !keystring) {
-    return NextResponse.json(
-      { error: "ETSY_OAUTH_CALLBACK_INCOMPLETE" },
-      { status: 400 }
-    );
-  }
-
-  if (returnedState !== expectedState) {
-    return NextResponse.json(
-      { error: "ETSY_OAUTH_STATE_MISMATCH" },
-      { status: 400 }
-    );
-  }
-
-  const tokenBody = new URLSearchParams({
-    grant_type: "authorization_code",
-    client_id: keystring,
-    redirect_uri: getEtsyRedirectUri(request.url),
-    code,
-    code_verifier: verifier
-  });
-
-  const tokenResponse = await fetch("https://api.etsy.com/v3/public/oauth/token", {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: tokenBody,
-    cache: "no-store"
-  });
-
-  const token = (await tokenResponse.json()) as EtsyTokenResponse;
-
-  if (!tokenResponse.ok || !token.access_token || !token.refresh_token) {
-    return NextResponse.json(
-      {
-        error: "ETSY_TOKEN_EXCHANGE_FAILED",
-        detail: token.error_description ?? token.error ?? "UNKNOWN"
-      },
-      { status: 502 }
-    );
-  }
+  if (!statesEqual(cookie, state) || !code || code.length > 2048 ||
+      url.searchParams.has("error")) return blocked("OAUTH_STATE_OR_CODE_REJECTED", 400);
 
   try {
-    await saveEtsyTokens({
-      accessToken: token.access_token,
-      refreshToken: token.refresh_token,
-      expiresIn: token.expires_in ?? 3600,
-      scope: token.scope,
-      tokenType: token.token_type,
-      userId: getEtsyUserIdFromToken(token.access_token)
+    const primary = await getStoredEtsyGrantMetadata();
+    const settings = migrationPreflight(request.url, primary);
+    // Atomic one-time consumption, BEFORE exchanging the authorization code.
+    const session = await consumeMigrationSession(state!);
+    if (!session || session.callback !== settings.callback ||
+        session.userId !== settings.userId || session.shopId !== settings.shopId)
+      return blocked("OAUTH_SESSION_INVALID_OR_REPLAYED", 400);
+
+    const { keystring } = getEtsyCredentials();
+    if (!keystring) return blocked("OAUTH_APP_KEY_UNAVAILABLE", 503);
+    const body = new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: keystring,
+      redirect_uri: settings.callback,
+      code, code_verifier: session.verifier
     });
-  } catch (storageError) {
-    return NextResponse.json(
-      {
-        error: "ETSY_TOKEN_STORAGE_FAILED",
-        detail:
-          storageError instanceof Error ? storageError.message : "UNKNOWN"
-      },
-      { status: 503 }
-    );
+    const tokenResponse = await fetch("https://api.etsy.com/v3/public/oauth/token", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body, redirect: "error", cache: "no-store",
+      signal: AbortSignal.timeout(15_000)
+    });
+    if (!tokenResponse.ok) return blocked("OAUTH_TOKEN_EXCHANGE_FAILED", 502);
+    const grant = validateMigrationToken(await tokenResponse.json(), settings.userId);
+
+    // Validate a real shop-scoped GET without touching the primary token row.
+    const verify = await fetchEtsyReadWithRetry(fetch,
+      `https://api.etsy.com/v3/application/shops/${settings.shopId}/listings?state=active&limit=1`,
+      { method: "GET", headers: etsyApiHeaders(grant.accessToken),
+        cache: "no-store", redirect: "error", signal: AbortSignal.timeout(15_000) },
+      { maxAttempts: 1 });
+    if (!verify.ok) return blocked("OAUTH_SHOP_READ_VERIFICATION_FAILED", 502);
+    const data = await verify.json();
+    if (!Number.isSafeInteger(data?.count) || data.count < 0 ||
+        !Array.isArray(data.results) ||
+        data.results.length !== Math.min(1, data.count) ||
+        data.results.some((r: { shop_id?: number; listing_id?: number; state?: string } | null) =>
+          !r || r.shop_id !== settings.shopId || r.state !== "active" ||
+          !Number.isSafeInteger(r.listing_id) || Number(r.listing_id) < 1))
+      return blocked("OAUTH_SHOP_READ_DATA_INVALID", 502);
+
+    await stageMigrationGrant(state!, grant, settings.shopId);
+    const destination = new URL("/?oauth_migration=staged", request.url);
+    const response = NextResponse.redirect(destination, 303);
+    for (const [key, value] of Object.entries(privateHeaders))
+      response.headers.set(key, value);
+    response.cookies.set("etsy_migration_state", "", {
+      httpOnly: true, secure: true, sameSite: "lax",
+      path: "/api/etsy/oauth/callback", maxAge: 0
+    });
+    return response;
+  } catch {
+    return blocked("OAUTH_MIGRATION_STAGING_FAILED", 503);
   }
-
-  const response = NextResponse.redirect(new URL("/connect/etsy", request.url));
-  response.cookies.delete("etsy_access_token");
-  response.cookies.delete("etsy_refresh_token");
-  response.cookies.delete("etsy_oauth_verifier");
-  response.cookies.delete("etsy_oauth_state");
-
-  return response;
 }

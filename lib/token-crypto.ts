@@ -32,10 +32,12 @@ export function encryptSecret(value: string) {
 }
 
 export function decryptSecret(envelope: string) {
-  const [version, ivEncoded, tagEncoded, ciphertextEncoded] = envelope.split(":");
+  const [version, ivEncoded, tagEncoded, ciphertextEncoded, extra] = envelope.split(":");
 
   if (
-    version !== VERSION ||
+    version !== VERSION || extra !== undefined ||
+    !/^[A-Za-z0-9_-]{16}$/.test(ivEncoded ?? "") ||
+    !/^[A-Za-z0-9_-]{22}$/.test(tagEncoded ?? "") ||
     !ivEncoded ||
     !tagEncoded ||
     !ciphertextEncoded

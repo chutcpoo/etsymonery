@@ -1,70 +1,51 @@
-# AutoDigitalPublisher / Etsy Sales Control Center
+# AutoDigitalPublisher
 
-A gated Etsy commerce control center for diagnosing sales problems before changing listings.
+Single-shop Etsy operator console and product-planning service. The dashboard reports the observed active-listing total, its timestamp and any reason the read is blocked. With the reviewed permissions currently on file, the live total is unknown. The branch contains no approved release candidate.
 
-## Current candidate
+## Access
 
-The current software candidate adds a read-only Etsy Sales Control Center on top of the encrypted OAuth persistence branch.
+| Function | Independent credential |
+| --- | --- |
+| Dashboard, shop and OAuth metadata, single-shop plan reads | `ETSY_OPERATOR_READ_TOKEN` |
+| Create a local plan, prepare a candidate or check a build | `ETSY_PLAN_EDITOR_TOKEN` |
+| Evaluate plan QC | `ETSY_QC_REVIEWER_TOKEN` |
+| Approve the exact reviewed plan revision | `ETSY_SELLER_APPROVER_TOKEN` and a quoted SHA-256 in `If-Match` |
 
-### Evidence layers
+Send credentials as Bearer headers over HTTPS. Browser reads also support Basic authentication with username `operator`. Each role requires its own unpredictable secret of at least 32 characters. Plan records belong to this single shop and require a dedicated durable database in production. Granting a role to the same person as another role does not establish independent human review. A plan approval permits local build work only.
 
-- Canonical Catalog identifier reconciliation
-- Etsy Shop Identity
-- Exact six live Etsy Listing records
-- Listing title / tags / image / favorite evidence
-- Sales transaction counts when `transactions_r` has been granted
-- Funnel diagnosis: discovery → click-through → engagement → conversion
-- Root Cause state that remains `NOT_YET_CONFIRMED` when evidence is insufficient
+**Single-user setup:** The app is for its owner only; the four role-specific secrets are separate security capabilities, not four application accounts. Local plan approval and independent item QC remain distinct steps. The current dashboard deliberately shows an unknown count until the operator supplies verified, shop-specific references through `ETSY_READ_APPROVED_SHOP_ID`, `ETSY_READ_APP_PERMISSION_REF`, and `ETSY_READ_SELLER_AGREEMENT_REF`, plus a monitored `APP_SUPPORT_EMAIL` and an unexpired, exactly scoped `listings_r` grant. These values are unset by default. Setting them does not authorize marketplace writes or grant changes. The prior broad OAuth grant is not silently migrated.
 
-### Etsy API limitation
+The public health check is `/api/health`. Marketplace operations, OAuth grant changes, external tracking, historical public catalog pages, sales analytics and market research are locked. Marketplace write flags cannot unlock these paths. See the [review, official policies, and release checklists](docs/etsy-security-review.md).
 
-The Etsy Open API v3 endpoints used by this project do not expose Etsy Shop Stats views, visits, search terms or click-through rate. The application therefore marks those fields as unavailable/unknown instead of fabricating metrics.
+## Validation
 
-Conversion rate is not calculated without an authoritative visit denominator.
+Use Node 22 and the checked-in lockfile. Run `npm ci`, `npm run lint`, `npm audit`, `npm test`, `node --require ./tests/offline.cjs --test .github/scripts/*.test.mjs`, `python3 -m unittest discover -s tests -p test_verify_p01_seller_zip.py`, `npm run typecheck`, `npm run build` and `node tests/operator-smoke.mjs`. The smoke suite starts the built application on loopback with fixture credentials. No Etsy account is needed.
 
-### Canonical Product Truth
+The canonical code repository is [chutcpoo/etsymonery](https://github.com/chutcpoo/etsymonery). The canonical Vercel project is [autodigitalpublisher](https://vercel.com/shopee-affiliate-ai/autodigitalpublisher). PR #288 has an explicit branch-specific Git deployment exclusion in `vercel.json`.
 
-`DIGITAL_PRODUCT_CATALOG_MASTER.xlsx` on Google Drive remains the sole canonical Catalog.
+## Owner-only Etsy OAuth migration (disabled by default)
 
-The repository contains only a derived, read-only Product_ID ↔ Etsy Listing_ID identifier projection required for runtime reconciliation. It is not Product Truth and cannot override the Catalog.
+The legacy production authorization requested twelve scopes. PR #288 requires
+only `listings_r` and will not silently reuse or narrow that historical grant.
+A separate, opt-in Authorization Code + PKCE flow is available under
+`/api/etsy/oauth/start` only after explicit, audited owner configuration.
+The exact HTTPS host of the start request must match the registered
+`ETSY_REDIRECT_URI`; the callback stays blocked until the migration flag is
+on. The start route requires the **seller** operator credential (Basic sign-in
+with username `operator` for an interactive browser); the callback requires
+a same-host HttpOnly state cookie and a one-use PostgreSQL session.
 
-## Canonical PoonthaiDigital Commerce Stack
+The callback stages an encrypted `listings_r` grant in an isolated table; it
+**never overwrites the existing primary token**. Owner-only
+`GET /api/etsy/oauth/migration/status` exposes only candidate metadata.
+Promotion via `POST /api/etsy/oauth/migration/promote` requires a separate
+promotion flag, specific reviewed candidate ID, approval reference, seller
+**Bearer** credential and an exact quoted `If-Match`. Promotion atomically
+checks shop/user identity against the locked current primary row. All Etsy
+listing Draft/Publish operations remain blocked.
 
-For the PoonthaiDigital project, use the following mapping as the canonical commerce stack for selling digital products on Etsy:
-
-- **Google Drive** — operational Product Truth, buyer files, final listing assets, release evidence, and source documents.
-- **GitHub** — `chutcpoo/etsymonery` (`https://github.com/chutcpoo/etsymonery`) is the canonical code/config repository for Etsy sales and publishing automation.
-- **Vercel** — project `autodigitalpublisher` in team `shopee-affiliate-ai` (`https://vercel.com/shopee-affiliate-ai/autodigitalpublisher`) is the canonical deployment target for this commerce application.
-- **Etsy** — PoonthaiDigital's marketplace endpoint for live product listings and buyer delivery.
-
-Canonical flow:
-
-`Google Drive Product Truth → GitHub etsymonery → Vercel autodigitalpublisher → Etsy PoonthaiDigital`
-
-Do not substitute `poonthaidigital-tools` as the primary GitHub/Vercel stack for Etsy commerce unless a task explicitly requires it.
-
-### Safety
-
-- Marketplace writes remain disabled by default.
-- Sales Control Center endpoints are GET/read-only.
-- Any controlled Listing fix must still follow Product Truth → ETSY GROWTH OS adaptation → Production Build → Tester → independent QC → Production authorization.
-- A material candidate change invalidates stale Tester/QC evidence.
-
-## Required environment
-
-See `.env.example`.
-
-For persistent OAuth:
-- `DATABASE_URL`
-- `TOKEN_ENCRYPTION_KEY`
-
-For Etsy:
-- `ETSY_API_KEY`
-- `ETSY_SHARED_SECRET`
-- `ETSY_REDIRECT_URI`
-- optional `ETSY_SHOP_ID`
-
-Keep:
-- `PUBLISH_WRITES_ENABLED=false`
-
-After this candidate is deployed, re-authorize Etsy once because the requested scope set adds `transactions_r`.
+After promotion, read-only token refresh is available only under the separately
+reviewed `ETSY_READ_TOKEN_REFRESH_ENABLED` gate. It preserves `listings_r`,
+uses compare-and-swap token replacement, and never grants new scopes. The
+default is disabled. See
+[the detailed operator runbook](docs/etsy-oauth-migration-runbook.md).

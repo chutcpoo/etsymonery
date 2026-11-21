@@ -1,24 +1,10 @@
 import { NextResponse } from "next/server";
-import { POST_RESET_PLATFORM_STATE } from "../../../../lib/post-reset-platform";
-import { ETSY_CHANNEL_INDEX } from "../../../../lib/catalog-channel-index";
-
+import { readActiveCatalog } from "../../../../lib/etsy-live-count";
+import { privateHeaders } from "../../../../lib/etsy-operator-auth";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const trackedCatalogCount = ETSY_CHANNEL_INDEX.length;
-  const catalogState = trackedCatalogCount > 0 ? "ACTIVE_CATALOG" : "EMPTY_CATALOG";
-
-  return NextResponse.json({
-    ...POST_RESET_PLATFORM_STATE,
-    catalogState,
-    liveCatalogCount: trackedCatalogCount,
-    registeredLiveListings: trackedCatalogCount,
-    newProductPreparationEndpoint: "/api/products/prepare",
-    etsyWrites: "DISABLED_UNTIL_NEW_EXACT_OPERATION",
-    productPlanStore: {
-      repository: process.env.DATABASE_URL?.trim() ? "NEON_POSTGRES" : "MEMORY_FALLBACK",
-      durable: Boolean(process.env.DATABASE_URL?.trim()),
-      databaseConfigured: Boolean(process.env.DATABASE_URL?.trim())
-    }
-  });
+  const live = await readActiveCatalog();
+  return NextResponse.json({ ...live, scope: "active", marketplaceWritesEnabled: false, ETSY_WRITE_COUNT: 0 },
+    { status: live.status === "PASS" ? 200 : 503, headers: privateHeaders });
 }

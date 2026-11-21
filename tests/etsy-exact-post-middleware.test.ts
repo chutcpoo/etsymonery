@@ -1,41 +1,42 @@
 import assert from "node:assert/strict";
+import { readdirSync } from "node:fs";
 import test from "node:test";
 import { NextRequest } from "next/server";
 import { middleware } from "../middleware";
 
-function call(path: string, method: string) {
-  return middleware(new NextRequest("https://publisher.example.test"+path,{method}));
-}
-test("source-only authenticated preflight reaches its safe POST handler",()=>{
-  const r=call("/api/etsy/chat-assets/source-preflight","POST");
-  assert.equal(r.headers.get("x-middleware-next"),"1");
-});
-test("new guarded Draft and Release POST routes are exact allowlist entries",()=>{
- for(const path of ["/api/etsy/chat-assets","/api/etsy/drafts","/api/etsy/release"]){
-   const r=call(path,"POST");
-   assert.equal(r.headers.get("x-middleware-next"),"1",path);
- }
-});
-test("legacy endpoints, unknown routes and unsafe methods are still catalog-reset",async()=>{
- for(const [path,method]of[
-  ["/api/etsy/draft-assets","POST"],
-  ["/api/etsy/active-listing-update","POST"],
-  ["/api/etsy/not-whitelisted","POST"],
-  ["/api/etsy/chat-assets/source-preflight/other","POST"],
-  ["/api/etsy/chat-assets/source-preflight","PATCH"],
-  ["/api/etsy/drafts","DELETE"],
-  ["/api/etsy/release","PUT"],
-  ["/api/publish","POST"],
-  ["/api/internal/etsy/deprecated-operation","POST"]
- ]){
-   const r=call(path,method);
-   assert.equal(r.status,410,`${method} ${path}`);
-   const data=await r.json();
-   assert.equal(data.status,"CATALOG_RESET");
-   assert.equal(data.ETSY_WRITE_COUNT,0);
- }
-});
-test("existing safe GET remains possible",()=>{
-  const r=call("/api/etsy/status","GET");
-  assert.equal(r.headers.get("x-middleware-next"),"1");
+const roles = {
+  read: "ETSY_OPERATOR_READ_TOKEN", plan: "ETSY_PLAN_EDITOR_TOKEN",
+  qc: "ETSY_QC_REVIEWER_TOKEN", seller: "ETSY_SELLER_APPROVER_TOKEN"
+};
+const token = (role: string) => "fixture-for-local-security-test-only-" + role;
+
+test("every API file rejects anonymous calls and all non-allowlisted operations stay locked", async () => {
+  for (const [role, key] of Object.entries(roles)) process.env[key] = token(role);
+  try {
+    for (const file of readdirSync("app/api", { recursive: true, encoding: "utf8" })) {
+      if (!file.endsWith("/route.ts")) continue;
+      const path = "/api/" + file.slice(0, -9).replace(/\[\w+\]/g, "fixture");
+      if (path === "/api/health") continue;
+      for (const method of ["GET", "HEAD", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"]) {
+        const call = (role?: string) => middleware(new NextRequest("https://example.test" + path, { method,
+          headers: role ? { authorization: "Bearer " + token(role) } : {} }));
+        assert.equal((await call()).status, 401, method + " " + path);
+        const read = ["GET", "HEAD"].includes(method);
+        const allowedRead = read && (["/api/etsy/status", "/api/etsy/seller-state", "/api/platform/status", "/api/product-plans/fixture", "/api/product-plans/create"].includes(path));
+        const expected = method === "POST" ? ({
+          "/api/product-plans/create": "plan", "/api/product-plans/fixture/qc": "qc",
+          "/api/product-plans/fixture/approve": "seller", "/api/products/fixture/build": "plan",
+          "/api/products/prepare": "plan"
+        } as Record<string, string>)[path] : undefined;
+        assert.equal((await call("read")).headers.has("x-middleware-next"), allowedRead, method + " " + path);
+        if (expected) {
+          assert.equal((await call(expected)).headers.has("x-middleware-next"), true);
+          for (const other of Object.keys(roles).filter(role => role !== expected))
+            assert.equal((await call(other)).status, 401);
+        }
+      }
+    }
+  } finally {
+    for (const key of Object.values(roles)) delete process.env[key];
+  }
 });

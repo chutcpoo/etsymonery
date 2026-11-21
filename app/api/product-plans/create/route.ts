@@ -1,3 +1,4 @@
+import { authorizePlanRequest } from "../../../../lib/etsy-operator-auth";
 import { NextResponse } from "next/server";
 import { globalPlanStore } from "../../../../lib/product-creation-plan";
 import type { ProductCreationPlan } from "../../../../lib/product-creation-plan";
@@ -6,6 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const denied = await authorizePlanRequest(request, "plan");
+  if (denied) return denied;
   try {
     const body = (await request.json()) as { plan?: ProductCreationPlan; planId?: string } & ProductCreationPlan;
     const plan = (body.plan ?? body) as ProductCreationPlan;
@@ -35,7 +38,7 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "UNKNOWN_ERROR" },
+      { error: "PLAN_STORE_UNAVAILABLE" },
       { status: 500 }
     );
   }

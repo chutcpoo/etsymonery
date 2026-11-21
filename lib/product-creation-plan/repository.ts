@@ -12,17 +12,19 @@ export interface ApprovalTestHooks {
 }
 
 export interface ProductCreationPlanRepository {
-  save(record: FrozenProductPlan): Promise<void>;
+  save(record: FrozenProductPlan, previous?: { sha: string; status: string }): Promise<void>;
   load(planId: string): Promise<FrozenProductPlan | null>;
   loadByProductId(productId: string): Promise<FrozenProductPlan | null>;
   list(): Promise<FrozenProductPlan[]>;
-  approveAtomic(planId: string, hooks?: ApprovalTestHooks): Promise<FrozenProductPlan>;
+  approveAtomic(planId: string, hooks?: ApprovalTestHooks, reviewedSha256?: string): Promise<FrozenProductPlan>;
 }
 
 export class MemoryProductCreationPlanRepository implements ProductCreationPlanRepository {
   private readonly records = new Map<string, FrozenProductPlan>();
 
-  async save(record: FrozenProductPlan): Promise<void> {
+  async save(record: FrozenProductPlan, previous?: { sha: string; status: string }): Promise<void> {
+    const current = this.records.get(record.planId);
+    if (previous && (current?.planSha256 !== previous.sha || current.status !== previous.status)) throw new Error("PLAN_CHANGED_DURING_QC");
     this.records.set(record.planId, structuredClone(record));
   }
 
@@ -51,7 +53,7 @@ export class MemoryProductCreationPlanRepository implements ProductCreationPlanR
    * to the exact snapshot before the transaction, leaving NO PLAN_APPROVED
    * or PLAN_APPROVAL_PENDING residue.
    */
-  async approveAtomic(planId: string, hooks?: ApprovalTestHooks): Promise<FrozenProductPlan> {
+  async approveAtomic(planId: string, hooks?: ApprovalTestHooks, reviewedSha256?: string): Promise<FrozenProductPlan> {
     // 1. BEGIN transaction snapshot
     const snapshot = new Map<string, FrozenProductPlan>();
     for (const [k, v] of this.records.entries()) {
@@ -82,6 +84,7 @@ export class MemoryProductCreationPlanRepository implements ProductCreationPlanR
 
       // 4. Compute canonical SHA
       const canonicalSha = computePlanSha256(current.plan);
+      if (reviewedSha256 && canonicalSha !== reviewedSha256) throw new Error("REVIEWED_PLAN_CHANGED");
 
       // 5. Write: PLAN_APPROVAL_PENDING
       const pendingRecord: FrozenProductPlan = {
