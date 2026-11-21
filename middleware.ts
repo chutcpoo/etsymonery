@@ -20,6 +20,13 @@ function planRole(path: string): OperatorRole | null {
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname.replace(/\/+$/, "") || "/";
   const read = ["GET", "HEAD"].includes(request.method);
+  // Public demo uses only static sample data. Never allow demo requests to reach protected APIs.
+  if (path === "/demo" && read) {
+    const response = NextResponse.next();
+    response.headers.set("cache-control", "public, max-age=60");
+    response.headers.set("x-content-type-options", "nosniff");
+    return response;
+  }
   if (!isEtsyOperatorProtectedPath(path) && read) return NextResponse.next();
 
   // Dedicated, disabled-by-default OAuth migration. The callback is public
