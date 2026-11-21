@@ -252,8 +252,7 @@ test("seller OAuth login form uses signed short-lived cookie, not an exposed bea
     const wrongRole = await middleware(new NextRequest(landingUrl, {
       headers: { authorization: "Bearer fixture-read-form-secret-123456789012345678901" }
     }));
-    assert.equal(wrongRole.status, 303);
-    assert.equal(wrongRole.headers.get("location"), loginUrl);
+    assert.equal(wrongRole.status, 401);
     const wrong = await loginSubmit(new NextRequest(loginUrl, {
       method: "POST",
       headers: { origin, "content-type": "application/x-www-form-urlencoded" },
@@ -291,7 +290,7 @@ test("seller OAuth login form uses signed short-lived cookie, not an exposed bea
     }));
     assert.equal(startMiddleware.headers.get("x-middleware-next"), "1");
     const fake = new NextRequest(landingUrl, {
-      headers: { cookie: cookie.replace(/.$/, "0") }
+      headers: { cookie: cookie.slice(0, -1) + (cookie.endsWith("0") ? "1" : "0") }
     });
     assert.equal(await validSellerBrowserSession(fake), false);
     const stale = await createSellerBrowserSession(Math.floor(Date.now() / 1000) - 601);

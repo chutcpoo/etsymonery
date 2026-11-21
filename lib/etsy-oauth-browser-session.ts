@@ -56,6 +56,9 @@ export async function authorizeSellerOAuthBrowserGet(request: NextRequest) {
   if (!denied) return null;
   if (denied.status === 503) return denied;
   if (await validSellerBrowserSession(request)) return null;
+  // Explicit invalid credentials remain 401; anonymous browser visits get
+  // the login form instead of a JSON-only HTTP Basic challenge.
+  if (request.headers.has("authorization")) return denied;
   return NextResponse.redirect(new URL(LOGIN_PATH, request.url),
     { status: 303, headers: privateHeaders });
 }
