@@ -8,6 +8,8 @@ import {
 } from "../lib/etsy-oauth-migration";
 import { GET as start } from "../app/api/etsy/oauth/start/route";
 import { GET as launch } from "../app/api/etsy/oauth/migration/launch/route";
+import { GET as loginPage, POST as loginSubmit } from "../app/api/etsy/oauth/migration/login/route";
+import { createSellerBrowserSession, validSellerBrowserSession, SELLER_SESSION_COOKIE } from "../lib/etsy-oauth-browser-session";
 import { GET as callback } from "../app/api/etsy/oauth/callback/route";
 import { POST as promote } from "../app/api/etsy/oauth/migration/promote/route";
 import { middleware } from "../middleware";
@@ -228,5 +230,78 @@ test("cross-site OAuth entry redirects to inert seller landing without creating 
       headers: { authorization: seller }
     }));
     assert.equal(sellerMiddleware.headers.get("x-middleware-next"), "1");
+  });
+});
+
+test("seller OAuth login form uses signed short-lived cookie, not an exposed bearer token", async () => {
+  await withEnv({
+    ETSY_OAUTH_MIGRATION_ENABLED: "true",
+    ETSY_SELLER_APPROVER_TOKEN: "fixture-seller-form-secret-12345678901234567890",
+    ETSY_OPERATOR_READ_TOKEN: "fixture-read-form-secret-123456789012345678901"
+  }, async () => {
+    const origin = "https://publisher.poonthaidigital.com";
+    const loginUrl = origin + "/api/etsy/oauth/migration/login";
+    const landingUrl = origin + "/api/etsy/oauth/migration/launch";
+    const startUrl = origin + "/api/etsy/oauth/start";
+    const noAuth = await middleware(new NextRequest(landingUrl));
+    assert.equal(noAuth.status, 303);
+    assert.equal(noAuth.headers.get("location"), loginUrl);
+    const page = await loginPage();
+    assert.equal(page.status, 200);
+    assert.match(await page.text(), /name="password"/);
+    const wrongRole = await middleware(new NextRequest(landingUrl, {
+      headers: { authorization: "Bearer fixture-read-form-secret-123456789012345678901" }
+    }));
+    assert.equal(wrongRole.status, 303);
+    assert.equal(wrongRole.headers.get("location"), loginUrl);
+    const wrong = await loginSubmit(new NextRequest(loginUrl, {
+      method: "POST",
+      headers: { origin, "content-type": "application/x-www-form-urlencoded" },
+      body: "password=wrong"
+    }));
+    assert.equal(wrong.status, 401);
+    assert.equal(wrong.headers.get("set-cookie"), null);
+    const crossSite = await loginSubmit(new NextRequest(loginUrl, {
+      method: "POST",
+      headers: { origin: "https://attacker.invalid", "content-type": "application/x-www-form-urlencoded" },
+      body: "password=fixture-seller-form-secret-12345678901234567890"
+    }));
+    assert.equal(crossSite.status, 403);
+    const valid = await loginSubmit(new NextRequest(loginUrl, {
+      method: "POST",
+      headers: { origin, "content-type": "application/x-www-form-urlencoded" },
+      body: "password=fixture-seller-form-secret-12345678901234567890"
+    }));
+    assert.equal(valid.status, 303);
+    assert.equal(valid.headers.get("location"), landingUrl);
+    const setCookie = valid.headers.get("set-cookie") ?? "";
+    assert.match(setCookie, /HttpOnly/i);
+    assert.match(setCookie, /Secure/i);
+    assert.match(setCookie, /SameSite=lax/i);
+    assert.doesNotMatch(setCookie, /fixture-seller-form-secret/);
+    const cookie = setCookie.split(";")[0];
+    const req = new NextRequest(landingUrl, { headers: { cookie } });
+    assert.equal(await validSellerBrowserSession(req), true);
+    const landingMiddleware = await middleware(req);
+    assert.equal(landingMiddleware.headers.get("x-middleware-next"), "1");
+    const landing = await launch(req);
+    assert.equal(landing.status, 200);
+    const startMiddleware = await middleware(new NextRequest(startUrl, {
+      headers: { cookie, "sec-fetch-site": "same-origin" }
+    }));
+    assert.equal(startMiddleware.headers.get("x-middleware-next"), "1");
+    const fake = new NextRequest(landingUrl, {
+      headers: { cookie: cookie.replace(/.$/, "0") }
+    });
+    assert.equal(await validSellerBrowserSession(fake), false);
+    const stale = await createSellerBrowserSession(Math.floor(Date.now() / 1000) - 601);
+    assert.equal(await validSellerBrowserSession(new NextRequest(landingUrl, {
+      headers: { cookie: SELLER_SESSION_COOKIE + "=" + stale }
+    })), false);
+    const promotion = await middleware(new NextRequest(
+      origin + "/api/etsy/oauth/migration/promote",
+      { method: "POST", headers: { cookie } }
+    ));
+    assert.equal(promotion.status, 401);
   });
 });

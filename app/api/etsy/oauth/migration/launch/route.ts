@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authorizeEtsyOperatorRequest, privateHeaders } from "../../../../../../lib/etsy-operator-auth";
+import { privateHeaders } from "../../../../../../lib/etsy-operator-auth";
+import { authorizeSellerOAuthBrowserGet } from "../../../../../../lib/etsy-oauth-browser-session";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
   if (process.env.ETSY_OAUTH_MIGRATION_ENABLED !== "true")
     return NextResponse.json({ status: "BLOCKED", error: "OAUTH_GRANT_CHANGE_REQUIRES_OWNER" },
       { status: 403, headers: privateHeaders });
-  const denied = await authorizeEtsyOperatorRequest(request, "seller", true);
+  const denied = await authorizeSellerOAuthBrowserGet(request);
   if (denied) return denied;
   return new NextResponse(html, {
     status: 200,

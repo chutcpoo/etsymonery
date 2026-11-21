@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { authorizeEtsyOperatorRequest, isEtsyOperatorProtectedPath, privateHeaders, type OperatorRole } from "./lib/etsy-operator-auth";
 import { reviewMarketplaceRequest } from "./lib/etsy-policy";
+import { authorizeSellerOAuthBrowserGet } from "./lib/etsy-oauth-browser-session";
 
 function blocked(error: string, missing?: string[]) {
   return NextResponse.json({ status: "BLOCKED", error, missing, ETSY_WRITE_COUNT: 0 }, { status: 403, headers: privateHeaders });
@@ -32,9 +33,16 @@ export async function middleware(request: NextRequest) {
         path === "/api/etsy/oauth/migration/status");
     const isPromotion = request.method === "POST" &&
       path === "/api/etsy/oauth/migration/promote";
-    if (isCallback || isOwnerRead || isPromotion) {
-      if (!isCallback) {
-        const denied = await authorizeEtsyOperatorRequest(request, "seller", isOwnerRead);
+    const isLogin = path === "/api/etsy/oauth/migration/login" &&
+      (request.method === "GET" || request.method === "POST");
+    if (isCallback || isOwnerRead || isPromotion || isLogin) {
+      if (isOwnerRead) {
+        const denied = path === "/api/etsy/oauth/migration/status"
+          ? await authorizeEtsyOperatorRequest(request, "seller", true)
+          : await authorizeSellerOAuthBrowserGet(request);
+        if (denied) return denied;
+      } else if (isPromotion) {
+        const denied = await authorizeEtsyOperatorRequest(request, "seller", false);
         if (denied) return denied;
       }
       const response = NextResponse.next();

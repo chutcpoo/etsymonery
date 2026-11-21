@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createOAuthState, createPkcePair, getEtsyCredentials } from "../../../../../lib/etsy";
-import { authorizeEtsyOperatorRequest, privateHeaders } from "../../../../../lib/etsy-operator-auth";
+import { privateHeaders } from "../../../../../lib/etsy-operator-auth";
+import { authorizeSellerOAuthBrowserGet } from "../../../../../lib/etsy-oauth-browser-session";
 import {
   migrationPreflight, buildMigrationAuthorizationUrl
 } from "../../../../../lib/etsy-oauth-migration";
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ status: "BLOCKED", error: "OAUTH_GRANT_CHANGE_REQUIRES_OWNER" },
       { status: 403, headers: privateHeaders });
 
-  const denied = await authorizeEtsyOperatorRequest(request, "seller", true);
+  const denied = await authorizeSellerOAuthBrowserGet(request);
   if (denied) return denied;
   // A link opened from ChatGPT/email is cross-site. Never create an OAuth
   // session on that request: redirect to an inert, authenticated landing page.
