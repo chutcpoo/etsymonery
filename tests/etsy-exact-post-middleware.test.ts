@@ -20,7 +20,12 @@ test("every API file rejects anonymous calls and all non-allowlisted operations 
       for (const method of ["GET", "HEAD", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"]) {
         const call = (role?: string) => middleware(new NextRequest("https://example.test" + path, { method,
           headers: role ? { authorization: "Bearer " + token(role) } : {} }));
-        assert.equal((await call()).status, 401, method + " " + path);
+        const anonymous = await call();
+        const factoryFetch = (method === "POST" && path === "/api/factory/owner-session") ||
+          (method === "POST" && path === "/api/factory/workflow") ||
+          (method === "PATCH" && /^\/api\/factory\/workflow\/[0-9a-f-]{36}$/i.test(path));
+        assert.equal(anonymous.status, factoryFetch ? 403 : 401, method + " " + path);
+        if (factoryFetch) assert.equal(anonymous.headers.has("www-authenticate"), false, "Factory fetch must not trigger Chrome sign-in");
         const read = ["GET", "HEAD"].includes(method);
         const allowedRead = read && !(method === "HEAD" && path === "/api/factory/owner-session") && (["/api/etsy/status", "/api/etsy/seller-state", "/api/platform/status", "/api/product-plans/fixture", "/api/product-plans/create", "/api/factory/workflow", "/api/factory/owner-session", "/api/factory/workflow/00000000-0000-4000-8000-000000000001"].includes(path));
         const expected = method === "PATCH" && path === "/api/factory/workflow/00000000-0000-4000-8000-000000000001" ? "plan" : method === "POST" ? ({
@@ -32,7 +37,7 @@ test("every API file rejects anonymous calls and all non-allowlisted operations 
         if (expected) {
           assert.equal((await call(expected)).headers.has("x-middleware-next"), true);
           for (const other of Object.keys(roles).filter(role => role !== expected))
-            assert.equal((await call(other)).status, 401);
+            assert.equal((await call(other)).status, factoryFetch ? 403 : 401);
         }
       }
     }

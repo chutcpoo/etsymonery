@@ -14,7 +14,11 @@ export default function WorkflowBoard({ initialItems, loadError }: { initialItem
   async function login() {
     setBusy(true); setMessage("");
     try { const r = await fetch("/api/factory/owner-session", { method: "POST", headers: { authorization: `Bearer ${password}`, "content-type": "application/json" }, credentials: "same-origin" });
-      if (!r.ok) throw Error("Owner verification failed. Check your plan-editor credential.");
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        if (data.error === "FACTORY_EDITOR_AUTH_NOT_CONFIGURED") throw Error("Factory Editor is not configured correctly in Production. Check the Vercel environment variable and redeploy.");
+        throw Error("Factory Editor credential was not accepted. Check the Production value in Vercel; do not use the website operator password.");
+      }
       setAuthenticated(true); setPassword(""); setMessage("Factory owner session active for up to four hours.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Login failed"); }
     finally { setBusy(false); }

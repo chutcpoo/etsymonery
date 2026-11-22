@@ -8,7 +8,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   if (!validSameOrigin(request)) return NextResponse.json({ error: "FACTORY_ORIGIN_DENIED" }, { status: 403, headers: privateHeaders });
   const denied = await authorizeEtsyOperatorRequest(request, "plan", false);
-  if (denied) return denied;
+  if (denied) return NextResponse.json({ error: denied.status === 503 ? "FACTORY_EDITOR_AUTH_NOT_CONFIGURED" : "FACTORY_EDITOR_CREDENTIAL_INVALID" },
+    { status: denied.status === 503 ? 503 : 403, headers: privateHeaders });
   const session = await issueOwnerSession();
   const response = NextResponse.json({ authenticated: true }, { headers: privateHeaders });
   response.cookies.set(OWNER_COOKIE, session.value, { httpOnly: true, secure: true, sameSite: "strict", path: "/", maxAge: session.maxAge });
