@@ -1,3 +1,5 @@
+import WorkflowBoard from "./workflow-board";
+import { listWorkflowItems, type WorkflowItem } from "../../lib/local-factory-workflow";
 import { readActiveListings } from "../../lib/etsy-active-listings";
 import { EtsyListingList } from "../etsy-listing-list";
 import { LiveCount } from "../live-count";
@@ -12,6 +14,10 @@ export default async function FactoryDashboardPage() {
   const live = await readActiveCatalog();
   const catalog = await readActiveListings();
   void FullFactoryDashboard;
+  let workflowItems: WorkflowItem[] = [];
+  let workflowError: string | null = null;
+  try { workflowItems = await listWorkflowItems(); }
+  catch { workflowError = "FACTORY_WORKFLOW_STORE_UNAVAILABLE"; }
   let rows: ReturnType<typeof buildOperatorDashboard>[] = [];
   let error: string | null = null;
   try {
@@ -36,6 +42,7 @@ export default async function FactoryDashboardPage() {
     {error && <section className="notice warningNotice"><p>{error}: verify the production registry database and schema.</p></section>}
     {live.status !== "PASS" && <section className="notice warningNotice"><p>Live Etsy access: {live.error}</p></section>}
     <EtsyListingList catalog={catalog} />
+    <WorkflowBoard initialItems={workflowItems} loadError={workflowError} />
     <section className="listingStack">
       <div><h2>Local Factory product registry</h2><p>Independent production/QC records; not automatically matched to Etsy listings.</p></div>
       {rows.length === 0 && !error && <article className="listingCard"><p>No canonical product records found.</p></article>}

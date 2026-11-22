@@ -1,0 +1,68 @@
+"use client";
+import { useState } from "react";
+import type { WorkflowItem } from "../../lib/local-factory-workflow";
+
+export default function WorkflowBoard({ initialItems, loadError }: { initialItems: WorkflowItem[]; loadError: string | null }) {
+  const [items, setItems] = useState(initialItems);
+  const [token, setToken] = useState("");
+  const [title, setTitle] = useState("");
+  const [buyer, setBuyer] = useState("");
+  const [message, setMessage] = useState(loadError ?? "");
+  const [busy, setBusy] = useState(false);
+  async function send(path: string, method: "POST" | "PATCH", data: object) {
+    if (!token.trim()) { setMessage("Enter your plan-editor token for local workflow changes."); return; }
+    setBusy(true); setMessage("");
+    try {
+      const response = await fetch(path, { method, headers: { "content-type": "application/json", authorization: `Bearer ${token.trim()}` }, cache: "no-store", body: JSON.stringify(data) });
+      const body = await response.json();
+      if (!response.ok) throw Error(body.error ?? `HTTP_${response.status}`);
+      const item = body.item as WorkflowItem;
+      setItems(previous => [item, ...previous.filter(x => x.id !== item.id)]);
+      if (method === "POST") { setTitle(""); setBuyer(""); }
+      setMessage(`${item.title}: ${item.stage} saved locally. No Etsy changes.`);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Workflow update failed"); }
+    finally { setBusy(false); }
+  }
+  return <section className="listingStack">
+    <div><h2>Local production workflow</h2><p>Create and advance internal digital-product tasks. Etsy listing data above is read-only and independent. Stages: Research → Blueprint → Build → QA → Ready → Published (manual evidence only).</p></div>
+    <article className="listingCard">
+      <label className="workflowLabel">Plan-editor token (held in this browser tab only; never saved)
+        <input className="workflowInput" type="password" autoComplete="off" value={token} onChange={event => setToken(event.target.value)} placeholder="Required for workflow edits" />
+      </label>
+      <form className="workflowForm" onSubmit={event => { event.preventDefault(); void send("/api/factory/workflow", "POST", { title, buyer, notes: "" }); }}>
+        <label className="workflowLabel">Product name<input className="workflowInput" required maxLength={180} value={title} onChange={event => setTitle(event.target.value)} /></label>
+        <label className="workflowLabel">Specific buyer<input className="workflowInput" required maxLength={120} value={buyer} onChange={event => setBuyer(event.target.value)} /></label>
+        <button className="connectButton buttonReset" disabled={busy || !title.trim() || !buyer.trim()} type="submit">Create local product</button>
+      </form>
+      {message && <p role="status">{message}</p>}
+    </article>
+    {items.length === 0 && <article className="listingCard"><p>No local workflow items yet. Create the first one above.</p></article>}
+    {items.map(item => <WorkflowItemEditor key={item.id} item={item} busy={busy} send={send} />)}
+  </section>;
+}
+function WorkflowItemEditor({ item, busy, send }: { item: WorkflowItem; busy: boolean; send: (path: string, method: "PATCH", data: object) => Promise<void> }) {
+  const [notes, setNotes] = useState(item.notes);
+  const [evidenceUrl, setEvidenceUrl] = useState(item.evidenceUrl ?? "");
+  const [qaPassed, setQaPassed] = useState(item.qaPassed);
+  const [listingId, setListingId] = useState(item.listingId?.toString() ?? "");
+  const [title, setTitle] = useState(item.title);
+  const [buyer, setBuyer] = useState(item.buyer);
+  const path = `/api/factory/workflow/${item.id}`;
+  const fields = { revision: item.revision, title, buyer, notes, evidenceUrl, qaPassed, listingId };
+  return <article className="listingCard">
+    <p className="eyebrow">{item.stage} · REVISION {item.revision}</p>
+    <div className="workflowForm">
+      <label className="workflowLabel">Product<input className="workflowInput" maxLength={180} value={title} onChange={e => setTitle(e.target.value)} /></label>
+      <label className="workflowLabel">Buyer<input className="workflowInput" maxLength={120} value={buyer} onChange={e => setBuyer(e.target.value)} /></label>
+      <label className="workflowLabel">Notes<textarea className="workflowInput" maxLength={2000} rows={3} value={notes} onChange={e => setNotes(e.target.value)} /></label>
+      <label className="workflowLabel">Evidence URL (https)<input className="workflowInput" type="url" maxLength={500} value={evidenceUrl} onChange={e => setEvidenceUrl(e.target.value)} /></label>
+      <label className="workflowLabel">Etsy Listing ID (only after manual publishing)<input className="workflowInput" inputMode="numeric" value={listingId} onChange={e => setListingId(e.target.value)} /></label>
+      <label className="workflowLabel workflowCheck"><input type="checkbox" checked={qaPassed} onChange={e => setQaPassed(e.target.checked)} /> QA passed (requires evidence URL)</label>
+    </div>
+    <div className="workflowActions">
+      <button className="connectButton buttonReset" disabled={busy || item.stage === "PUBLISHED"} onClick={() => void send(path, "PATCH", { ...fields, action: "update" })}>Save notes / evidence</button>
+      <button className="connectButton buttonReset" disabled={busy || item.stage === "PUBLISHED"} onClick={() => void send(path, "PATCH", { ...fields, action: "advance" })}>Advance one stage</button>
+    </div>
+    <p>Publishing is never triggered here. Moving Ready → Published records a manual Etsy Listing ID and evidence only.</p>
+  </article>;
+}

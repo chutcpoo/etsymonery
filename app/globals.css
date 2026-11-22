@@ -448,3 +448,12 @@ code {
     flex-direction: column;
   }
 }
+
+/* Owner-only local production workflow */
+.workflowForm { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
+.workflowLabel { display: grid; gap: 7px; color: var(--muted); font-size: 13px; min-width: 0; }
+.workflowInput { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: #08101d; color: var(--text); padding: 12px; font: inherit; }
+.workflowCheck { display: flex; align-items: center; }
+.workflowActions { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+.workflowActions button:disabled, .workflowForm button:disabled { opacity: .5; cursor: not-allowed; }
+@media (max-width: 600px) { .workflowForm { grid-template-columns: 1fr; } .workflowActions button { width: 100%; } }
