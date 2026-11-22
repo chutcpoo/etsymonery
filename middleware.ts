@@ -1,3 +1,4 @@
+import { hasOwnerSession, validSameOrigin } from "./lib/factory-owner-session";
 import { NextResponse, type NextRequest } from "next/server";
 import { authorizeEtsyOperatorRequest, isEtsyOperatorProtectedPath, privateHeaders, type OperatorRole } from "./lib/etsy-operator-auth";
 import { reviewMarketplaceRequest } from "./lib/etsy-policy";
@@ -60,10 +61,23 @@ export async function middleware(request: NextRequest) {
   const isWorkflow = path === "/api/factory/workflow" || /^\/api\/factory\/workflow\/[0-9a-f-]{36}$/i.test(path);
   const workflowRead = isWorkflow && read;
   const workflowWrite = isWorkflow && (request.method === "PATCH" || request.method === "POST");
-  const role = workflowWrite ? "plan" : request.method === "POST" ? planRole(path) : null;
+  const isOwnerSession = path === "/api/factory/owner-session";
+  const role = workflowWrite || (isOwnerSession && request.method === "POST") ? "plan" : request.method === "POST" ? planRole(path) : null;
+  if (workflowWrite && await hasOwnerSession(request)) {
+    if (!validSameOrigin(request)) return blocked("FACTORY_ORIGIN_DENIED");
+    const response = NextResponse.next();
+    for (const [key, value] of Object.entries(privateHeaders)) response.headers.set(key, value);
+    return response;
+  }
+  if (isOwnerSession && request.method === "DELETE" && !(await hasOwnerSession(request) && validSameOrigin(request))) return NextResponse.json({ error: "FACTORY_OWNER_SESSION_REQUIRED" }, { status: 401, headers: privateHeaders });
   const denied = await authorizeEtsyOperatorRequest(request, role ?? "read", read);
+  if (isOwnerSession && request.method === "DELETE" && await hasOwnerSession(request) && validSameOrigin(request)) {
+    const response = NextResponse.next();
+    for (const [key, value] of Object.entries(privateHeaders)) response.headers.set(key, value);
+    return response;
+  }
   if (denied) return denied;
-  if (workflowRead || workflowWrite || role || (read && (["/", "/factory", "/sales", "/commerce", "/events", "/stats-evidence", "/connect/etsy", "/api/platform/status", "/api/etsy/status", "/api/etsy/seller-state"].includes(path) ||
+  if (workflowRead || workflowWrite || (isOwnerSession && ["GET", "POST", "DELETE"].includes(request.method)) || role || (read && (["/", "/factory", "/sales", "/commerce", "/events", "/stats-evidence", "/connect/etsy", "/api/platform/status", "/api/etsy/status", "/api/etsy/seller-state"].includes(path) ||
       /^\/api\/product-plans\/[a-zA-Z0-9_-]+$/.test(path)))) {
     const response = NextResponse.next();
     for (const [key, value] of Object.entries(privateHeaders)) response.headers.set(key, value);
