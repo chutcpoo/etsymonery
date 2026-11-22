@@ -57,10 +57,13 @@ export async function middleware(request: NextRequest) {
       return response;
     }
   }
-  const role = request.method === "POST" ? planRole(path) : null;
+  const isWorkflow = path === "/api/factory/workflow" || /^\/api\/factory\/workflow\/[0-9a-f-]{36}$/i.test(path);
+  const workflowRead = isWorkflow && read;
+  const workflowWrite = isWorkflow && (request.method === "PATCH" || request.method === "POST");
+  const role = workflowWrite ? "plan" : request.method === "POST" ? planRole(path) : null;
   const denied = await authorizeEtsyOperatorRequest(request, role ?? "read", read);
   if (denied) return denied;
-  if (role || (read && (["/", "/factory", "/sales", "/commerce", "/events", "/stats-evidence", "/connect/etsy", "/api/platform/status", "/api/etsy/status", "/api/etsy/seller-state"].includes(path) ||
+  if (workflowRead || workflowWrite || role || (read && (["/", "/factory", "/sales", "/commerce", "/events", "/stats-evidence", "/connect/etsy", "/api/platform/status", "/api/etsy/status", "/api/etsy/seller-state"].includes(path) ||
       /^\/api\/product-plans\/[a-zA-Z0-9_-]+$/.test(path)))) {
     const response = NextResponse.next();
     for (const [key, value] of Object.entries(privateHeaders)) response.headers.set(key, value);

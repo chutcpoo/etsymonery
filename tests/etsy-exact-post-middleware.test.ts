@@ -15,18 +15,18 @@ test("every API file rejects anonymous calls and all non-allowlisted operations 
   try {
     for (const file of readdirSync("app/api", { recursive: true, encoding: "utf8" })) {
       if (!file.endsWith("/route.ts")) continue;
-      const path = "/api/" + file.slice(0, -9).replace(/\[\w+\]/g, "fixture");
+      const path = "/api/" + file.slice(0, -9).replace(/\[\w+\]/g, "fixture").replace("/factory/workflow/fixture", "/factory/workflow/00000000-0000-4000-8000-000000000001");
       if (path === "/api/health") continue;
       for (const method of ["GET", "HEAD", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"]) {
         const call = (role?: string) => middleware(new NextRequest("https://example.test" + path, { method,
           headers: role ? { authorization: "Bearer " + token(role) } : {} }));
         assert.equal((await call()).status, 401, method + " " + path);
         const read = ["GET", "HEAD"].includes(method);
-        const allowedRead = read && (["/api/etsy/status", "/api/etsy/seller-state", "/api/platform/status", "/api/product-plans/fixture", "/api/product-plans/create"].includes(path));
-        const expected = method === "POST" ? ({
+        const allowedRead = read && (["/api/etsy/status", "/api/etsy/seller-state", "/api/platform/status", "/api/product-plans/fixture", "/api/product-plans/create", "/api/factory/workflow", "/api/factory/workflow/00000000-0000-4000-8000-000000000001"].includes(path));
+        const expected = method === "PATCH" && path === "/api/factory/workflow/00000000-0000-4000-8000-000000000001" ? "plan" : method === "POST" ? ({
           "/api/product-plans/create": "plan", "/api/product-plans/fixture/qc": "qc",
           "/api/product-plans/fixture/approve": "seller", "/api/products/fixture/build": "plan",
-          "/api/products/prepare": "plan"
+          "/api/products/prepare": "plan", "/api/factory/workflow": "plan"
         } as Record<string, string>)[path] : undefined;
         assert.equal((await call("read")).headers.has("x-middleware-next"), allowedRead, method + " " + path);
         if (expected) {
