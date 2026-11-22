@@ -1,3 +1,5 @@
+import { readActiveListings } from "../../../lib/etsy-active-listings";
+import { EtsyListingList } from "../../etsy-listing-list";
 import {
   ETSY_SCOPES,
   ETSY_SELLER_READ_SCOPES,
@@ -27,6 +29,7 @@ export default async function EtsyConnectPage() {
   } catch {
     metadataUnavailable = true;
   }
+  const live = await readActiveListings();
   const credentials = getEtsyCredentials();
   const expiry = grant?.expiresAt;
   const expiryValid = expiry instanceof Date && Number.isFinite(expiry.getTime());
@@ -62,7 +65,8 @@ export default async function EtsyConnectPage() {
           </p>
         </div>
         <div className="badge">
-          {metadataUnavailable ? "TOKEN STATUS UNAVAILABLE"
+          {live.status === "PASS" ? "ETSY LIVE READ PASS"
+            : metadataUnavailable ? "TOKEN STATUS UNAVAILABLE"
             : accessTokenExpired ? "STORED TOKEN EXPIRED"
             : connected ? "GRANT STORED — NOT VERIFIED"
             : !persistenceConfigured ? "TOKEN STORE REQUIRED"
@@ -74,7 +78,8 @@ export default async function EtsyConnectPage() {
         <div>
           <p className="eyebrow">STATUS</p>
           <h2>
-            {metadataUnavailable ? "Unable to read stored OAuth metadata"
+            {live.status === "PASS" ? `Live Etsy catalog verified: ${live.count} active listings`
+              : metadataUnavailable ? "Unable to read stored OAuth metadata"
               : accessTokenExpired ? "Stored access token has expired"
               : connected ? "Grant recorded — live access not verified"
               : "No verified Etsy connection"}
@@ -90,11 +95,11 @@ export default async function EtsyConnectPage() {
             Recorded Shop ID: {recordedShopId} (database metadata only).
             Access token: {accessTokenExpired ? "EXPIRED" : accessTokenUnexpired ? "UNEXPIRED (NOT LIVE VERIFIED)" : "UNKNOWN"}.
             {expiryValid ? ` Expiry: ${expiry.toISOString()} (UTC).` : " Expiry not available."}
-            Etsy API live read: NOT VERIFIED. Marketplace writes: LOCKED.
+            Etsy API live read: {live.status}. Marketplace writes: LOCKED.
           </p>
           <p>
-            These indicators do not perform Etsy API requests or prove app permission,
-            seller agreement, or successful token refresh. Credentials remain encrypted server-side.
+            Stored OAuth metadata alone does not prove live access. The separate live read above
+            requests only active listings; credentials remain encrypted server-side.
           </p>
         </div>
 
@@ -110,6 +115,7 @@ export default async function EtsyConnectPage() {
           <p>OAuth reconnection is disabled by policy. No OAuth changes are initiated from this page.</p>
         )}
       </section>
+      <EtsyListingList catalog={live} />
     </main>
   );
 }

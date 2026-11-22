@@ -1,3 +1,5 @@
+import { readActiveListings } from "../../lib/etsy-active-listings";
+import { EtsyListingList } from "../etsy-listing-list";
 import { LiveCount } from "../live-count";
 import FullFactoryDashboard from "./full-dashboard";
 import { buildOperatorDashboard } from "../../lib/operator-dashboard";
@@ -8,7 +10,8 @@ export const dynamic = "force-dynamic";
 
 export default async function FactoryDashboardPage() {
   const live = await readActiveCatalog();
-  if (live.status === "PASS") return <FullFactoryDashboard />;
+  const catalog = await readActiveListings();
+  void FullFactoryDashboard;
   let rows: ReturnType<typeof buildOperatorDashboard>[] = [];
   let error: string | null = null;
   try {
@@ -31,8 +34,10 @@ export default async function FactoryDashboardPage() {
       <article className="metricCard"><span>Marketplace writes</span><strong>LOCKED</strong></article>
     </section>
     {error && <section className="notice warningNotice"><p>{error}: verify the production registry database and schema.</p></section>}
-    <section className="notice warningNotice"><p>Live Etsy access: {live.error}</p></section>
+    {live.status !== "PASS" && <section className="notice warningNotice"><p>Live Etsy access: {live.error}</p></section>}
+    <EtsyListingList catalog={catalog} />
     <section className="listingStack">
+      <div><h2>Local Factory product registry</h2><p>Independent production/QC records; not automatically matched to Etsy listings.</p></div>
       {rows.length === 0 && !error && <article className="listingCard"><p>No canonical product records found.</p></article>}
       {rows.map(row => <article className="listingCard" key={row.productId}>
         <p className="eyebrow">{row.productId}</p><h2>{row.currentState ?? "STATE NOT AVAILABLE"}</h2>

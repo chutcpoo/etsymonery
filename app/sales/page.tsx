@@ -1,3 +1,5 @@
+import { readActiveListings } from "../../lib/etsy-active-listings";
+import { EtsyListingList } from "../etsy-listing-list";
 import { LiveCount } from "../live-count";
 import FullDashboard from "./full-dashboard";
 import { readActiveCatalog } from "../../lib/etsy-live-count";
@@ -7,6 +9,7 @@ export const dynamic = "force-dynamic";
 void FullDashboard;
 export default async function SalesControlCenterPage() {
   const live = await readActiveCatalog();
+  const catalog = await readActiveListings();
   return <main className="shell">
     <a className="textLink" href="/">Control Center</a>
     <section className="hero"><div>
@@ -20,6 +23,7 @@ export default async function SalesControlCenterPage() {
       <article className="metricCard"><span>Revenue</span><strong>NOT VERIFIED</strong></article>
     </section>
     {live.status !== "PASS" && <section className="notice warningNotice"><p>{live.error}</p></section>}
+    <EtsyListingList catalog={catalog} />
     <section className="notice"><p>Detailed sales analytics remain unavailable until the shop owner has the required Etsy authorization, transaction scopes, and approved data use. Historical counts are not substituted for live evidence.</p></section>
   </main>;
 }
