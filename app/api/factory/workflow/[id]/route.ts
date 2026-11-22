@@ -1,9 +1,11 @@
+import { authorizeFactoryMutation } from "../../../../../lib/factory-owner-session";
 import { NextResponse } from "next/server";
-import { authorizeEtsyOperatorRequest, privateHeaders } from "../../../../../lib/etsy-operator-auth";
+import { privateHeaders } from "../../../../../lib/etsy-operator-auth";
 import { updateWorkflowItem } from "../../../../../lib/local-factory-workflow";
 export const runtime = "nodejs";
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const denied = await authorizeEtsyOperatorRequest(request, "plan", false);
+  const denied = await authorizeFactoryMutation(request);
+  if (typeof denied === "string") return NextResponse.json({ error: denied }, { status: 403, headers: privateHeaders });
   if (denied) return denied;
   try { const { id } = await params; const item = await updateWorkflowItem(id, await request.json());
     return item ? NextResponse.json({ item }, { headers: privateHeaders })

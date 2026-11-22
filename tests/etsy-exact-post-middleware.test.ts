@@ -22,11 +22,11 @@ test("every API file rejects anonymous calls and all non-allowlisted operations 
           headers: role ? { authorization: "Bearer " + token(role) } : {} }));
         assert.equal((await call()).status, 401, method + " " + path);
         const read = ["GET", "HEAD"].includes(method);
-        const allowedRead = read && (["/api/etsy/status", "/api/etsy/seller-state", "/api/platform/status", "/api/product-plans/fixture", "/api/product-plans/create", "/api/factory/workflow", "/api/factory/workflow/00000000-0000-4000-8000-000000000001"].includes(path));
+        const allowedRead = read && !(method === "HEAD" && path === "/api/factory/owner-session") && (["/api/etsy/status", "/api/etsy/seller-state", "/api/platform/status", "/api/product-plans/fixture", "/api/product-plans/create", "/api/factory/workflow", "/api/factory/owner-session", "/api/factory/workflow/00000000-0000-4000-8000-000000000001"].includes(path));
         const expected = method === "PATCH" && path === "/api/factory/workflow/00000000-0000-4000-8000-000000000001" ? "plan" : method === "POST" ? ({
           "/api/product-plans/create": "plan", "/api/product-plans/fixture/qc": "qc",
           "/api/product-plans/fixture/approve": "seller", "/api/products/fixture/build": "plan",
-          "/api/products/prepare": "plan", "/api/factory/workflow": "plan"
+          "/api/products/prepare": "plan", "/api/factory/workflow": "plan", "/api/factory/owner-session": "plan"
         } as Record<string, string>)[path] : undefined;
         assert.equal((await call("read")).headers.has("x-middleware-next"), allowedRead, method + " " + path);
         if (expected) {
