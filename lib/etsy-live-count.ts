@@ -1,4 +1,5 @@
 import { appSupportEmail } from "./app-support";
+import { privateSingleShopId } from "./etsy-private-shop";
 import { ETSY_SCOPES, etsyApiHeaders, parseEtsyGrantedScopes } from "./etsy";
 import { fetchEtsyReadWithRetry } from "./etsy-http";
 import { loadEtsyReadGrantWithOptionalRefresh } from "./etsy-read-refresh";
@@ -20,9 +21,13 @@ export function reviewedReadAuthorizationFromEnvironment(): ReadAuthorization | 
   const shop = Number(process.env.ETSY_READ_APPROVED_SHOP_ID);
   const etsyPermissionRef = evidenceReference(process.env.ETSY_READ_APP_PERMISSION_REF);
   const sellerPrivacyAgreementRef = evidenceReference(process.env.ETSY_READ_SELLER_AGREEMENT_REF);
-  if (!Number.isSafeInteger(shop) || shop < 1 || !etsyPermissionRef || !sellerPrivacyAgreementRef)
-    return null;
-  return { shopId: shop, etsyPermissionRef, sellerPrivacyAgreementRef };
+  if (!Number.isSafeInteger(shop) || shop < 1) return null;
+  if (etsyPermissionRef && sellerPrivacyAgreementRef)
+    return { shopId: shop, etsyPermissionRef, sellerPrivacyAgreementRef };
+  // Explicit owner-only mode avoids pretending a private shop needs third-party seller acceptance.
+  if (privateSingleShopId() === shop)
+    return { shopId: shop, etsyPermissionRef: "private-single-shop", sellerPrivacyAgreementRef: "owner-operated" };
+  return null;
 }
 
 export async function readActiveCatalog({

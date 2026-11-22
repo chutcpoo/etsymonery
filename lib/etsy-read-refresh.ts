@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { appSupportEmail } from "./app-support";
+import { privateSingleShopId } from "./etsy-private-shop";
 import { getEtsyCredentials, parseEtsyGrantedScopes } from "./etsy";
 import { reviewedReference, validateMigrationToken } from "./etsy-oauth-migration";
 import { decryptSecret, encryptSecret } from "./token-crypto";
@@ -14,8 +15,9 @@ export function mayRefreshMinimalReadGrant(grant: ReadGrant | null, now = Date.n
   return Boolean(grant &&
     process.env.ETSY_READ_TOKEN_REFRESH_ENABLED === "true" &&
     reviewedReference(process.env.ETSY_READ_TOKEN_REFRESH_APPROVAL_REF) &&
-    reviewedReference(process.env.ETSY_READ_APP_PERMISSION_REF) &&
-    reviewedReference(process.env.ETSY_READ_SELLER_AGREEMENT_REF) &&
+    ((reviewedReference(process.env.ETSY_READ_APP_PERMISSION_REF) &&
+      reviewedReference(process.env.ETSY_READ_SELLER_AGREEMENT_REF)) ||
+      (grant !== null && privateSingleShopId() === grant.shopId)) &&
     appSupportEmail() &&
     Number.isSafeInteger(grant.shopId) && grant.shopId > 0 &&
     grant.shopId === Number(process.env.ETSY_SHOP_ID) &&
