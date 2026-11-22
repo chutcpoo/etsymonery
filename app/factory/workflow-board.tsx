@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { WorkflowItem } from "../../lib/local-factory-workflow";
+import { workflowErrorMessage } from "../../lib/workflow-feedback";
 
 export default function WorkflowBoard({ initialItems, loadError }: { initialItems: WorkflowItem[]; loadError: string | null }) {
   const [items, setItems] = useState(initialItems);
@@ -34,18 +35,19 @@ export default function WorkflowBoard({ initialItems, loadError }: { initialItem
   const [buyer, setBuyer] = useState("");
   const [message, setMessage] = useState(loadError ?? "");
   const [busy, setBusy] = useState(false);
-  async function send(path: string, method: "POST" | "PATCH", data: object) {
-    if (!authenticated) { setMessage("Sign in as Factory owner before editing."); return; }
+  async function send(path: string, method: "POST" | "PATCH", data: object): Promise<{ ok: true } | { ok: false; error: string }> {
+    if (!authenticated) { const error = "Sign in as Factory owner before editing."; setMessage(error); return { ok: false, error }; }
     setBusy(true); setMessage("");
     try {
       const response = await fetch(path, { method, headers: { "content-type": "application/json" }, credentials: "same-origin", cache: "no-store", body: JSON.stringify(data) });
       const body = await response.json();
-      if (!response.ok) throw Error(body.error ?? `HTTP_${response.status}`);
+      if (!response.ok) throw Error(workflowErrorMessage(typeof body.error === "string" ? body.error : `HTTP_${response.status}`));
       const item = body.item as WorkflowItem;
       setItems(previous => [item, ...previous.filter(x => x.id !== item.id)]);
       if (method === "POST") { setTitle(""); setBuyer(""); }
       setMessage(`${item.title}: ${item.stage} saved locally. No Etsy changes.`);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Workflow update failed"); }
+      return { ok: true };
+    } catch (error) { const message = error instanceof Error ? error.message : "Workflow update failed"; setMessage(message); return { ok: false, error: message }; }
     finally { setBusy(false); }
   }
   return <section className="listingStack">
@@ -70,7 +72,8 @@ export default function WorkflowBoard({ initialItems, loadError }: { initialItem
     {items.map(item => <WorkflowItemEditor key={item.id} item={item} busy={busy || !authenticated} send={send} />)}
   </section>;
 }
-function WorkflowItemEditor({ item, busy, send }: { item: WorkflowItem; busy: boolean; send: (path: string, method: "PATCH", data: object) => Promise<void> }) {
+function WorkflowItemEditor({ item, busy, send }: { item: WorkflowItem; busy: boolean; send: (path: string, method: "PATCH", data: object) => Promise<{ ok: true } | { ok: false; error: string }> }) {
+  const [localFeedback, setLocalFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [notes, setNotes] = useState(item.notes);
   const [evidenceUrl, setEvidenceUrl] = useState(item.evidenceUrl ?? "");
   const [qaPassed, setQaPassed] = useState(item.qaPassed);
@@ -79,6 +82,13 @@ function WorkflowItemEditor({ item, busy, send }: { item: WorkflowItem; busy: bo
   const [buyer, setBuyer] = useState(item.buyer);
   const path = `/api/factory/workflow/${item.id}`;
   const fields = { revision: item.revision, title, buyer, notes, evidenceUrl, qaPassed, listingId };
+  async function submit(action: "update" | "advance") {
+    setLocalFeedback(null);
+    const result = await send(path, "PATCH", { ...fields, action });
+    setLocalFeedback(result.ok
+      ? { ok: true, text: action === "advance" ? `Advanced successfully. Refresh to verify the saved stage.` : "Project changes saved." }
+      : { ok: false, text: result.error });
+  }
   return <article className="listingCard">
     <p className="eyebrow">{item.stage} · REVISION {item.revision}</p>
     <div className="workflowForm">
@@ -90,9 +100,10 @@ function WorkflowItemEditor({ item, busy, send }: { item: WorkflowItem; busy: bo
       <label className="workflowLabel workflowCheck"><input type="checkbox" checked={qaPassed} onChange={e => setQaPassed(e.target.checked)} /> QA passed (requires evidence URL)</label>
     </div>
     <div className="workflowActions">
-      <button className="connectButton buttonReset" disabled={busy || item.stage === "PUBLISHED"} onClick={() => void send(path, "PATCH", { ...fields, action: "update" })}>Save notes / evidence</button>
-      <button className="connectButton buttonReset" disabled={busy || item.stage === "PUBLISHED"} onClick={() => void send(path, "PATCH", { ...fields, action: "advance" })}>Advance one stage</button>
+      <button className="connectButton buttonReset" disabled={busy || item.stage === "PUBLISHED"} onClick={() => void submit("update")}>Save notes / evidence</button>
+      <button className="connectButton buttonReset" disabled={busy || item.stage === "PUBLISHED"} onClick={() => void submit("advance")}>Advance one stage</button>
     </div>
+    {localFeedback && <p role={localFeedback.ok ? "status" : "alert"} aria-live="polite" style={{ color: localFeedback.ok ? "inherit" : "#ffb4a2", fontWeight: 600 }}>{localFeedback.text}</p>}
     <p>Publishing is never triggered here. Moving Ready → Published records a manual Etsy Listing ID and evidence only.</p>
   </article>;
 }
