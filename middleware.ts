@@ -60,7 +60,8 @@ export async function middleware(request: NextRequest) {
   }
   const isWorkflow = path === "/api/factory/workflow" || /^\/api\/factory\/workflow\/[0-9a-f-]{36}$/i.test(path);
   const workflowRead = isWorkflow && read;
-  const workflowWrite = isWorkflow && (request.method === "PATCH" || request.method === "POST");
+  const workflowWrite = (path === "/api/factory/workflow" && request.method === "POST") ||
+    (/^\/api\/factory\/workflow\/[0-9a-f-]{36}$/i.test(path) && request.method === "PATCH");
   const isOwnerSession = path === "/api/factory/owner-session";
   const role = workflowWrite || (isOwnerSession && request.method === "POST") ? "plan" : request.method === "POST" ? planRole(path) : null;
   if (workflowWrite && await hasOwnerSession(request)) {
@@ -75,6 +76,13 @@ export async function middleware(request: NextRequest) {
     const response = NextResponse.next();
     for (const [key, value] of Object.entries(privateHeaders)) response.headers.set(key, value);
     return response;
+  }
+  // Factory API is called by fetch(), not browser navigation. Never emit
+  // WWW-Authenticate here: Chrome would open an unrelated HTTP Basic dialog.
+  if (denied && ((isOwnerSession && request.method === "POST") || workflowWrite)) {
+    const headers = new Headers(privateHeaders);
+    return NextResponse.json({ error: denied.status === 503 ? "FACTORY_EDITOR_AUTH_NOT_CONFIGURED" : "FACTORY_EDITOR_CREDENTIAL_INVALID" },
+      { status: denied.status === 503 ? 503 : 403, headers });
   }
   if (denied) return denied;
   if (workflowRead || workflowWrite || (isOwnerSession && ["GET", "POST", "DELETE"].includes(request.method)) || role || (read && (["/", "/factory", "/sales", "/commerce", "/events", "/stats-evidence", "/connect/etsy", "/api/platform/status", "/api/etsy/status", "/api/etsy/seller-state"].includes(path) ||
