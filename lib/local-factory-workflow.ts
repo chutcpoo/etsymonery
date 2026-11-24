@@ -77,6 +77,11 @@ export async function updateWorkflowItem(id: string, body: unknown): Promise<Wor
       fields.buyer !== current.buyer || fields.notes !== current.notes || fields.evidenceUrl !== current.evidenceUrl)) {
     throw Error("READY_RECORD_LOCKED");
   }
+  // A saved MosseloraStudio identity cannot be removed or reassigned to bypass visual QC.
+  if (current.releaseEvidence?.shop === "MosseloraStudio" &&
+      (releaseEvidence?.shop !== "MosseloraStudio" || releaseEvidence.productId !== current.releaseEvidence.productId)) {
+    throw Error("VISUAL_SHOP_IDENTITY_LOCKED");
+  }
   const verdict = releaseEvidence ? evaluateProductReleaseEvidence(releaseEvidence) : null;
   // Binding ensures evidence collected for one buyer cannot be pasted into another workflow.
   const buyerBound = releaseEvidence?.targetBuyer.trim() === fields.buyer.trim();
