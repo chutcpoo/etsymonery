@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import VisualStudio from "./visual-studio";
 import {
   evaluateProductReleaseEvidence,
   type ProductPlatform, type ProductQaCase, type ProductReleaseCandidate,
@@ -157,6 +158,7 @@ export default function ReleaseEvidenceEditor({ buyer, initial, disabled, onSave
           onChange={e=>updateCase(t.id,{testedFingerprint:e.target.value})}/></label>
         <button type="button" disabled={disabled} onClick={()=>edit({qaCases:value.qaCases.filter(x=>x.id!==t.id)})}>Remove test</button>
       </div></div>)}
+    <VisualStudio candidate={value} onChange={edit} disabled={disabled}/>
     <h3>4. Blockers and owner sign-off</h3>
     <div className="workflowForm">
       <label className="workflowLabel">Critical defects still open<input className="workflowInput" type="number" min={0}
