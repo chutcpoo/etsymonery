@@ -12,7 +12,7 @@ test("research missing evidence explains blocked advance in plain language", () 
 test("each QA gate has an actionable error", () => {
   for (const [code, fragment] of [
     ["BUILD_EVIDENCE_REQUIRED", "Build evidence URL"],
-    ["QA_EVIDENCE_AND_PASS_REQUIRED", "QA passed"],
+    ["QA_RELEASE_EVIDENCE_REQUIRED", "fully verified release QA record"],
     ["MANUAL_PUBLISH_EVIDENCE_REQUIRED", "manually published Etsy Listing ID"],
     ["WORKFLOW_REVISION_CONFLICT", "Refresh"],
   ]) assert.match(workflowErrorMessage(code), new RegExp(fragment));
@@ -26,7 +26,8 @@ test("all stage transitions through READY with verifiable code evidence links, w
   assert.equal(nextStage("RESEARCH", input), "BLUEPRINT");
   assert.equal(nextStage("BLUEPRINT", input), "BUILD");
   assert.equal(nextStage("BUILD", { ...input, evidenceUrl: build }), "QA");
-  assert.throws(() => nextStage("QA", { ...input, evidenceUrl: qa }), /QA_EVIDENCE_AND_PASS_REQUIRED/);
-  assert.equal(nextStage("QA", { ...input, evidenceUrl: qa, qaPassed: true }), "READY");
+  assert.throws(() => nextStage("QA", { ...input, evidenceUrl: qa }), /QA_RELEASE_EVIDENCE_REQUIRED/);
+  assert.throws(() => nextStage("QA", { ...input, evidenceUrl: qa, qaPassed: true }), /QA_RELEASE_EVIDENCE_REQUIRED/);
+  assert.equal(nextStage("QA", { ...input, evidenceUrl: qa, releaseGatePassed: true }), "READY");
   assert.throws(() => nextStage("READY", { ...input, evidenceUrl: qa }), /MANUAL_PUBLISH_EVIDENCE_REQUIRED/);
 });
