@@ -73,7 +73,10 @@ export async function updateWorkflowItem(id: string, body: unknown): Promise<Wor
   // Manual checkbox is not a release gate. Evaluate evidence tied to the exact build.
   const releaseEvidence = x.releaseEvidence === undefined ? current.releaseEvidence
     : x.releaseEvidence === null ? null : parseProductReleaseEvidence(x.releaseEvidence);
-  if (current.stage === "READY" && x.releaseEvidence !== undefined) throw Error("READY_EVIDENCE_LOCKED");
+  if (current.stage === "READY" && (x.releaseEvidence !== undefined || fields.title !== current.title ||
+      fields.buyer !== current.buyer || fields.notes !== current.notes || fields.evidenceUrl !== current.evidenceUrl)) {
+    throw Error("READY_RECORD_LOCKED");
+  }
   const verdict = releaseEvidence ? evaluateProductReleaseEvidence(releaseEvidence) : null;
   // Binding ensures evidence collected for one buyer cannot be pasted into another workflow.
   const buyerBound = releaseEvidence?.targetBuyer.trim() === fields.buyer.trim();
