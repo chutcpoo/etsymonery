@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { authorizeEtsyOperatorRequest, privateHeaders } from "../../../lib/etsy-operator-auth";
+import { authorizeEtsyOperatorRequest, privateHeaders } from "../../../../lib/etsy-operator-auth";
 import {
   hasOwnerSession, hasReaderSession, issueOwnerSession, issueReaderSession,
   OWNER_COOKIE, READER_COOKIE, validSameOrigin
-} from "../../../lib/factory-owner-session";
+} from "../../../../lib/factory-owner-session";
 
 export const runtime = "nodejs";
 
