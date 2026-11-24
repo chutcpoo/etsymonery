@@ -171,3 +171,91 @@ export function evaluateProductReleaseEvidence(candidate: ProductReleaseCandidat
   }
   return { readyForOwnerRelease: blockers.length === 0, blockers, evaluatedTestCount: candidate.qaCases.length };
 }
+
+
+/** Validate the persisted JSON boundary; never trust an object cast from a request. */
+export function parseProductReleaseEvidence(input: unknown): ProductReleaseCandidate {
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw Error("INVALID_PRODUCT_RELEASE_EVIDENCE");
+  // 150 KB upper bound protects the shared workflow endpoint and its JSONB store.
+  let encoded = "";
+  try { encoded = JSON.stringify(input); } catch { throw Error("INVALID_PRODUCT_RELEASE_EVIDENCE"); }
+  if (!encoded || encoded.length > 150_000) throw Error("INVALID_PRODUCT_RELEASE_EVIDENCE");
+  const x = input as Record<string, unknown>;
+  const str = (v: unknown, max = 500): string => {
+    if (typeof v !== "string" || v.length > max) throw Error("INVALID_PRODUCT_RELEASE_EVIDENCE");
+    return v;
+  };
+  const arr = (v: unknown, max: number): unknown[] => {
+    if (!Array.isArray(v) || v.length > max) throw Error("INVALID_PRODUCT_RELEASE_EVIDENCE");
+    return v;
+  };
+  const obj = (v: unknown): Record<string, unknown> => {
+    if (!v || typeof v !== "object" || Array.isArray(v)) throw Error("INVALID_PRODUCT_RELEASE_EVIDENCE");
+    return v as Record<string, unknown>;
+  };
+  const platform = (v: unknown): ProductPlatform => {
+    if (!isPlatform(v)) throw Error("INVALID_PRODUCT_RELEASE_EVIDENCE");
+    return v;
+  };
+  const scope = (v: unknown): QaScope => {
+    if (!isScope(v)) throw Error("INVALID_PRODUCT_RELEASE_EVIDENCE");
+    return v;
+  };
+  const result = (v: unknown): QaResult => {
+    if (v !== "PASS" && v !== "FAIL" && v !== "NOT_VERIFIED" && v !== "BLOCKED") {
+      throw Error("INVALID_PRODUCT_RELEASE_EVIDENCE");
+    }
+    return v;
+  };
+  const qaPlatform = (v: unknown): QaPlatform => v === "ALL" ? "ALL" : platform(v);
+  if (!Number.isSafeInteger(x.openCriticalDefects) || (x.openCriticalDefects as number) < 0) {
+    throw Error("INVALID_PRODUCT_RELEASE_EVIDENCE");
+  }
+  const requirements = arr(x.requirements, 100).map(item => {
+    const r = obj(item);
+    return {
+      id: str(r.id, 80),
+      buyerScenario: str(r.buyerScenario),
+      expectedOutcome: str(r.expectedOutcome),
+      platforms: arr(r.platforms, 3).map(platform)
+    };
+  });
+  const claims = arr(x.claims, 100).map(item => {
+    const c = obj(item);
+    return { id: str(c.id, 80), requirementId: str(c.requirementId, 80), text: str(c.text) };
+  });
+  const qaCases = arr(x.qaCases, 400).map(item => {
+    const c = obj(item);
+    return {
+      id: str(c.id, 80),
+      ...(c.requirementId == null ? {} : { requirementId: str(c.requirementId, 80) }),
+      ...(c.claimId == null ? {} : { claimId: str(c.claimId, 80) }),
+      scope: scope(c.scope),
+      platform: qaPlatform(c.platform),
+      result: result(c.result),
+      expected: str(c.expected, 2000),
+      actual: str(c.actual, 2000),
+      evidenceUrl: str(c.evidenceUrl, 1200),
+      testedAt: str(c.testedAt, 50),
+      testedFingerprint: str(c.testedFingerprint, 80)
+    };
+  });
+  const approval = x.approval == null ? undefined : (() => {
+    const a = obj(x.approval);
+    return { approvedBy: str(a.approvedBy, 150), approvedAt: str(a.approvedAt, 50), fingerprint: str(a.fingerprint, 80) };
+  })();
+  return {
+    productId: str(x.productId, 120),
+    targetBuyer: str(x.targetBuyer, 150),
+    customerProblem: str(x.customerProblem, 2000),
+    promisedDecision: str(x.promisedDecision, 2000),
+    researchEvidenceUrl: str(x.researchEvidenceUrl, 1200),
+    supportedPlatforms: arr(x.supportedPlatforms, 3).map(platform),
+    fingerprint: str(x.fingerprint, 80),
+    requirements,
+    claims,
+    qaCases,
+    openCriticalDefects: x.openCriticalDefects as number,
+    ...(approval ? { approval } : {})
+  };
+}
