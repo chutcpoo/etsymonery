@@ -51,7 +51,8 @@ export default function WorkflowBoard({ initialItems, loadError }: { initialItem
         <div className="workflowActions"><p>Factory Owner session active · Editing enabled · No second login required</p>
           <button className="connectButton buttonReset" disabled={busy} type="button" onClick={() => void logout()}>Sign out</button></div> :
         <div className="workflowActions"><p>Read-only mode · Sign in with the Factory Owner credential to edit workflows.</p>
-          <a className="connectButton" href="/login?next=%2Ffactory">Sign in as Owner</a></div>}
+          <a className="connectButton" href="/login?next=%2Ffactory">Sign in as Owner</a>
+          <button className="connectButton buttonReset" disabled={busy} type="button" onClick={() => void logout()}>Sign out</button></div>}
       <form className="workflowForm" onSubmit={event => { event.preventDefault(); void send("/api/factory/workflow", "POST", { title, buyer, notes: "" }); }}>
         <label className="workflowLabel">Product name<input className="workflowInput" required maxLength={180} value={title} onChange={event => setTitle(event.target.value)} /></label>
         <label className="workflowLabel">Specific buyer<input className="workflowInput" required maxLength={120} value={buyer} onChange={event => setBuyer(event.target.value)} /></label>
