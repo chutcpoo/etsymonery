@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, restore-dashboard-20261121]
 
 permissions:
   contents: read
