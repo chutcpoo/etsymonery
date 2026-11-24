@@ -78,10 +78,7 @@ export async function authorizeEtsyOperatorRequest(
       { status: "BLOCKED", error: "ETSY_OPERATOR_UNAUTHORIZED", ETSY_WRITE_COUNT: 0 },
       {
         status: 401,
-        headers: {
-          ...privateHeaders,
-          "www-authenticate": 'Basic realm="Etsy Operator", charset="UTF-8"'
-        }
+        headers: privateHeaders
       }
     );
   }
