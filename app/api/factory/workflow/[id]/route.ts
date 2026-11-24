@@ -12,7 +12,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       : NextResponse.json({ error: "WORKFLOW_NOT_FOUND" }, { status: 404, headers: privateHeaders }); }
   catch (error) { const message = error instanceof Error ? error.message : "UNKNOWN";
     const conflict = message === "WORKFLOW_REVISION_CONFLICT";
-    const invalid = message.startsWith("INVALID_") || message.endsWith("_REQUIRED") || message.endsWith("_LOCKED");
+    const invalid = message.startsWith("INVALID_") || message.startsWith("RELEASE_EVIDENCE_BLOCKED") || message.endsWith("_REQUIRED") || message.endsWith("_LOCKED");
     return NextResponse.json({ error: conflict || invalid ? message : "FACTORY_WORKFLOW_STORE_UNAVAILABLE" },
       { status: conflict ? 409 : invalid ? 400 : 503, headers: privateHeaders }); }
 }
