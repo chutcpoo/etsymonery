@@ -2,8 +2,6 @@
 import { useEffect, useState } from "react";
 import type { WorkflowItem } from "../../lib/local-factory-workflow";
 import { workflowErrorMessage } from "../../lib/workflow-feedback";
-import type { ProductReleaseCandidate } from "../../lib/product-release-evidence";
-import ReleaseEvidenceEditor from "./release-evidence-editor";
 
 export default function WorkflowBoard({ initialItems, loadError }: { initialItems: WorkflowItem[]; loadError: string | null }) {
   const [items, setItems] = useState(initialItems);
@@ -14,7 +12,7 @@ export default function WorkflowBoard({ initialItems, loadError }: { initialItem
     .catch(() => setMessage("Could not verify Factory owner session"))
     .finally(() => setChecking(false)); }, []);
   async function logout() {
-    setBusy(true);
+    setBusy(true); setMessage("");
     try {
       const r = await fetch("/api/auth/session", {
         method: "DELETE", credentials: "same-origin", cache: "no-store"
@@ -52,7 +50,7 @@ export default function WorkflowBoard({ initialItems, loadError }: { initialItem
           <button className="connectButton buttonReset" disabled={busy} type="button" onClick={() => void logout()}>Sign out</button></div> :
         <div className="workflowActions"><p>Read-only mode · Sign in with the Factory Owner credential to edit workflows.</p>
           <a className="connectButton" href="/login?next=%2Ffactory">Sign in as Owner</a>
-          <button className="connectButton buttonReset" disabled={busy} type="button" onClick={() => void logout()}>Sign out</button></div>}
+          <button className="connectButton buttonReset" disabled={busy} type="button" onClick={() => void logout()}>Sign out</button></div> }
       <form className="workflowForm" onSubmit={event => { event.preventDefault(); void send("/api/factory/workflow", "POST", { title, buyer, notes: "" }); }}>
         <label className="workflowLabel">Product name<input className="workflowInput" required maxLength={180} value={title} onChange={event => setTitle(event.target.value)} /></label>
         <label className="workflowLabel">Specific buyer<input className="workflowInput" required maxLength={120} value={buyer} onChange={event => setBuyer(event.target.value)} /></label>
@@ -68,18 +66,18 @@ function WorkflowItemEditor({ item, busy, send }: { item: WorkflowItem; busy: bo
   const [localFeedback, setLocalFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [notes, setNotes] = useState(item.notes);
   const [evidenceUrl, setEvidenceUrl] = useState(item.evidenceUrl ?? "");
-    const [listingId, setListingId] = useState(item.listingId?.toString() ?? "");
+  const [qaPassed, setQaPassed] = useState(item.qaPassed);
+  const [listingId, setListingId] = useState(item.listingId?.toString() ?? "");
   const [title, setTitle] = useState(item.title);
   const [buyer, setBuyer] = useState(item.buyer);
   const path = `/api/factory/workflow/${item.id}`;
-  const fields = { revision: item.revision, title, buyer, notes, evidenceUrl, listingId };
-  async function submit(action: "update" | "advance", releaseEvidence?: ProductReleaseCandidate) {
+  const fields = { revision: item.revision, title, buyer, notes, evidenceUrl, qaPassed, listingId };
+  async function submit(action: "update" | "advance") {
     setLocalFeedback(null);
-    const result = await send(path, "PATCH", { ...fields, action, ...(releaseEvidence === undefined ? {} : { releaseEvidence }) });
+    const result = await send(path, "PATCH", { ...fields, action });
     setLocalFeedback(result.ok
       ? { ok: true, text: action === "advance" ? `Advanced successfully. Refresh to verify the saved stage.` : "Project changes saved." }
       : { ok: false, text: result.error });
-    return result.ok;
   }
   return <article className="listingCard">
     <p className="eyebrow">{item.stage} · REVISION {item.revision}</p>
@@ -89,14 +87,12 @@ function WorkflowItemEditor({ item, busy, send }: { item: WorkflowItem; busy: bo
       <label className="workflowLabel">Notes<textarea className="workflowInput" maxLength={2000} rows={3} value={notes} onChange={e => setNotes(e.target.value)} /></label>
       <label className="workflowLabel">Evidence URL (https)<input className="workflowInput" type="url" maxLength={500} value={evidenceUrl} onChange={e => setEvidenceUrl(e.target.value)} /></label>
       <label className="workflowLabel">Etsy Listing ID (only after manual publishing)<input className="workflowInput" inputMode="numeric" value={listingId} onChange={e => setListingId(e.target.value)} /></label>
-      <p>QA status (read-only): {item.qaPassed ? "Evidence gate passed on saved candidate" : "NOT VERIFIED / BLOCKED"}. A manual checkbox cannot authorize Ready.</p>
+      <label className="workflowLabel workflowCheck"><input type="checkbox" checked={qaPassed} onChange={e => setQaPassed(e.target.checked)} /> QA passed (requires evidence URL)</label>
     </div>
     <div className="workflowActions">
       <button className="connectButton buttonReset" disabled={busy || item.stage === "PUBLISHED"} onClick={() => void submit("update")}>Save notes / evidence</button>
       <button className="connectButton buttonReset" disabled={busy || item.stage === "PUBLISHED"} onClick={() => void submit("advance")}>Advance one stage</button>
     </div>
-    <ReleaseEvidenceEditor buyer={buyer} initial={item.releaseEvidence} disabled={busy}
-      onSave={(record) => submit("update", record)} />
     {localFeedback && <p role={localFeedback.ok ? "status" : "alert"} aria-live="polite" style={{ color: localFeedback.ok ? "inherit" : "#ffb4a2", fontWeight: 600 }}>{localFeedback.text}</p>}
     <p>Publishing is never triggered here. Moving Ready → Published records a manual Etsy Listing ID and evidence only.</p>
   </article>;
