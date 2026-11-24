@@ -15,8 +15,9 @@ test("workflow cannot skip stages and requires evidence at gates", () => {
   assert.equal(nextStage("BLUEPRINT", blank), "BUILD");
   assert.throws(() => nextStage("BUILD", blank), /BUILD_EVIDENCE_REQUIRED/);
   assert.equal(nextStage("BUILD", { ...blank, evidenceUrl: "https://example.com/build" }), "QA");
-  assert.throws(() => nextStage("QA", { ...blank, evidenceUrl: "https://example.com/test" }), /QA_EVIDENCE_AND_PASS_REQUIRED/);
-  assert.equal(nextStage("QA", { ...blank, evidenceUrl: "https://example.com/test", qaPassed: true }), "READY");
+  assert.throws(() => nextStage("QA", { ...blank, evidenceUrl: "https://example.com/test" }), /QA_RELEASE_EVIDENCE_REQUIRED/);
+  assert.throws(() => nextStage("QA", { ...blank, evidenceUrl: "https://example.com/test", qaPassed: true }), /QA_RELEASE_EVIDENCE_REQUIRED/);
+  assert.equal(nextStage("QA", { ...blank, releaseGatePassed: true }), "READY");
   assert.throws(() => nextStage("READY", { ...blank, evidenceUrl: "https://example.com/listing" }), /MANUAL_PUBLISH_EVIDENCE_REQUIRED/);
   assert.equal(nextStage("READY", { ...blank, evidenceUrl: "https://example.com/listing", listingId: 123 }), "PUBLISHED");
   assert.throws(() => nextStage("PUBLISHED", blank), /INVALID_STAGE_TRANSITION/);
