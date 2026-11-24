@@ -1,0 +1,53 @@
+name: Production Public Login Smoke
+
+on:
+  push:
+    branches:
+      - feature/production-single-login-20261124
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 13
+    steps:
+      - name: Verify public Production login after deploy (no secrets)
+        shell: bash
+        env:
+          BASE: https://publisher.poonthaidigital.com
+        run: |
+          set -euo pipefail
+          headers=$(mktemp); body=$(mktemp)
+          trap 'rm -f "$headers" "$body"' EXIT
+          success=0
+          for attempt in $(seq 1 60); do
+            code=$(curl -sS --max-time 12 -H 'Accept: text/html' -D "$headers" -o "$body" -w '%{http_code}' "$BASE/login" || true)
+            if [ "$code" = "200" ] && grep -qi 'Mosselora' "$body"; then success=1; break; fi
+            sleep 8
+          done
+          echo "GET /login: HTTP $code"
+          test "$success" -eq 1
+          code=$(curl -sS --max-time 12 -D "$headers" -o "$body" -w '%{http_code}' "$BASE/api/auth/session")
+          echo "GET /api/auth/session: HTTP $code"
+          test "$code" = "200"
+          grep -q '"authenticated":false' "$body"
+          code=$(curl -sS --max-time 12 -H 'Accept: text/html' -D "$headers" -o "$body" -w '%{http_code}' "$BASE/factory")
+          echo "GET /factory anonymously: HTTP $code"
+          test "$code" = "307"
+          grep -qi '^location: .*/login?next=' "$headers"
+          if grep -qi '^www-authenticate:' "$headers"; then echo "Unexpected Basic auth prompt"; exit 1; fi
+          code=$(curl -sS --max-time 12 -D "$headers" -o "$body" -w '%{http_code}' "$BASE/api/etsy/status")
+          echo "GET private API anonymously: HTTP $code"
+          test "$code" = "401"
+          if grep -qi '^www-authenticate:' "$headers"; then echo "Unexpected Basic auth challenge"; exit 1; fi
+          for mode in owner reader; do
+            code=$(curl -sS --max-time 12 -D "$headers" -o "$body" -w '%{http_code}' -X POST \
+              -H 'Content-Type: application/json' -H 'Origin: https://publisher.poonthaidigital.com' \
+              --data "{\"mode\":\"$mode\",\"password\":\"invalid-test-credential-not-used-for-login-0000000\"}" "$BASE/api/auth/session")
+            echo "POST $mode invalid credential: HTTP $code"
+            test "$code" = "401"
+            if grep -qi '^www-authenticate:' "$headers"; then echo "Unexpected Basic auth challenge"; exit 1; fi
+          done
+          echo "ANONYMOUS LIVE LOGIN SECURITY CHECKS PASSED"
