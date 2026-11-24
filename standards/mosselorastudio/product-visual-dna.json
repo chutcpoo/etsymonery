@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "version": "1.1",
+  "effectiveDate": "2026-11-24",
+  "shop": "MosseloraStudio",
+  "scope": "current and future SKUs; never apply to another shop automatically",
+  "brand": {
+    "palette": {
+      "deepPlum": "#322131",
+      "cream": "#FCF7F3",
+      "gold": "#DCB377",
+      "emerald": "#2A6954",
+      "white": "#FFFFFF"
+    },
+    "font": "Inter",
+    "functionalColors": "preserve product-specific semantic colors",
+    "consistentLogoMarginsHierarchy": true
+  },
+  "product": {
+    "required": [
+      "Start Here",
+      "clearly editable inputs",
+      "distinct calculated outputs",
+      "actionable status and recovery messages",
+      "consistent navigation",
+      "realistic fictional example",
+      "documented limitations"
+    ],
+    "preserveValidatedLogic": true
+  },
+  "solution": {
+    "principle": "Show the Product. Show the Problem. Show the Solution. Prove the Result.",
+    "claimTrace": [
+      "buyerScenario",
+      "inputs",
+      "verifiedOutput",
+      "customerDecision",
+      "requirementId",
+      "testId",
+      "evidenceRef",
+      "productVersion"
+    ],
+    "forbid": [
+      "fabricated screenshots",
+      "fabricated results",
+      "fabricated testimonials",
+      "unsupported savings or automation claims"
+    ]
+  },
+  "visual": {
+    "canvasPx": [
+      2400,
+      2400
+    ],
+    "thumbnailTestPx": [
+      157,
+      160
+    ],
+    "cropTests": [
+      "1:1",
+      "4:5"
+    ],
+    "pageNumberBadges": false,
+    "onePrimaryMessage": true,
+    "productFocusedAreaTarget": {
+      "productEvidence": 70,
+      "benefitCopy": 20,
+      "brand": 10
+    },
+    "roles": [
+      "Hero",
+      "Problem & Solution",
+      "Real Results",
+      "Core Feature A",
+      "Core Feature B",
+      "Real Use Case",
+      "How It Works",
+      "What's Included",
+      "Before You Buy"
+    ],
+    "existingGalleryException": "8–10 images with documented role coverage and owner-approved exception",
+    "actualVersionMatchedScreenshotsRequired": true
+  },
+  "delivery": {
+    "required": [
+      "versioned manifest",
+      "customer-friendly filenames",
+      "verified applicable Excel and native Google Sheets Blank/Example",
+      "quick start",
+      "buyer access",
+      "verified ZIP/PDF as applicable",
+      "honest compatibility and limits"
+    ],
+    "privateArtifactsInPublicRepo": false
+  },
+  "qc": {
+    "minimumScore": 90,
+    "weights": {
+      "brand": 15,
+      "productVisibility": 20,
+      "problemBenefit": 20,
+      "productAccuracy": 20,
+      "mobileReadability": 15,
+      "technicalDelivery": 10
+    },
+    "requiredEvidenceFields": [
+      "sku",
+      "productVersion",
+      "dnaVersion",
+      "expected",
+      "actual",
+      "result",
+      "evidenceRef",
+      "tester",
+      "testedAt"
+    ],
+    "results": [
+      "PASS",
+      "FAIL",
+      "NOT VERIFIED"
+    ],
+    "hardBlockers": [
+      "critical FAIL",
+      "critical NOT VERIFIED",
+      "misleading claim",
+      "missing or stale screenshot",
+      "missing mobile check",
+      "unapproved exception"
+    ],
+    "checkboxOnlyPass": false
+  },
+  "workflow": {
+    "existingGates": "G0–G10",
+    "applyAt": [
+      "G1",
+      "G2",
+      "G7"
+    ],
+    "revalidateOnVersionChange": true,
+    "requireShopIdentity": true,
+    "requireOwnerApproval": true,
+    "autoPublish": false,
+    "deploymentReadyIsProductReady": false
+  },
+  "migration": {
+    "M08": "remove obsolete numbering; show actual event profit, fees and costs",
+    "M09": "show actual cost breakdown and quote result without duplication; offline pilot",
+    "M10": "preserve action queue; disclose manual listing removal"
+  },
+  "runtimeStatus": "POLICY_ONLY_NOT_RUNTIME_VERIFIED"
+}
