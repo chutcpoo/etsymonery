@@ -56,13 +56,7 @@ export async function middleware(request: NextRequest) {
         const denied = path === "/api/etsy/oauth/migration/status"
           ? await authorizeEtsyOperatorRequest(request, "seller", true)
           : await authorizeSellerOAuthBrowserGet(request);
-        if (denied && read && !path.startsWith("/api/") &&
-      request.headers.get("accept")?.includes("text/html")) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
-    return NextResponse.redirect(loginUrl, { status: 307, headers: privateHeaders });
-  }
-  if (denied) return denied;
+        if (denied) return denied;
       } else if (isPromotion) {
         const denied = await authorizeEtsyOperatorRequest(request, "seller", false);
         if (denied) return denied;
@@ -85,8 +79,11 @@ export async function middleware(request: NextRequest) {
     return response;
   }
   if (isOwnerSession && request.method === "DELETE" && !(await hasOwnerSession(request) && validSameOrigin(request))) return NextResponse.json({ error: "FACTORY_OWNER_SESSION_REQUIRED" }, { status: 401, headers: privateHeaders });
+  const htmlNavigation = read && !path.startsWith("/api/") &&
+    request.headers.get("accept")?.includes("text/html");
   const signedRead = read && (await hasOwnerSession(request) || await hasReaderSession(request));
-  const denied = signedRead ? null : await authorizeEtsyOperatorRequest(request, role ?? "read", read);
+  // Cached legacy Basic credentials cannot bypass the new browser login page.
+  const denied = signedRead ? null : await authorizeEtsyOperatorRequest(request, role ?? "read", read && !htmlNavigation);
   if (isOwnerSession && request.method === "DELETE" && await hasOwnerSession(request) && validSameOrigin(request)) {
     const response = NextResponse.next();
     for (const [key, value] of Object.entries(privateHeaders)) response.headers.set(key, value);
@@ -98,6 +95,11 @@ export async function middleware(request: NextRequest) {
     const headers = new Headers(privateHeaders);
     return NextResponse.json({ error: denied.status === 503 ? "FACTORY_EDITOR_AUTH_NOT_CONFIGURED" : "FACTORY_EDITOR_CREDENTIAL_INVALID" },
       { status: denied.status === 503 ? 503 : 403, headers });
+  }
+  if (denied && htmlNavigation) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
+    return NextResponse.redirect(loginUrl, { status: 307, headers: privateHeaders });
   }
   if (denied) return denied;
   if (workflowRead || workflowWrite || (isOwnerSession && ["GET", "POST", "DELETE"].includes(request.method)) || role || (read && (["/", "/factory", "/sales", "/commerce", "/events", "/stats-evidence", "/connect/etsy", "/api/platform/status", "/api/etsy/status", "/api/etsy/seller-state"].includes(path) ||
