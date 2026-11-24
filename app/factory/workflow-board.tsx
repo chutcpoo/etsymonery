@@ -7,29 +7,21 @@ import ReleaseEvidenceEditor from "./release-evidence-editor";
 
 export default function WorkflowBoard({ initialItems, loadError }: { initialItems: WorkflowItem[]; loadError: string | null }) {
   const [items, setItems] = useState(initialItems);
-  const [password, setPassword] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [checking, setChecking] = useState(true);
-  useEffect(() => { void fetch("/api/factory/owner-session", { cache: "no-store" })
-    .then(r => r.json()).then(x => setAuthenticated(x.authenticated === true))
+  useEffect(() => { void fetch("/api/auth/session", { cache: "no-store", credentials: "same-origin" })
+    .then(r => r.json()).then(x => setAuthenticated(x.role === "owner"))
     .catch(() => setMessage("Could not verify Factory owner session"))
     .finally(() => setChecking(false)); }, []);
-  async function login() {
-    setBusy(true); setMessage("");
-    try { const r = await fetch("/api/factory/owner-session", { method: "POST", headers: { authorization: `Bearer ${password}`, "content-type": "application/json" }, credentials: "same-origin" });
-      if (!r.ok) {
-        const data = await r.json().catch(() => ({}));
-        if (data.error === "FACTORY_EDITOR_AUTH_NOT_CONFIGURED") throw Error("Factory Editor is not configured correctly in Production. Check the Vercel environment variable and redeploy.");
-        throw Error("Factory Editor credential was not accepted. Check the Production value in Vercel; do not use the website operator password.");
-      }
-      setAuthenticated(true); setPassword(""); setMessage("Factory owner session active for up to four hours.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "Login failed"); }
-    finally { setBusy(false); }
-  }
   async function logout() {
     setBusy(true);
-    try { const r = await fetch("/api/factory/owner-session", { method: "DELETE", credentials: "same-origin" });
-      if (!r.ok) throw Error("Sign out failed"); setAuthenticated(false); setMessage("Factory owner session ended.");
+    try {
+      const r = await fetch("/api/auth/session", {
+        method: "DELETE", credentials: "same-origin", cache: "no-store"
+      });
+      if (!r.ok) throw Error("Sign out failed");
+      setAuthenticated(false);
+      window.location.assign("/login");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Sign out failed"); }
     finally { setBusy(false); }
   }
@@ -55,14 +47,12 @@ export default function WorkflowBoard({ initialItems, loadError }: { initialItem
   return <section className="listingStack">
     <div><h2>Local production workflow</h2><p>Create and advance internal digital-product tasks. Etsy listing data above is read-only and independent. Stages: Research → Blueprint → Build → QA → Ready → Published (manual evidence only).</p></div>
     <article className="listingCard">
-      {checking ? <p>Checking Factory owner session…</p> : authenticated ?
-        <div className="workflowActions"><p>Owner session active · Local workflow editing enabled</p><button className="connectButton buttonReset" disabled={busy} type="button" onClick={() => void logout()}>Sign out of Factory</button></div> :
-        <form className="workflowForm" onSubmit={e => { e.preventDefault(); void login(); }}>
-          <label className="workflowLabel">Verify Factory owner (one-time editor credential; not stored in browser storage)
-            <input className="workflowInput" type="password" autoComplete="off" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Owner verification" />
-          </label>
-          <button className="connectButton buttonReset" disabled={busy || !password} type="submit">Unlock Factory editing</button>
-        </form> }
+      {checking ? <p>Checking secure session…</p> : authenticated ?
+        <div className="workflowActions"><p>Factory Owner session active · Editing enabled · No second login required</p>
+          <button className="connectButton buttonReset" disabled={busy} type="button" onClick={() => void logout()}>Sign out</button></div> :
+        <div className="workflowActions"><p>Read-only mode · Sign in with the Factory Owner credential to edit workflows.</p>
+          <a className="connectButton" href="/login?next=%2Ffactory">Sign in as Owner</a>
+          <button className="connectButton buttonReset" disabled={busy} type="button" onClick={() => void logout()}>Sign out</button></div>}
       <form className="workflowForm" onSubmit={event => { event.preventDefault(); void send("/api/factory/workflow", "POST", { title, buyer, notes: "" }); }}>
         <label className="workflowLabel">Product name<input className="workflowInput" required maxLength={180} value={title} onChange={event => setTitle(event.target.value)} /></label>
         <label className="workflowLabel">Specific buyer<input className="workflowInput" required maxLength={120} value={buyer} onChange={event => setBuyer(event.target.value)} /></label>
