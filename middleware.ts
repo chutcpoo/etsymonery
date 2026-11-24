@@ -1,4 +1,4 @@
-import { hasOwnerSession, validSameOrigin } from "./lib/factory-owner-session";
+import { hasOwnerSession, hasReaderSession, validSameOrigin } from "./lib/factory-owner-session";
 import { NextResponse, type NextRequest } from "next/server";
 import { authorizeEtsyOperatorRequest, isEtsyOperatorProtectedPath, privateHeaders, type OperatorRole } from "./lib/etsy-operator-auth";
 import { reviewMarketplaceRequest } from "./lib/etsy-policy";
@@ -29,6 +29,14 @@ export async function middleware(request: NextRequest) {
     return response;
   }
   if (!isEtsyOperatorProtectedPath(path) && read) return NextResponse.next();
+  // One branded sign-in page replaces repeated browser Basic challenges.
+  // Only login and its session endpoint are public; protected business APIs remain guarded.
+  if ((path === "/login" && read) ||
+      (path === "/api/auth/session" && ["GET", "POST", "DELETE"].includes(request.method))) {
+    const response = NextResponse.next();
+    for (const [key, value] of Object.entries(privateHeaders)) response.headers.set(key, value);
+    return response;
+  }
 
   // Dedicated, disabled-by-default OAuth migration. The callback is public
   // only during an approved migration and validates a single-use durable state.
@@ -48,7 +56,13 @@ export async function middleware(request: NextRequest) {
         const denied = path === "/api/etsy/oauth/migration/status"
           ? await authorizeEtsyOperatorRequest(request, "seller", true)
           : await authorizeSellerOAuthBrowserGet(request);
-        if (denied) return denied;
+        if (denied && read && !path.startsWith("/api/") &&
+      request.headers.get("accept")?.includes("text/html")) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
+    return NextResponse.redirect(loginUrl, { status: 307, headers: privateHeaders });
+  }
+  if (denied) return denied;
       } else if (isPromotion) {
         const denied = await authorizeEtsyOperatorRequest(request, "seller", false);
         if (denied) return denied;
@@ -71,7 +85,8 @@ export async function middleware(request: NextRequest) {
     return response;
   }
   if (isOwnerSession && request.method === "DELETE" && !(await hasOwnerSession(request) && validSameOrigin(request))) return NextResponse.json({ error: "FACTORY_OWNER_SESSION_REQUIRED" }, { status: 401, headers: privateHeaders });
-  const denied = await authorizeEtsyOperatorRequest(request, role ?? "read", read);
+  const signedRead = read && (await hasOwnerSession(request) || await hasReaderSession(request));
+  const denied = signedRead ? null : await authorizeEtsyOperatorRequest(request, role ?? "read", read);
   if (isOwnerSession && request.method === "DELETE" && await hasOwnerSession(request) && validSameOrigin(request)) {
     const response = NextResponse.next();
     for (const [key, value] of Object.entries(privateHeaders)) response.headers.set(key, value);
