@@ -9,7 +9,7 @@ const OWNER = "test-only-owner-token-d83e791a969d463190ed";
 const READER = "test-only-reader-token-4c44f3ea168b456ca4ec";
 const ROOT = "https://publisher.example.test";
 
-function request(path: string, options: RequestInit = {}) {
+function request(path: string, options: ConstructorParameters<typeof NextRequest>[1] = {}) {
   return new NextRequest(ROOT + path, options);
 }
 
@@ -92,7 +92,8 @@ test("Viewer login supports read-only navigation, not Factory edits", async () =
     const cookie = READER_COOKIE + "=" + response.cookies.get(READER_COOKIE)?.value;
     assert.equal(await hasReaderSession(request("/factory", { headers: { cookie } })), true);
     assert.equal(await hasOwnerSession(request("/factory", { headers: { cookie } })), false);
-    assert.equal((await GET(request("/api/auth/session", { headers: { cookie } })).json()).role, "reader");
+    const readerStatus = await GET(request("/api/auth/session", { headers: { cookie } }));
+    assert.equal((await readerStatus.json()).role, "reader");
     assert.equal((await middleware(request("/factory", { headers: { cookie } }))).headers.get("x-middleware-next"), "1");
     const denied = await middleware(request("/api/factory/workflow", {
       method: "POST", headers: { cookie, origin: ROOT }
