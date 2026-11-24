@@ -32,5 +32,15 @@ jobs:
         run: npm run typecheck
       - name: App regression and security
         run: npm test
+      - name: Check current Production auth is configured (no credentials sent)
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' -H 'Accept: text/html' https://publisher.poonthaidigital.com/factory)
+          echo "Current Production anonymous Factory status: HTTP $code"
+          if [ "$code" != "401" ]; then
+            echo "BLOCKED: Production auth settings must be verified before release (expected 401, not 503)."
+            exit 1
+          fi
       - name: Production build smoke (no secrets)
         run: npm run build
