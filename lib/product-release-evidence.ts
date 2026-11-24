@@ -7,6 +7,7 @@
  *
  * This module does NOT mutate workflow state, Neon, Drive or Etsy.
  */
+import { evaluateVisual, parseVisual, type VisualEvidence } from "./mosselorastudio-visual-dna";
 export const PRODUCT_PLATFORMS = ["EXCEL", "GOOGLE_SHEETS", "WORD_DOCS"] as const;
 export type ProductPlatform = typeof PRODUCT_PLATFORMS[number];
 export const QA_SCOPES = ["FUNCTIONAL", "NEGATIVE", "BUYER_ACCESS", "DELIVERY", "LISTING_CLAIM"] as const;
@@ -36,6 +37,8 @@ export type ProductQaCase = {
 };
 export type ProductReleaseCandidate = {
   productId: string;
+  shop?: string;
+  visualEvidence?: VisualEvidence;
   targetBuyer: string;
   customerProblem: string;
   promisedDecision: string;
@@ -169,6 +172,7 @@ export function evaluateProductReleaseEvidence(candidate: ProductReleaseCandidat
       candidate.approval.fingerprint !== candidate.fingerprint) {
     block("OWNER_APPROVAL_FOR_CURRENT_BUILD_REQUIRED");
   }
+  for (const issue of evaluateVisual(candidate).blockers) block(issue);
   return { readyForOwnerRelease: blockers.length === 0, blockers, evaluatedTestCount: candidate.qaCases.length };
 }
 
@@ -246,6 +250,8 @@ export function parseProductReleaseEvidence(input: unknown): ProductReleaseCandi
   })();
   return {
     productId: str(x.productId, 120),
+    ...(x.shop == null ? {} : { shop: str(x.shop, 120) }),
+    ...(x.visualEvidence == null ? {} : { visualEvidence: parseVisual(x.visualEvidence) }),
     targetBuyer: str(x.targetBuyer, 150),
     customerProblem: str(x.customerProblem, 2000),
     promisedDecision: str(x.promisedDecision, 2000),
