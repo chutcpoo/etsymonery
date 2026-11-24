@@ -1,0 +1,36 @@
+name: Production Login Candidate QA
+
+on:
+  push:
+    branches:
+      - feature/production-single-login-20261124
+  pull_request:
+    branches:
+      - restore-dashboard-20261121
+
+permissions:
+  contents: read
+
+jobs:
+  qa:
+    name: TypeScript and security regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Dependencies
+        run: npm ci --ignore-scripts
+      - name: Type check
+        run: npm run typecheck
+      - name: App regression and security
+        run: npm test
+      - name: Production build smoke (no secrets)
+        run: npm run build
