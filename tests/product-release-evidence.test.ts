@@ -1,4 +1,5 @@
 import test from "node:test";
+import { emptyVisual, visualWeights } from "../lib/mosselorastudio-visual-dna";
 import assert from "node:assert/strict";
 import {
   evaluateProductReleaseEvidence,
@@ -21,9 +22,18 @@ function caseFor(
     testedAt: "2026-11-24T09:00:00+07:00", testedFingerprint: fingerprint
   };
 }
+function completeVisual() {
+  const v=emptyVisual(fingerprint);
+  const url="https://drive.google.com/file/d/synthetic-test-fixture/view";
+  v.images=v.images.map(i=>({...i,headline:"Synthetic headline",benefit:"Synthetic benefit",input:"Input",output:"Output",action:"Decision",screenshotUrl:url,requirementId:"R01",testId:"T01-excel",result:"PASS"}));
+  for(const [key,max] of Object.entries(visualWeights)) v.checks[key]={expected:"Expected",actual:"Actual",result:"PASS",evidenceUrl:url,tester:"Synthetic test",testedAt:"2026-11-24T00:00:00Z",score:max};
+  return v;
+}
 function validCandidate(): ProductReleaseCandidate {
   return {
     productId: "M11",
+    shop: "MosseloraStudio",
+    visualEvidence: completeVisual(),
     targetBuyer: "Wedding florist handling multiple events",
     customerProblem: "Cannot reliably identify unallocated usable stems per event",
     promisedDecision: "Show shortage and same-flower available stock before ordering",
@@ -136,6 +146,9 @@ test("open critical defects and missing customer outcome remain blockers", () =>
 
 test("document-only products do not require spreadsheet negative tests", () => {
   const value = validCandidate();
+  value.productId = "DOC01";
+  value.shop = "PoonthaiDigital";
+  value.visualEvidence = undefined;
   value.supportedPlatforms = ["WORD_DOCS"];
   value.requirements = [{ ...value.requirements[0], platforms: ["WORD_DOCS"] }];
   value.qaCases = [
