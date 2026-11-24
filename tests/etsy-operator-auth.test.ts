@@ -74,7 +74,7 @@ test("anonymous, wrong, query-string and malformed credentials are rejected", as
       const response = await middleware(req);
       assert.equal(response.status, 401, req.url);
       assert.equal((await response.json()).error, "ETSY_OPERATOR_UNAUTHORIZED");
-      assert.match(response.headers.get("www-authenticate") ?? "", /^Basic /);
+      assert.equal(response.headers.get("www-authenticate"), null, "never trigger a browser Basic challenge");
     }
   });
 });
