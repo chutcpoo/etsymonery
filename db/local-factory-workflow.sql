@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS public.local_factory_workflow (
  notes text NOT NULL DEFAULT '',
  evidence_url text,
  qa_passed boolean NOT NULL DEFAULT false,
+ release_evidence jsonb,
  listing_id bigint,
  revision integer NOT NULL DEFAULT 1 CHECK (revision > 0),
  created_at timestamptz NOT NULL DEFAULT now(),
