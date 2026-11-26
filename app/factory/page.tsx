@@ -7,6 +7,7 @@ import FullFactoryDashboard from "./full-dashboard";
 import { buildOperatorDashboard } from "../../lib/operator-dashboard";
 import { NeonCanonicalProductRegistryRepository } from "../../lib/product-registry-repository";
 import { readActiveCatalog } from "../../lib/etsy-live-count";
+import { isLegacyProduct } from "../../lib/legacy-products";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -19,10 +20,15 @@ export default async function FactoryDashboardPage() {
   try { workflowItems = await listWorkflowItems(); }
   catch { workflowError = "FACTORY_WORKFLOW_STORE_UNAVAILABLE"; }
   let rows: ReturnType<typeof buildOperatorDashboard>[] = [];
+  let archivedRows: typeof rows = [];
   let error: string | null = null;
   try {
     const records = await new NeonCanonicalProductRegistryRepository().list();
-    rows = records.map(product => buildOperatorDashboard({ product }));
+    for (const product of records) {
+      const row = buildOperatorDashboard({ product });
+      if (isLegacyProduct(product.productId)) archivedRows.push(row);
+      else rows.push(row);
+    }
   } catch {
     error = "FACTORY_REGISTRY_UNAVAILABLE";
   }
@@ -34,7 +40,7 @@ export default async function FactoryDashboardPage() {
       <p className="lede">Canonical product states and QC gates are read-only. No Etsy listing changes are triggered by this page.</p>
     </div><div className="badge">READ ONLY</div></section>
     <section className="metrics">
-      <article className="metricCard"><span>Local products</span><strong>{error ? "UNKNOWN" : rows.length}</strong></article>
+      <article className="metricCard"><span>Current registry products</span><strong>{error ? "UNKNOWN" : rows.length}</strong></article>
       <article className="metricCard"><span>Live Etsy listings</span><LiveCount count={live.liveCatalogCount} observedAt={live.observedAt} /></article>
       <article className="metricCard"><span>Live read</span><strong>{live.status}</strong></article>
       <article className="metricCard"><span>Marketplace writes</span><strong>LOCKED</strong></article>
@@ -45,7 +51,7 @@ export default async function FactoryDashboardPage() {
     <WorkflowBoard initialItems={workflowItems} loadError={workflowError} />
     <section className="listingStack">
       <div><h2>Local Factory product registry</h2><p>Independent production/QC records; not automatically matched to Etsy listings.</p></div>
-      {rows.length === 0 && !error && <article className="listingCard"><p>No canonical product records found.</p></article>}
+      {rows.length === 0 && !error && <article className="listingCard"><p>No current product records found.</p></article>}
       {rows.map(row => <article className="listingCard" key={row.productId}>
         <p className="eyebrow">{row.productId}</p><h2>{row.currentState ?? "STATE NOT AVAILABLE"}</h2>
         <p>Next: {row.nextExecutableStage ?? "NOT AVAILABLE"}</p>
@@ -53,5 +59,13 @@ export default async function FactoryDashboardPage() {
         <div className="tagRow">{row.gates.map(gate => <span key={gate.gateType}>{gate.gateType}: {gate.status}</span>)}</div>
       </article>)}
     </section>
+    {archivedRows.length > 0 && <details className="listingStack">
+      <summary>Legacy product history ({archivedRows.length})</summary>
+      {archivedRows.map(row => <article className="listingCard" key={row.productId}>
+        <h3>{row.productId}</h3>
+        <p>Last recorded state: {row.currentState ?? "UNKNOWN"}</p>
+        <div className="tagRow">{row.gates.map(gate => <span key={gate.gateType}>{gate.gateType}: {gate.status}</span>)}</div>
+      </article>)}
+    </details>}
   </main>;
 }
