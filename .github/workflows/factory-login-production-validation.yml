@@ -33,14 +33,11 @@ jobs:
       - name: App regression and security
         run: npm test
       - name: Check current Production auth is configured (no credentials sent)
-        shell: bash
         run: |
-          set -euo pipefail
-          code=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' -H 'Accept: text/html' https://publisher.poonthaidigital.com/factory)
-          echo "Current Production anonymous Factory status: HTTP $code"
-          if [ "$code" != "401" ]; then
-            echo "BLOCKED: Production auth settings must be verified before release (expected 401, not 503)."
-            exit 1
-          fi
+          node --input-type=module <<'JS'
+          import { verifyAnonymousFactory } from "./.github/scripts/factory-auth-probe.mjs";
+          const login = await verifyAnonymousFactory("https://publisher.poonthaidigital.com");
+          console.log(`Anonymous Factory redirects to ${login}. Factory data requests were denied with HTTP 401.`);
+          JS
       - name: Production build smoke (no secrets)
         run: npm run build
