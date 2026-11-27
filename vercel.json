@@ -2,7 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "security/etsy-operator-read-gate-20261120": false
+      "security/etsy-operator-read-gate-20261120": false,
+      "chore/detach-hbop-etsy-mapping": false
     }
   }
 }

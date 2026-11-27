@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { setTimeout as delay } from "node:timers/promises";
+import { verifyAnonymousFactory } from "../.github/scripts/factory-auth-probe.mjs";
 
 const origin = "http://127.0.0.1:3147";
 const read = "ci-fixture-read-0123456789-0123456789";
@@ -25,6 +26,8 @@ try {
     await delay(250);
   }
   assert.ok(ready);
+  // Next.js canonicalizes the direct loopback browser URL to localhost.
+  await verifyAnonymousFactory("http://localhost:3147");
   for (const path of ["/", "/api/platform/status", "/api/etsy/status", "/api/internal/etsy/reset-status",
     "/api/control-center/status", "/api/product-plans/example", "/p", "/factory", "/stats-evidence"])
     assert.equal((await send(path)).status, 401, path);

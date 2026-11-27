@@ -25,6 +25,25 @@ test("reads active listings with titles and IDs only using shop-scoped GET", asy
   }
 });
 
+test("owner live catalog retains M01 after the legacy projection is archived", async () => {
+  const listingId = 4626228544;
+  const result = await readActiveListings({
+    ...deps,
+    transport: async (_url, init) => {
+      assert.equal(init?.method, "GET");
+      return Response.json({ count: 1, results: [{ ...row(listingId), title: "M01" }] });
+    }
+  });
+
+  assert.equal(result.status, "PASS");
+  assert.equal(result.count, 1);
+  assert.deepEqual(result.listings, [{
+    listingId,
+    title: "M01",
+    url: `https://www.etsy.com/listing/${listingId}/example`
+  }]);
+});
+
 test("does not contact Etsy for broad, expired or wrong-shop grants", async () => {
   let calls = 0;
   for (const change of [{ scope: "listings_r listings_w" }, { shopId: 124 }, { expiresAt: new Date(50) }, { accessToken: "99.bad" }]) {

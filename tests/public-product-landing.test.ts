@@ -1,21 +1,16 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { ETSY_CHANNEL_INDEX } from "../lib/catalog-channel-index";
-import { formatEtsyMoney, normalizeProviderText } from "../lib/public-product";
+import { LEGACY_ETSY_CHANNEL_INDEX } from "../lib/catalog-channel-index";
+import { formatEtsyMoney, getPublicProduct, normalizeProviderText } from "../lib/public-product";
 
-test("post-reset public channel index reflects the current canonical identifier projection", () => {
-  assert.equal(ETSY_CHANNEL_INDEX.length, 5);
-  assert.deepEqual(
-    ETSY_CHANNEL_INDEX.map(({ productId, listingId }) => ({ productId, listingId })),
-    [
-      { productId: "PDT-CBEO-004", listingId: 4580126260 },
-      { productId: "PDT-FCMP-002", listingId: 4579068925 },
-      { productId: "PDT-HBOP-001", listingId: 4581821318 },
-      { productId: "PDT-IPT-001", listingId: 4578945050 },
-      { productId: "PDT-RPT-003", listingId: 4580303015 }
-    ]
-  );
+test("the public product resolver rejects each archived Etsy listing", async () => {
+  for (const { listingId } of LEGACY_ETSY_CHANNEL_INDEX) {
+    assert.deepEqual(await getPublicProduct(listingId), {
+      status: "NOT_FOUND",
+      reason: "LISTING_NOT_IN_CANONICAL_CHANNEL_INDEX"
+    });
+  }
 });
 
 test("Etsy money formatting preserves provider amount/divisor identity", () => {

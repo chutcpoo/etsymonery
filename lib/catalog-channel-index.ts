@@ -29,7 +29,10 @@ export type EtsyChannelIndexEntry = {
  * Do not add a listing because it merely appears live on Etsy. The Product_ID
  * <-> Listing_ID pair must exist in the canonical Drive registry first.
  */
-export const ETSY_CHANNEL_INDEX: readonly EtsyChannelIndexEntry[] = [
+export const ETSY_CHANNEL_INDEX: readonly EtsyChannelIndexEntry[] = [];
+
+// Historical projection retained for reconciliation only. Runtime Etsy reads use the index above.
+export const LEGACY_ETSY_CHANNEL_INDEX: readonly EtsyChannelIndexEntry[] = [
   { productId: "PDT-CBEO-004", listingId: 4580126260 },
   { productId: "PDT-FCMP-002", listingId: 4579068925 },
   { productId: "PDT-HBOP-001", listingId: 4581821318 },
