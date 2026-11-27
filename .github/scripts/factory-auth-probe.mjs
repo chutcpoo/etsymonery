@@ -35,10 +35,9 @@ export async function verifyAnonymousFactory(origin, transport = fetch) {
   assert.ok(URL.canParse(location, factoryUrl) && new URL(location, factoryUrl).href === loginUrl.href,
     "/factory: expected same-origin /login with exactly next=/factory");
   const redirectBody = Buffer.from(await navigation.arrayBuffer());
-  assert.ok(redirectBody.length === 0 || redirectBody.equals(Buffer.from(location)),
-    `/factory: unexpected redirect body (status=${navigation.status}, location=verified same-origin /login?next=%2Ffactory, content-type=${redirectContentType(navigation)}, body-bytes=${redirectBody.length})`);
+  const knownRedirectBody = redirectBody.length === 0 || redirectBody.equals(Buffer.from(location));
 
-  for (const path of ["/factory", "/api/factory/workflow"]) {
+  async function verifyJsonDenial(path) {
     const response = await request(new URL(path, origin), "application/json");
     assert.equal(response.status, 401, `${path} (JSON): expected configured auth to deny anonymous access`);
     assert.equal(response.headers.has("location"), false, `${path} (JSON): unexpected redirect`);
@@ -51,9 +50,27 @@ export async function verifyAnonymousFactory(origin, transport = fetch) {
     }), `${path} (JSON): expected only the authorization error`);
   }
 
-  const login = await request(loginUrl, "text/html");
-  assert.equal(login.status, 200, "/login: expected the login page");
-  assertPrivate(login, "/login");
-  assert.ok(/<input\b[^>]*\bid="factory-password"/.test(await login.text()), "/login: missing sign-in input");
+  async function verifyLogin() {
+    const login = await request(loginUrl, "text/html");
+    assert.equal(login.status, 200, "/login: expected the login page");
+    assertPrivate(login, "/login");
+    assert.ok(/<input\b[^>]*\bid="factory-password"/.test(await login.text()), "/login: missing sign-in input");
+  }
+
+  // The validated Location is safe to check independently of the redirect body.
+  // Unknown bodies still fail the gate even if every follow-up check passes.
+  const checks = [
+    ["/factory JSON", verifyJsonDenial("/factory")],
+    ["/api/factory/workflow JSON", verifyJsonDenial("/api/factory/workflow")],
+    ["/login form", verifyLogin()]
+  ];
+  const results = await Promise.allSettled(checks.map(([, check]) => check));
+  const summary = checks.map(([name], index) =>
+    `${name}=${results[index].status === "fulfilled" ? "PASS" : "FAIL"}`).join(", ");
+  assert.ok(knownRedirectBody,
+    `/factory: unexpected redirect body (status=${navigation.status}, location=verified same-origin /login?next=%2Ffactory, content-type=${redirectContentType(navigation)}, body-bytes=${redirectBody.length}); independent checks: ${summary}`);
+  const failed = results.find(result => result.status === "rejected");
+  if (failed) throw failed.reason;
+
   return loginUrl.href;
 }

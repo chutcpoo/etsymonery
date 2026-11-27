@@ -89,12 +89,21 @@ test("reports redirect metadata without exposing body or arbitrary Content-Type 
       })),
       error => {
         assert.equal(error.message,
-          `/factory: unexpected redirect body (status=307, location=verified same-origin /login?next=%2Ffactory, content-type=${expectedType}, body-bytes=${expectedBytes})`);
+          `/factory: unexpected redirect body (status=307, location=verified same-origin /login?next=%2Ffactory, content-type=${expectedType}, body-bytes=${expectedBytes}); independent checks: /factory JSON=PASS, /api/factory/workflow JSON=PASS, /login form=PASS`);
         assert.doesNotMatch(error.message, /fixture-private-value/);
         return true;
       }
     );
   }
+});
+
+test("unknown 138-byte HTML cannot pass and independent checks still report failures", async () => {
+  const body = "<p>" + "x".repeat(131) + "</p>";
+  await assert.rejects(verifyAnonymousFactory(origin, fixture({
+    redirect: navigation(loginPath, { ...privateHeaders, "content-type": "text/html" }, body),
+    workflow: denied(200),
+    login: new Response("Unexpected content", { headers: privateHeaders })
+  })), /body-bytes=138\); independent checks: \/factory JSON=PASS, \/api\/factory\/workflow JSON=FAIL, \/login form=FAIL/);
 });
 
 test("rejects misconfigured auth, exposed data and a missing login form", async () => {
