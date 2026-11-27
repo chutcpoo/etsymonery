@@ -50,5 +50,6 @@ test("all 29 audited historical listing pairs belong to 28 archived products", (
   const productIds = new Set(historicalPairs.map((pair) => pair.split(":")[0]));
   assert.equal(productIds.size, 28);
   for (const productId of productIds) assert.ok(isLegacyProduct(productId), productId);
+  assert.equal(isLegacyProduct("M01"), false);
   assert.equal(isLegacyProduct("CREATIVE-M01"), false);
 });
