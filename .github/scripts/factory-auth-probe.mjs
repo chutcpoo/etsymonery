@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { isDeepStrictEqual } from "node:util";
 
 function assertPrivate(response, path) {
@@ -6,6 +7,13 @@ function assertPrivate(response, path) {
   assert.ok(directives.includes("private") && directives.includes("no-store") && !directives.includes("public"),
     `${path}: expected private, non-cacheable response`);
   assert.equal(response.headers.has("www-authenticate"), false, `${path}: unexpected HTTP auth challenge`);
+}
+
+function redirectContentType(response) {
+  const type = response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase();
+  if (!type) return "absent";
+  return ["text/plain", "text/html", "application/json", "application/octet-stream"].includes(type)
+    ? type : "other";
 }
 
 export async function verifyAnonymousFactory(origin, transport = fetch) {
@@ -26,8 +34,9 @@ export async function verifyAnonymousFactory(origin, transport = fetch) {
   const loginUrl = new URL("/login?next=%2Ffactory", factoryUrl);
   assert.ok(URL.canParse(location, factoryUrl) && new URL(location, factoryUrl).href === loginUrl.href,
     "/factory: expected same-origin /login with exactly next=/factory");
-  const redirectBody = await navigation.text();
-  assert.ok(redirectBody === "" || redirectBody === location, "/factory: unexpected redirect body");
+  const redirectBody = Buffer.from(await navigation.arrayBuffer());
+  assert.ok(redirectBody.length === 0 || redirectBody.equals(Buffer.from(location)),
+    `/factory: unexpected redirect body (status=${navigation.status}, location=verified same-origin /login?next=%2Ffactory, content-type=${redirectContentType(navigation)}, body-bytes=${redirectBody.length})`);
 
   for (const path of ["/factory", "/api/factory/workflow"]) {
     const response = await request(new URL(path, origin), "application/json");

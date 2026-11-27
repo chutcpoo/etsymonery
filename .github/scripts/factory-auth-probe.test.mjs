@@ -75,6 +75,28 @@ test("rejects missing Location, cacheable redirects, Basic challenges and redire
   })), /unexpected redirect body/);
 });
 
+test("reports redirect metadata without exposing body or arbitrary Content-Type parameters", async () => {
+  for (const [body, contentType, expectedType, expectedBytes] of [
+    ["Redirecting...", "text/plain; charset=utf-8", "text/plain", 14],
+    ['{"records":["fixture-private-value"]}', "application/json; tag=fixture-private-value", "application/json", 37],
+    ["<h1>fixture-private-value</h1>", "text/html", "text/html", 30],
+    ["\ufeff" + loginPath, "text/plain", "text/plain", 25],
+    ["x", "application/x-fixture-private-value", "other", 1]
+  ]) {
+    await assert.rejects(
+      verifyAnonymousFactory(origin, fixture({
+        redirect: navigation(loginPath, { ...privateHeaders, "content-type": contentType }, body)
+      })),
+      error => {
+        assert.equal(error.message,
+          `/factory: unexpected redirect body (status=307, location=verified same-origin /login?next=%2Ffactory, content-type=${expectedType}, body-bytes=${expectedBytes})`);
+        assert.doesNotMatch(error.message, /fixture-private-value/);
+        return true;
+      }
+    );
+  }
+});
+
 test("rejects misconfigured auth, exposed data and a missing login form", async () => {
   for (const response of [denied(503), denied(200), navigation()]) {
     await assert.rejects(verifyAnonymousFactory(origin, fixture({ workflow: response })), /expected configured auth/);
