@@ -19,8 +19,8 @@ export default async function FactoryDashboardPage() {
   let workflowError: string | null = null;
   try { workflowItems = await listWorkflowItems(); }
   catch { workflowError = "FACTORY_WORKFLOW_STORE_UNAVAILABLE"; }
-  let rows: ReturnType<typeof buildOperatorDashboard>[] = [];
-  let archivedRows: typeof rows = [];
+  const rows: ReturnType<typeof buildOperatorDashboard>[] = [];
+  const archivedRows: typeof rows = [];
   let error: string | null = null;
   try {
     const records = await new NeonCanonicalProductRegistryRepository().list();
